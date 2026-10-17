@@ -1,0 +1,38 @@
+export const demoProducts = [
+  {
+    id: "demo-1",
+    name: "Wireless Headphones",
+    category: "Electronics",
+    price: 4500,
+    stock: 12,
+    illustration: "headphones",
+    color: "lavender",
+  },
+  {
+    id: "demo-2",
+    name: "Everyday Backpack",
+    category: "Fashion",
+    price: 2800,
+    stock: 8,
+    illustration: "backpack",
+    color: "peach",
+  },
+  {
+    id: "demo-3",
+    name: "Coffee Maker",
+    category: "Home",
+    price: 14999,
+    stock: 5,
+    illustration: "coffee",
+    color: "mint",
+  },
+  {
+    id: "demo-4",
+    name: "Desk Lamp",
+    category: "Home",
+    price: 2200,
+    stock: 0,
+    illustration: "lamp",
+    color: "sand",
+  },
+];
