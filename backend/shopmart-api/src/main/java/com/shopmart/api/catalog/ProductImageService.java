@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -47,11 +48,14 @@ public class ProductImageService {
 
   private final JdbcTemplate jdbc;
   private final Path directory;
+  private final CloudinaryImageStore cloudinary;
 
   public ProductImageService(
       JdbcTemplate jdbc,
-      @Value("${shopmart.upload-dir:./uploads/products}") String directory) {
+      @Value("${shopmart.upload-dir:./uploads/products}") String directory,
+      CloudinaryImageStore cloudinary) {
     this.jdbc = jdbc;
+    this.cloudinary = cloudinary;
     this.directory = Path.of(directory).toAbsolutePath().normalize();
   }
 
@@ -116,7 +120,7 @@ public class ProductImageService {
       }
     }
 
-    List<Path> created = new ArrayList<>();
+    List<UUID> created = new ArrayList<>();
 
     // Remove newly created files if the database transaction fails.
     TransactionSynchronizationManager.registerSynchronization(
@@ -124,27 +128,32 @@ public class ProductImageService {
           @Override
           public void afterCompletion(int status) {
             if (status != STATUS_COMMITTED) {
-              created.forEach(ProductImageService.this::deleteQuietly);
+              created.forEach(ProductImageService.this::deleteStoredImageQuietly);
             }
           }
         });
 
     try {
-      Files.createDirectories(directory);
+      if (!cloudinary.enabled()) Files.createDirectories(directory);
 
       for (MultipartFile file : files) {
         UUID id = UUID.randomUUID();
         BufferedImage normalized = decode(file);
         Path destination = filePath(id);
 
-        try (OutputStream output = Files.newOutputStream(
-            destination,
-            StandardOpenOption.CREATE_NEW,
-            StandardOpenOption.WRITE)) {
-          created.add(destination);
-
-          if (!ImageIO.write(normalized, "jpeg", output)) {
-            throw new IOException("JPEG writer unavailable");
+        try {
+          if (cloudinary.enabled()) {
+            created.add(id);
+            try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+              if (!ImageIO.write(normalized, "jpeg", output)) throw new IOException("JPEG writer unavailable");
+              cloudinary.upload(id, output.toByteArray());
+            }
+          } else {
+            try (OutputStream output = Files.newOutputStream(destination,
+                StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)) {
+              created.add(id);
+              if (!ImageIO.write(normalized, "jpeg", output)) throw new IOException("JPEG writer unavailable");
+            }
           }
         } finally {
           normalized.flush();
@@ -214,7 +223,7 @@ public class ProductImageService {
         new TransactionSynchronization() {
           @Override
           public void afterCommit() {
-            deleteQuietly(filePath(imageId));
+            deleteStoredImageQuietly(imageId);
           }
         });
 
@@ -248,9 +257,19 @@ public class ProductImageService {
         new TransactionSynchronization() {
           @Override
           public void afterCommit() {
-            imageIds.forEach(id -> deleteQuietly(filePath(id)));
+            imageIds.forEach(ProductImageService.this::deleteStoredImageQuietly);
           }
         });
+  }
+
+  @Transactional(readOnly = true)
+  public String cloudUrl(UUID imageId) {
+    if (!cloudinary.enabled()) return null;
+    Boolean exists = jdbc.queryForObject("""
+        SELECT EXISTS (SELECT 1 FROM public.product_images WHERE id = ?)
+        """, Boolean.class, imageId);
+    if (!Boolean.TRUE.equals(exists)) throw failure(HttpStatus.NOT_FOUND, "Image not found.");
+    return cloudinary.url(imageId);
   }
 
   @Transactional(readOnly = true)
@@ -412,6 +431,16 @@ public class ProductImageService {
     return directory.resolve(id + ".jpg");
   }
 
+  private void deleteStoredImageQuietly(UUID id) {
+    if (cloudinary.enabled()) {
+      try { cloudinary.delete(id); }
+      catch (RuntimeException failure) {
+        log.warn("Could not remove unused Cloudinary product image {}. It can be removed in Cloudinary manually.", id);
+      }
+    }
+    deleteQuietly(filePath(id));
+  }
+
   private void deleteQuietly(Path path) {
     try {
       Files.deleteIfExists(path);
@@ -422,12 +451,12 @@ public class ProductImageService {
     }
   }
 
-  private static ProductImage image(
+  private ProductImage image(
       UUID id, UUID productId, int position) {
     return new ProductImage(
         id,
         productId,
-        "/api/product-images/files/" + id,
+        cloudinary.enabled() ? cloudinary.url(id) : "/api/product-images/files/" + id,
         position);
   }
 

@@ -1,10 +1,10 @@
 package com.shopmart.api.catalog;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,9 +35,14 @@ public class ProductImageController {
   }
 
   @GetMapping("/product-images/files/{imageId}")
-  public ResponseEntity<Resource> file(
+  public ResponseEntity<?> file(
       @PathVariable UUID imageId) {
 
+    String cloudUrl = images.cloudUrl(imageId);
+    if (cloudUrl != null) {
+      return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(cloudUrl))
+          .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic()).build();
+    }
     return ResponseEntity.ok()
         .contentType(MediaType.IMAGE_JPEG)
         .header("X-Content-Type-Options", "nosniff")
