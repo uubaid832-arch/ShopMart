@@ -1,6 +1,7 @@
 package com.shopmart.api.security;
 
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,12 +40,14 @@ public class SecurityConfig {
         @Bean
         public SecurityFilterChain securityFilterChain(
                         HttpSecurity http,
-                        JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+                        JwtAuthenticationConverter jwtAuthenticationConverter,
+                        @Value("${shopmart.auth.cookie-secure:false}") boolean secureCookies) throws Exception {
 
                 CookieCsrfTokenRepository csrfRepository = new CookieCsrfTokenRepository();
 
                 csrfRepository.setCookieCustomizer(cookie -> cookie
                                 .httpOnly(true)
+                                .secure(secureCookies)
                                 .sameSite("Strict")
                                 .path("/"));
 
@@ -53,6 +56,11 @@ public class SecurityConfig {
                                                 .csrfTokenRepository(csrfRepository))
                                 .authorizeHttpRequests(authorize -> authorize
                                                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/", "/index.html", "/assets/**",
+                                                                "/favicon.svg", "/icons.svg", "/favicon.ico", "/robots.txt",
+                                                                "/admin", "/admin/**", "/rider", "/rider/**")
+                                                .permitAll()
                                                 .requestMatchers(
                                                                 HttpMethod.GET,
                                                                 "/api/health",

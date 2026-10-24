@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+.idea
+**/node_modules
+**/dist
+**/target
+**/uploads
+**/.env
+**/.env.*
+apps/mobile
+*.zip
+*.rar
+*.dump
+*.log
+**/*.log
