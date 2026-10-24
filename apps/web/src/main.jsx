@@ -11,51 +11,58 @@ import AdminOrdersPage from "./features/admin/AdminOrdersPage";
 import AdminDeliveries from "./features/admin/AdminDeliveries";
 import AdminReviews from "./features/admin/AdminReviews";
 import AdminReturns from "./features/admin/AdminReturns";
-
 import RiderLayout from "./features/rider/RiderLayout";
 import RiderDeliveries from "./features/rider/RiderDeliveries";
+import SessionProvider from "./features/auth/SessionProvider";
+import LanguageProvider from "./features/language/LanguageProvider";
+import AdminUsers from "./features/admin/AdminUsers";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="products" element={<AdminProductsPage />} />
-          <Route path="categories" element={<AdminCategories />} />
-          <Route path="orders" element={<AdminOrdersPage />} />
-          <Route path="deliveries" element={<AdminDeliveries />} />
-          <Route path="reviews" element={<AdminReviews />} />
-          <Route path="returns" element={<AdminReturns />} />
-        </Route>
-        <Route path="/rider" element={<RiderLayout />}>
-          <Route index element={<RiderDeliveries />} />
-        </Route>
+    <LanguageProvider>
+      <SessionProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<App />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="products" element={<AdminProductsPage />} />
+              <Route path="categories" element={<AdminCategories />} />
+              <Route path="orders" element={<AdminOrdersPage />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="deliveries" element={<AdminDeliveries />} />
+              <Route path="reviews" element={<AdminReviews />} />
+              <Route path="returns" element={<AdminReturns />} />
+            </Route>
+            <Route path="/rider" element={<RiderLayout />}>
+              <Route index element={<RiderDeliveries />} />
+            </Route>
 
-        <Route
-          path="*"
-          element={
-            <main className="grid min-h-screen place-items-center p-6 text-center">
-              <div>
-                <p className="m-0 text-6xl font-extrabold text-violet-600">
-                  404
-                </p>
-                <h1 className="mt-4 text-2xl font-bold">Page not found</h1>
-                <p className="mb-6 text-slate-500">
-                  The page you requested does not exist.
-                </p>
-                <Link
-                  to="/"
-                  className="inline-block rounded-xl bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-700"
-                >
-                  Back to ShopMart
-                </Link>
-              </div>
-            </main>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+            <Route
+              path="*"
+              element={
+                <main className="grid min-h-screen place-items-center p-6 text-center">
+                  <div>
+                    <p className="m-0 text-6xl font-extrabold text-violet-600">
+                      404
+                    </p>
+                    <h1 className="mt-4 text-2xl font-bold">Page not found</h1>
+                    <p className="mb-6 text-slate-500">
+                      The page you requested does not exist.
+                    </p>
+                    <Link
+                      to="/"
+                      className="inline-block rounded-xl bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-700"
+                    >
+                      Back to ShopMart
+                    </Link>
+                  </div>
+                </main>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </SessionProvider>
+    </LanguageProvider>
   </StrictMode>,
 );

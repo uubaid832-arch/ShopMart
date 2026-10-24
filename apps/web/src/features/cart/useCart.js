@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-
+import { useStoredList } from "../../hooks/useStoredList";
 const STORAGE_KEY = "shopmart-cart-v1";
-
-function restoreCart(products) {
+function restoreCart(products, storageKey) {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
 
     if (!Array.isArray(saved)) return [];
 
@@ -43,24 +41,14 @@ function restoreCart(products) {
   }
 }
 
-export function useCart(products) {
-  const [items, setItems] = useState(() => restoreCart(products));
+export function useCart(products, userId = null) {
+  const storageKey = userId ? `${STORAGE_KEY}:user:${userId}` : STORAGE_KEY;
 
-  useEffect(() => {
-    try {
-      // Save identifiers and quantities.
-      // Prices and stock come from the current product list.
-      const savedItems = items.map(({ id, quantity }) => ({
-        id,
-        quantity,
-      }));
+  const [items, setItems] = useStoredList(storageKey, (key) =>
+    restoreCart(products, key),
+  );
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(savedItems));
-    } catch {
-      // Cart remains usable in memory if browser storage is unavailable.
-    }
-  }, [items]);
-
+  // Keep addItem and all remaining functions below.
   function addItem(product) {
     const currentProduct = products.find((item) => item.id === product.id);
 
@@ -98,14 +86,15 @@ export function useCart(products) {
   function removeItem(id) {
     setItems((current) => current.filter((item) => item.id !== id));
   }
-
+  function clearCart() {
+    setItems([]);
+  }
   const count = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const total = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-
   return {
     items,
     count,
@@ -113,5 +102,6 @@ export function useCart(products) {
     addItem,
     changeQuantity,
     removeItem,
+    clearCart,
   };
 }

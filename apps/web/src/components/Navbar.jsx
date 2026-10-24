@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Search,
-  Bell,
   Heart,
   ShoppingCart,
   User,
@@ -9,9 +8,15 @@ import {
   Package,
   Truck,
   RotateCcw,
+  Info,
 } from "lucide-react";
+import NotificationBell from "../features/notifications/NotificationBell";
+import AppearanceMenu from "./AppearanceMenu";
+import VoiceSearchButton from "./VoiceSearchButton";
+import { useLanguage } from "../features/language/useLanguage";
 
 export default function Navbar({
+  isSignedIn = false,
   search,
   onSearch,
   wishlistCount,
@@ -20,11 +25,13 @@ export default function Navbar({
   onOrders,
   onTracking,
   onReturns,
-  onNotifications,
   onWishlist,
   onCart,
   onProfile,
+  onAbout,
+  onSignOut,
 }) {
+  const { language, setLanguage, t, direction } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
@@ -55,29 +62,36 @@ export default function Navbar({
   }, [menuOpen]);
 
   const actions = [
-    { label: "Notifications", Icon: Bell, onClick: onNotifications },
     {
-      label: "Wishlist",
+      label: t("wishlist"),
       Icon: Heart,
       onClick: onWishlist,
       count: wishlistCount,
     },
     {
-      label: "Cart",
+      label: t("cart"),
       Icon: ShoppingCart,
       onClick: onCart,
       count: cartCount,
     },
   ];
 
-  const accountLinks = [
-    { label: "Login / Register", Icon: User, onClick: onAccount },
-    { label: "My Profile", Icon: User, onClick: onProfile },
-    { label: "My Orders", Icon: Package, onClick: onOrders },
-    { label: "Track Order", Icon: Truck, onClick: onTracking },
-    { label: "Returns & Refunds", Icon: RotateCcw, onClick: onReturns },
-  ];
+  const accountLinks = isSignedIn
+    ? [
+        { label: t("profile"), Icon: User, onClick: onProfile },
+        { label: t("orders"), Icon: Package, onClick: onOrders },
+        { label: t("tracking"), Icon: Truck, onClick: onTracking },
+        { label: t("returns"), Icon: RotateCcw, onClick: onReturns },
+      ]
+    : [{ label: t("login"), Icon: User, onClick: onAccount }];
 
+  const dropdownLinks = [
+    ...accountLinks,
+    { label: t("about"), Icon: Info, onClick: onAbout },
+    ...(isSignedIn
+      ? [{ label: t("signOut"), Icon: User, onClick: onSignOut }]
+      : []),
+  ];
   return (
     <header className="sticky top-0 z-20 border-0 border-b border-solid border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 lg:flex-nowrap lg:gap-6 lg:px-6">
@@ -109,14 +123,30 @@ export default function Navbar({
             value={search}
             onChange={(event) => onSearch(event.target.value)}
             placeholder="Search products..."
-            className="box-border w-full rounded-2xl border border-solid border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-800 focus:border-violet-500"
+            className="box-border w-full rounded-2xl border border-solid border-slate-200 bg-slate-50 py-3 pl-11 pr-14 text-slate-800 focus:border-violet-500"
           />
+          <VoiceSearchButton onTranscript={onSearch} />
         </div>
 
         <nav
           aria-label="Main navigation"
           className="flex shrink-0 items-center gap-1 sm:gap-2"
         >
+          <label className="sr-only" htmlFor="store-language">
+            {t("language")}
+          </label>
+
+          <select
+            id="store-language"
+            value={language}
+            onChange={(event) => setLanguage(event.target.value)}
+            className="h-10 min-w-0 rounded-xl border border-solid border-slate-200 bg-white px-2 text-sm text-slate-600"
+          >
+            <option value="en">English</option>
+            <option value="ur">اردو</option>
+          </select>
+          <AppearanceMenu />
+          <NotificationBell />
           {actions.map(({ label, Icon, onClick, count }) => (
             <button
               key={label}
@@ -176,13 +206,14 @@ export default function Navbar({
             {menuOpen && (
               <div
                 id="account-options"
+                dir={direction}
                 className="absolute right-0 top-full z-30 mt-3 w-60 overflow-hidden rounded-2xl border border-solid border-slate-200 bg-white p-2 shadow-xl"
               >
                 <p className="mb-2 mt-0 border-0 border-b border-solid border-slate-100 px-3 py-3 text-xs font-bold tracking-widest text-slate-400">
                   YOUR ACCOUNT
                 </p>
 
-                {accountLinks.map(({ label, Icon, onClick }) => (
+                {dropdownLinks.map(({ label, Icon, onClick }) => (
                   <button
                     key={label}
                     type="button"
@@ -192,7 +223,7 @@ export default function Navbar({
                       setMenuOpen(false);
                       onClick();
                     }}
-                    className="flex w-full items-center gap-3 rounded-xl border-0 bg-transparent px-3 py-3 text-left text-slate-600 hover:bg-violet-50 hover:text-violet-700"
+                    className="flex w-full items-center gap-3 rounded-xl border-0 bg-transparent px-3 py-3 text-start text-slate-600 hover:bg-violet-50 hover:text-violet-700"
                   >
                     <Icon size={18} aria-hidden="true" />
                     <span className="text-sm font-medium">{label}</span>

@@ -8,7 +8,14 @@ const statuses = [
   "Returned",
   "Cancelled",
 ];
-
+const statusColors = {
+  Pending: "bg-amber-100 text-amber-800",
+  Confirmed: "bg-blue-100 text-blue-800",
+  Dispatched: "bg-violet-100 text-violet-800",
+  Delivered: "bg-emerald-100 text-emerald-800",
+  Cancelled: "bg-rose-100 text-rose-800",
+  Returned: "bg-slate-200 text-slate-700",
+};
 const formatPrice = (amount, currency = "PKR") =>
   new Intl.NumberFormat("en-PK", {
     style: "currency",
@@ -20,6 +27,7 @@ export default function AdminOrders({
   loading = false,
   error = "",
   onView,
+  onManage,
 }) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
@@ -39,7 +47,7 @@ export default function AdminOrders({
       <header>
         <h1 className="m-0 text-3xl font-bold">Orders</h1>
         <p className="mb-0 mt-2 text-sm text-slate-500">
-          Find customer orders and review their fulfilment status.
+          Review customer orders. Search and filters apply to this page.
         </p>
       </header>
 
@@ -51,7 +59,7 @@ export default function AdminOrders({
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Order number or customer name"
-            className="w-full rounded-xl border border-solid border-slate-200 bg-white p-3"
+            className="box-border w-full rounded-xl border border-solid border-slate-200 bg-white p-3"
           />
         </label>
 
@@ -92,7 +100,7 @@ export default function AdminOrders({
             <p className="mb-0 mt-2 text-sm text-slate-500">
               {orders.length
                 ? "Try another search or status."
-                : "Order data is not connected yet."}
+                : "Customer orders will appear here after checkout."}
             </p>
           </div>
         ) : (
@@ -102,7 +110,7 @@ export default function AdminOrders({
 
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
-                  {["Order", "Customer", "Total", "Status", "Action"].map(
+                  {["Order", "Customer", "Total", "Status", "Actions"].map(
                     (label) => (
                       <th key={label} scope="col" className="p-4">
                         {label}
@@ -118,30 +126,46 @@ export default function AdminOrders({
                     key={order.id}
                     className="border-0 border-t border-solid border-slate-100"
                   >
-                    <td className="p-4 font-semibold">
-                      {order.orderNumber ?? order.id}
-                    </td>
                     <td className="p-4">
-                      {order.customerName || "Guest customer"}
+                      <span className="block max-w-64 break-all text-xs font-semibold">
+                        {order.orderNumber ?? order.id}
+                      </span>
                     </td>
+                    <td className="p-4">{order.customerName}</td>
                     <td className="whitespace-nowrap p-4">
                       {formatPrice(order.total, order.currency)}
                     </td>
                     <td className="p-4">
-                      <span className="inline-block rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold">
+                      <span
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                          statusColors[order.status] ?? statusColors.Returned
+                        }`}
+                      >
                         {order.status}
                       </span>
                     </td>
                     <td className="p-4">
-                      <button
-                        type="button"
-                        disabled={!onView}
-                        onClick={() => onView?.(order)}
-                        aria-label={`View order ${order.orderNumber ?? order.id}`}
-                        className="rounded-lg border-0 bg-violet-50 px-3 py-2 font-semibold text-violet-700 enabled:hover:bg-violet-100 disabled:opacity-50"
-                      >
-                        View
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={!onView}
+                          onClick={() => onView?.(order)}
+                          aria-label={`View order ${order.orderNumber}`}
+                          className="rounded-lg border-0 bg-violet-50 px-3 py-2 font-semibold text-violet-700 disabled:opacity-50"
+                        >
+                          View
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={!onManage}
+                          onClick={() => onManage?.(order)}
+                          aria-label={`Manage order ${order.orderNumber}`}
+                          className="rounded-lg border-0 bg-violet-600 px-3 py-2 font-semibold text-white disabled:opacity-50"
+                        >
+                          Manage
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

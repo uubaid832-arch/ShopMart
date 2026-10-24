@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useStoredList } from "../../hooks/useStoredList";
 
 const STORAGE_KEY = "shopmart-wishlist-v1";
 
-function restoreWishlist(products) {
+function restoreWishlist(products, storageKey) {
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    const saved = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
 
     if (!Array.isArray(saved)) return [];
 
@@ -16,17 +16,14 @@ function restoreWishlist(products) {
   }
 }
 
-export function useWishlist(products) {
-  const [ids, setIds] = useState(() => restoreWishlist(products));
+export function useWishlist(products, userId = null) {
+  const storageKey = userId ? `${STORAGE_KEY}:user:${userId}` : STORAGE_KEY;
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-    } catch {
-      // Wishlist remains usable if browser storage is unavailable.
-    }
-  }, [ids]);
+  const [ids, setIds] = useStoredList(storageKey, (key) =>
+    restoreWishlist(products, key),
+  );
 
+  // Keep toggleItem and all remaining functions below.
   function toggleItem(id) {
     if (!products.some((product) => product.id === id)) return;
 

@@ -1,4 +1,6 @@
 import Modal from "../../components/Modal";
+import ProductThumbnail from "../../components/ProductThumbnail";
+import { useLanguage } from "../language/useLanguage";
 
 export default function WishlistModal({
   wishlist,
@@ -8,6 +10,9 @@ export default function WishlistModal({
   onAdd,
   onClose,
 }) {
+  const { language, direction } = useLanguage();
+  const urdu = language === "ur";
+  const text = (en, ur) => (urdu ? ur : en);
   const items = products.filter((product) => wishlist.hasItem(product.id));
 
   return (
@@ -17,14 +22,18 @@ export default function WishlistModal({
       size="md"
       fixedSections
     >
-      <header className="flex shrink-0 items-center justify-between gap-4 border-0 border-b border-solid border-slate-200 p-5">
+      <header
+        dir={direction}
+        className="flex shrink-0 items-center justify-between gap-4 border-0 border-b border-solid border-slate-200 p-5"
+      >
         <div>
           <p className="m-0 text-xs font-bold tracking-widest text-violet-600">
-            SAVED FOR LATER
+            {text("SAVED FOR LATER", "بعد کے لیے محفوظ")}
           </p>
+
           <h2 id="wishlist-title" className="mb-0 mt-2 text-2xl font-bold">
-            Your wishlist
-            <span className="ml-3 rounded-lg bg-violet-100 px-2 py-1 text-sm text-violet-700">
+            {text("Your wishlist", "آپ کی پسندیدہ مصنوعات")}
+            <span className="ms-3 rounded-lg bg-violet-100 px-2 py-1 text-sm text-violet-700">
               {items.length}
             </span>
           </h2>
@@ -32,25 +41,35 @@ export default function WishlistModal({
 
         <button
           type="button"
-          aria-label="Close wishlist"
+          aria-label={text("Close wishlist", "پسندیدہ مصنوعات بند کریں")}
           onClick={onClose}
           className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-slate-600 hover:bg-violet-100"
         >
-          <span className="text-2xl">×</span>
+          <span aria-hidden="true" className="text-2xl">
+            ×
+          </span>
         </button>
       </header>
 
-      <div className="min-h-0 overflow-y-auto overscroll-contain px-5">
+      <div
+        dir={direction}
+        className="min-h-0 overflow-y-auto overscroll-contain px-5"
+      >
         {items.length === 0 ? (
           <div className="py-10 text-center">
             <span aria-hidden="true" className="text-5xl text-rose-500">
               ♡
             </span>
+
             <h3 className="mb-2 mt-4 text-xl font-bold">
-              Save your favourites
+              {text("Save your favourites", "اپنی پسندیدہ مصنوعات محفوظ کریں")}
             </h3>
+
             <p className="m-0 text-slate-500">
-              Tap a product’s heart to add it here.
+              {text(
+                "Tap a product’s heart to add it here.",
+                "کسی مصنوع کو یہاں شامل کرنے کے لیے دل کے نشان پر کلک کریں۔",
+              )}
             </p>
           </div>
         ) : (
@@ -67,26 +86,43 @@ export default function WishlistModal({
                   key={product.id}
                   className="border-0 border-b border-solid border-slate-200 py-5 last:border-b-0"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                  <div className="flex items-start gap-3">
+                    <ProductThumbnail product={product} />
+
+                    <div className="min-w-0 flex-1">
                       <p className="m-0 text-xs text-slate-500">
-                        {product.category}
+                        <bdi>{product.category}</bdi>
                       </p>
+
                       <h3 className="my-1 break-words text-base font-bold">
-                        {product.name}
+                        <bdi>{product.name}</bdi>
                       </h3>
+
                       <p className="m-0 font-semibold text-violet-700">
-                        {formatPrice(product.price)}
+                        <bdi>{formatPrice(product.price)}</bdi>
+                      </p>
+
+                      <p
+                        className={`mb-0 mt-1 text-xs ${
+                          outOfStock ? "text-rose-700" : "text-emerald-700"
+                        }`}
+                      >
+                        {outOfStock
+                          ? text("Out of stock", "اسٹاک ختم")
+                          : text("In stock", "اسٹاک میں موجود")}
                       </p>
                     </div>
 
                     <button
                       type="button"
-                      aria-label={`Remove ${product.name} from wishlist`}
+                      aria-label={text(
+                        `Remove ${product.name} from wishlist`,
+                        `${product.name} کو پسندیدہ مصنوعات سے ہٹائیں`,
+                      )}
                       onClick={() => wishlist.toggleItem(product.id)}
-                      className="shrink-0 rounded-lg border-0 bg-rose-50 px-2 py-1 text-rose-700 hover:bg-rose-100"
+                      className="shrink-0 rounded-lg border-0 bg-rose-50 px-2 py-1 text-sm text-rose-700 hover:bg-rose-100"
                     >
-                      Remove
+                      {text("Remove", "ہٹائیں")}
                     </button>
                   </div>
 
@@ -97,18 +133,21 @@ export default function WishlistModal({
                     className="mt-4 w-full rounded-xl border-0 bg-violet-100 p-3 font-semibold text-violet-700 transition enabled:hover:bg-violet-600 enabled:hover:text-white disabled:bg-slate-100 disabled:text-slate-500"
                   >
                     {outOfStock
-                      ? "Out of stock"
+                      ? text("Out of stock", "اسٹاک ختم")
                       : atLimit
-                        ? "Stock limit reached"
-                        : "＋ Add to cart"}
+                        ? text("Stock limit reached", "دستیاب مقدار کی حد پوری")
+                        : text("＋ Add to cart", "＋ ٹوکری میں شامل کریں")}
                   </button>
 
                   {quantity > 0 && (
                     <p
-                      className="mb-0 mt-2 text-xs text-slate-500"
                       role="status"
+                      className="mb-0 mt-2 text-xs text-slate-500"
                     >
-                      {quantity} in your cart
+                      {text(
+                        `${quantity} in your cart`,
+                        `آپ کی ٹوکری میں ${quantity} موجود ہیں`,
+                      )}
                     </p>
                   )}
                 </li>
@@ -118,13 +157,16 @@ export default function WishlistModal({
         )}
       </div>
 
-      <footer className="shrink-0 border-0 border-t border-solid border-slate-200 p-5">
+      <footer
+        dir={direction}
+        className="shrink-0 border-0 border-t border-solid border-slate-200 p-5"
+      >
         <button
           type="button"
           onClick={onClose}
           className="w-full rounded-xl border-0 bg-violet-600 p-3 font-semibold text-white hover:bg-violet-700"
         >
-          Continue shopping →
+          {text("Continue shopping →", "خریداری جاری رکھیں ←")}
         </button>
       </footer>
     </Modal>

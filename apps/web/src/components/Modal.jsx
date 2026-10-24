@@ -4,8 +4,8 @@ import { createPortal } from "react-dom";
 const widths = {
   sm: "max-w-md",
   md: "max-w-lg",
-  lg: "max-w-xl",
-  xl: "max-w-3xl",
+  lg: "max-w-2xl",
+  xl: "max-w-4xl",
 };
 
 export default function Modal({
@@ -17,35 +17,51 @@ export default function Modal({
   children,
 }) {
   const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
 
-    dialog.showModal();
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+
     document.body.style.overflow = "hidden";
 
     return () => {
-      dialog.close();
+      if (dialog.open) {
+        dialog.close();
+      }
+
       document.body.style.overflow = previousOverflow;
+
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus({ preventScroll: true });
+      }
     };
   }, [isOpen]);
 
   function handleBackdropClick(event) {
     if (event.target !== event.currentTarget) return;
 
-    const { left, right, top, bottom } =
-      event.currentTarget.getBoundingClientRect();
+    const bounds = event.currentTarget.getBoundingClientRect();
 
-    if (
-      event.clientX < left ||
-      event.clientX > right ||
-      event.clientY < top ||
-      event.clientY > bottom
-    ) {
-      onClose();
+    const outside =
+      event.clientX < bounds.left ||
+      event.clientX > bounds.right ||
+      event.clientY < bounds.top ||
+      event.clientY > bounds.bottom;
+
+    if (outside) {
+      closeRef.current?.();
     }
   }
 
@@ -53,15 +69,16 @@ export default function Modal({
     <dialog
       ref={dialogRef}
       aria-labelledby={labelledBy}
+      aria-modal="true"
       onClick={handleBackdropClick}
       onCancel={(event) => {
         event.preventDefault();
-        onClose();
+        closeRef.current?.();
       }}
-      className={`m-auto max-h-[90dvh] w-[calc(100%-2rem)] rounded-3xl border-0 bg-white p-0 text-slate-800 shadow-2xl backdrop:bg-slate-950/50 backdrop:backdrop-blur-sm ${
+      className={`shopmart-modal m-auto box-border max-h-[92dvh] w-[calc(100%-1rem)] rounded-2xl border border-solid border-slate-200 bg-white p-0 text-slate-800 shadow-2xl sm:max-h-[90dvh] sm:w-[calc(100%-3rem)] sm:rounded-3xl ${
         fixedSections
           ? "overflow-hidden open:flex open:flex-col"
-          : "overflow-y-auto"
+          : "overflow-y-auto overscroll-contain"
       } ${widths[size] ?? widths.md}`}
     >
       {children}

@@ -1,26 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
+import { getProducts } from "./api/products";
 import "./App.css";
-import { demoProducts } from "./data/demoProducts";
+
 import { useCart } from "./features/cart/useCart";
 import CartPanel from "./features/cart/CartPanel";
 import ProductDetails from "./features/products/ProductDetails";
 import { useWishlist } from "./features/wishlist/useWishlist";
 import WishlistModal from "./features/wishlist/WishlistModal";
 import AuthModal from "./features/auth/AuthModal";
-import OrdersModal from "./features/orders/OrdersModal";
+import CustomerOrders from "./features/orders/CustomerOrders";
 import CheckoutModal from "./features/checkout/CheckoutModal";
-import NotificationsModal from "./features/notifications/NotificationsModal";
 import ReturnsModal from "./features/return/ReturnsModal";
 import TrackingModal from "./features/tracking/TrackingModal";
 import Navbar from "./components/Navbar";
 import ChatWidget from "./features/chatbot/ChatWidget";
 import ProfileModal from "./features/account/ProfileModal";
 import Recommendations from "./features/recommendations/Recommendations";
-
-const categories = [
-  "All",
-  ...new Set(demoProducts.map((product) => product.category)),
-];
+import { useSession } from "./features/auth/useSession";
+import { useLanguage } from "./features/language/useLanguage";
+import AboutModal from "./components/AboutModal";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-PK", {
@@ -29,7 +28,28 @@ const formatPrice = (price) =>
     maximumFractionDigits: 0,
   }).format(price);
 
-// Decorative illustrations drawn directly with SVG.
+const normalize = (value) =>
+  String(value ?? "")
+    .normalize("NFKC")
+    .toLocaleLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+const defaultFilters = {
+  search: "",
+  category: "All",
+  minPrice: "",
+  maxPrice: "",
+  sort: "featured",
+  inStock: false,
+};
+
+const filterInput =
+  "box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 text-sm text-slate-800";
+
+const secondaryButton =
+  "rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40";
+
 function ProductIllustration({ type }) {
   return (
     <svg
@@ -151,6 +171,25 @@ function ProductIllustration({ type }) {
           <path d="M79 173a40 19 0 0 1 80 0z" fill="currentColor" />
         </>
       )}
+
+      {!["headphones", "backpack", "coffee", "lamp"].includes(type) && (
+        <>
+          <rect
+            x="65"
+            y="55"
+            width="110"
+            height="110"
+            rx="16"
+            stroke="currentColor"
+            strokeWidth="8"
+          />
+          <path
+            d="M65 90h110M120 55v110"
+            stroke="currentColor"
+            strokeWidth="6"
+          />
+        </>
+      )}
     </svg>
   );
 }
@@ -163,6 +202,10 @@ function ProductCard({
   isWishlisted,
   onToggleWishlist,
 }) {
+  const { language, direction } = useLanguage();
+  const text = (en, ur) => (language === "ur" ? ur : en);
+  const [failedImages, setFailedImages] = useState([]);
+
   const outOfStock = product.stock <= 0;
   const atLimit = quantity >= product.stock;
 
@@ -173,29 +216,53 @@ function ProductCard({
     sand: "bg-[#f8f1df] text-[#927131]",
   };
 
+  const imageUrls = [
+    ...new Set(
+      [
+        product.imageUrl,
+        ...(product.images ?? []).map((image) => image.url),
+      ].filter(Boolean),
+    ),
+  ];
+
+  const imageUrl = imageUrls.find((url) => !failedImages.includes(url));
+
   return (
-    <article className="overflow-hidden rounded-2xl border border-solid border-slate-200 bg-white transition hover:-translate-y-1 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none">
+    <article
+      dir={direction}
+      className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-solid border-slate-200 bg-white transition hover:-translate-y-1 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none"
+    >
       <div
-        className={`relative grid h-56 place-items-center p-6 ${
-          colors[product.color] ?? colors.lavender
+        className={`relative box-border grid h-56 shrink-0 place-items-center p-5 ${
+          imageUrl ? "bg-white" : (colors[product.color] ?? colors.lavender)
         }`}
       >
         <span
-          className={`absolute left-3 top-3 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold ${
+          className={`pointer-events-none absolute start-3 top-3 z-10 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold ${
             outOfStock ? "text-rose-700" : "text-emerald-700"
           }`}
         >
-          {outOfStock ? "Out of stock" : "In stock"}
+          {outOfStock
+            ? text("Out of stock", "اسٹاک ختم")
+            : text("In stock", "اسٹاک میں موجود")}
         </span>
 
         <button
           type="button"
           aria-pressed={isWishlisted}
-          aria-label={`${isWishlisted ? "Remove" : "Save"} ${product.name} ${
-            isWishlisted ? "from" : "to"
-          } wishlist`}
+          aria-label={
+            isWishlisted
+              ? text(
+                  `Remove ${product.name} from wishlist`,
+                  `${product.name} کو پسندیدہ مصنوعات سے ہٹائیں`,
+                )
+              : text(
+                  `Save ${product.name} to wishlist`,
+                  `${product.name} کو پسندیدہ مصنوعات میں شامل کریں`,
+                )
+          }
           onClick={() => onToggleWishlist(product.id)}
-          className={`absolute right-3 top-3 z-10 grid size-10 place-items-center rounded-full border-0 p-0 shadow-sm transition hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none ${
+          className={`absolute end-3 top-3 z-20 grid size-10 place-items-center rounded-full border-0 p-0 shadow-sm transition hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none ${
             isWishlisted
               ? "bg-rose-600 text-white"
               : "bg-white text-rose-600 hover:bg-rose-50"
@@ -216,27 +283,67 @@ function ProductCard({
           </svg>
         </button>
 
-        <div className="w-full max-w-48">
-          <ProductIllustration type={product.illustration} />
-        </div>
+        <button
+          type="button"
+          onClick={() => onView(product)}
+          aria-label={text(
+            `View photos and details for ${product.name}`,
+            `${product.name} کی تصاویر اور تفصیلات دیکھیں`,
+          )}
+          aria-haspopup="dialog"
+          className="grid h-full w-full min-w-0 place-items-center overflow-hidden rounded-xl border-0 bg-transparent p-0 text-inherit"
+        >
+          {imageUrl ? (
+            <img
+              key={imageUrl}
+              src={imageUrl}
+              alt={product.name}
+              width={320}
+              height={224}
+              loading="lazy"
+              decoding="async"
+              onError={() =>
+                setFailedImages((current) =>
+                  current.includes(imageUrl) ? current : [...current, imageUrl],
+                )
+              }
+              className="h-full max-h-44 w-full object-contain"
+            />
+          ) : (
+            <div className="w-full max-w-48">
+              <ProductIllustration type={product.illustration} />
+            </div>
+          )}
+        </button>
+
+        {imageUrl && imageUrls.length > 1 && (
+          <span className="pointer-events-none absolute bottom-3 start-3 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold text-slate-600">
+            {text(`${imageUrls.length} photos`, `${imageUrls.length} تصاویر`)}
+          </span>
+        )}
 
         {quantity > 0 && (
-          <span className="absolute bottom-3 right-3 rounded-lg bg-white px-2 py-1 text-xs font-semibold text-violet-700">
-            {quantity} in cart
+          <span className="pointer-events-none absolute bottom-3 end-3 rounded-lg bg-white px-2 py-1 text-xs font-semibold text-violet-700">
+            {text(`${quantity} in cart`, `ٹوکری میں ${quantity}`)}
           </span>
         )}
       </div>
 
-      <div className="p-5">
-        <p className="m-0 text-xs text-slate-500">{product.category}</p>
-        <h3 className="mb-4 mt-2 text-base font-bold">{product.name}</h3>
+      <div className="flex flex-1 flex-col p-5">
+        <p className="m-0 text-xs text-slate-500">
+          <bdi>{product.category}</bdi>
+        </p>
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="mb-4 mt-2 break-words text-base font-bold">
+          <bdi>{product.name}</bdi>
+        </h3>
+
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
           <p className="m-0 text-lg font-extrabold">
-            {formatPrice(product.price)}
+            <bdi>{formatPrice(product.price)}</bdi>
           </p>
           <span className="text-xs text-slate-500">
-            {product.stock} available
+            {text(`${product.stock} available`, `${product.stock} دستیاب`)}
           </span>
         </div>
 
@@ -247,90 +354,207 @@ function ProductCard({
           className="mt-4 w-full rounded-xl border-0 bg-violet-100 p-3 font-semibold text-violet-700 transition enabled:hover:bg-violet-600 enabled:hover:text-white disabled:bg-slate-100 disabled:text-slate-500"
         >
           {outOfStock
-            ? "Out of stock"
+            ? text("Out of stock", "اسٹاک ختم")
             : atLimit
-              ? "Stock limit reached"
-              : "＋ Add to cart"}
+              ? text("Stock limit reached", "دستیاب مقدار کی حد پوری")
+              : text("＋ Add to cart", "＋ ٹوکری میں شامل کریں")}
         </button>
 
         <button
           type="button"
           aria-haspopup="dialog"
-          aria-label={`View details for ${product.name}`}
           onClick={() => onView(product)}
+          aria-label={text(
+            `View details for ${product.name}`,
+            `${product.name} کی تفصیلات دیکھیں`,
+          )}
           className="mt-2 w-full rounded-lg border-0 bg-transparent p-2 text-slate-500 hover:bg-violet-50 hover:text-violet-700"
         >
-          View details ↗
+          {text("View details ↗", "تفصیلات دیکھیں ↖")}
         </button>
       </div>
     </article>
   );
 }
 
-export default function App() {
-  const cart = useCart(demoProducts);
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [sortBy, setSortBy] = useState("featured");
-  const [notice, setNotice] = useState("");
-  const query = search.trim().toLowerCase();
-  const minimum = minPrice === "" ? 0 : Number(minPrice);
-  const maximum = maxPrice === "" ? Infinity : Number(maxPrice);
+function Storefront({ products }) {
+  const { language, direction } = useLanguage();
+  const text = (en, ur) => (language === "ur" ? ur : en);
+
+  const [filters, setFilters] = useState(defaultFilters);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(12);
+  const [notice, setNotice] = useState(null);
+
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [viewedProductIds, setViewedProductIds] = useState([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const wishlist = useWishlist(demoProducts);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isReturnsOpen, setIsReturnsOpen] = useState(false);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  const {
+    session,
+    restoring,
+    error: sessionError,
+    signIn,
+    signOut,
+    saveProfile,
+  } = useSession();
+
+  const navigate = useNavigate();
+  const cart = useCart(products, session?.user.id);
+  const wishlist = useWishlist(products, session?.user.id);
+
+  const catalog = products.filter((product) => product.active !== false);
+
+  const categories = [
+    "All",
+    ...[...new Set(catalog.map((product) => product.category))]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b)),
+  ];
+
+  const selectedCategory = categories.includes(filters.category)
+    ? filters.category
+    : "All";
+
+  const query = normalize(filters.search);
+  const words = [...new Set(query.split(" ").filter(Boolean))];
+
+  const minimum = filters.minPrice.trim() === "" ? 0 : Number(filters.minPrice);
+
+  const maximum =
+    filters.maxPrice.trim() === "" ? Infinity : Number(filters.maxPrice);
 
   const priceError =
-    (minPrice !== "" && !Number.isFinite(minimum)) ||
-    (maxPrice !== "" && !Number.isFinite(maximum))
-      ? "Enter a valid price."
+    (filters.minPrice !== "" && !Number.isFinite(minimum)) ||
+    (filters.maxPrice !== "" && !Number.isFinite(maximum))
+      ? text("Enter a valid price.", "درست قیمت درج کریں۔")
       : minimum < 0 || maximum < 0
-        ? "Prices cannot be negative."
+        ? text("Prices cannot be negative.", "قیمت منفی نہیں ہو سکتی۔")
         : minimum > maximum
-          ? "Minimum price cannot exceed maximum price."
+          ? text(
+              "Minimum price cannot exceed maximum price.",
+              "کم سے کم قیمت، زیادہ سے زیادہ قیمت سے بڑھ نہیں سکتی۔",
+            )
           : "";
 
-  const filteredProducts = demoProducts.filter((product) => {
-    const matchesSearch = `${product.name} ${product.category}`
-      .toLowerCase()
-      .includes(query);
+  const matchingProducts = catalog
+    .map((product, index) => {
+      const name = normalize(product.name);
+      const category = normalize(product.category);
+      const searchable = normalize(
+        `${product.name} ${product.category} ${product.description ?? ""}`,
+      );
 
-    const matchesCategory =
-      selectedCategory === "All" || product.category === selectedCategory;
+      const matchesSearch = words.every((word) => searchable.includes(word));
 
-    const matchesPrice = product.price >= minimum && product.price <= maximum;
+      const matchesCategory =
+        selectedCategory === "All" || product.category === selectedCategory;
 
-    return !priceError && matchesSearch && matchesCategory && matchesPrice;
-  });
+      const matchesPrice =
+        Number(product.price) >= minimum && Number(product.price) <= maximum;
 
-  const visibleProducts = [...filteredProducts].sort((a, b) => {
-    if (sortBy === "price-low") return a.price - b.price;
-    if (sortBy === "price-high") return b.price - a.price;
-    if (sortBy === "name") return a.name.localeCompare(b.name);
-    return 0;
-  });
+      const matchesStock = !filters.inStock || product.stock > 0;
+
+      const score = query
+        ? (name === query ? 100 : name.includes(query) ? 50 : 0) +
+          words.reduce(
+            (total, word) =>
+              total +
+              (name.includes(word) ? 10 : category.includes(word) ? 5 : 1),
+            0,
+          )
+        : 0;
+
+      return {
+        product,
+        index,
+        score,
+        matches:
+          !priceError &&
+          matchesSearch &&
+          matchesCategory &&
+          matchesPrice &&
+          matchesStock,
+      };
+    })
+    .filter((entry) => entry.matches)
+    .sort((a, b) => {
+      const byName = a.product.name.localeCompare(
+        b.product.name,
+        language === "ur" ? "ur" : "en",
+        { sensitivity: "base" },
+      );
+
+      if (filters.sort === "price-low") {
+        return a.product.price - b.product.price || byName;
+      }
+
+      if (filters.sort === "price-high") {
+        return b.product.price - a.product.price || byName;
+      }
+
+      if (filters.sort === "name") return byName;
+      if (filters.sort === "name-desc") return -byName;
+
+      return b.score - a.score || a.index - b.index;
+    })
+    .map(({ product }) => product);
+
+  const totalItems = matchingProducts.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const currentPage = Math.min(page, Math.max(0, totalPages - 1));
+  const startIndex = currentPage * pageSize;
+
+  const visibleProducts = matchingProducts.slice(
+    startIndex,
+    startIndex + pageSize,
+  );
+
+  const firstItem = totalItems ? startIndex + 1 : 0;
+  const lastItem = startIndex + visibleProducts.length;
+
+  const firstPageButton = Math.max(
+    0,
+    Math.min(currentPage - 2, totalPages - 5),
+  );
+
+  const pageNumbers = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => firstPageButton + index,
+  );
 
   const hasFilters =
-    search !== "" ||
+    filters.search !== "" ||
     selectedCategory !== "All" ||
-    minPrice !== "" ||
-    maxPrice !== "";
+    filters.minPrice !== "" ||
+    filters.maxPrice !== "" ||
+    filters.inStock ||
+    filters.sort !== "featured";
+
+  function updateFilters(values) {
+    setFilters((current) => ({ ...current, ...values }));
+    setPage(0);
+  }
 
   function clearFilters() {
-    setSearch("");
-    setSelectedCategory("All");
-    setMinPrice("");
-    setMaxPrice("");
+    setFilters({ ...defaultFilters });
+    setPage(0);
+  }
+
+  function handleViewProduct(product) {
+    setSelectedProduct(product);
+
+    setViewedProductIds((current) =>
+      [product.id, ...current.filter((id) => id !== product.id)].slice(0, 12),
+    );
   }
 
   function handleAdd(product) {
@@ -340,61 +564,138 @@ export default function App() {
     if (product.stock <= 0 || quantity >= product.stock) return;
 
     cart.addItem(product);
-    setNotice(`${product.name} added to your cart.`);
+    setNotice({ name: product.name });
+  }
+
+  function renderProduct(product) {
+    return (
+      <ProductCard
+        key={product.id}
+        product={product}
+        quantity={
+          cart.items.find((item) => item.id === product.id)?.quantity ?? 0
+        }
+        onAdd={handleAdd}
+        onView={handleViewProduct}
+        isWishlisted={wishlist.hasItem(product.id)}
+        onToggleWishlist={wishlist.toggleItem}
+      />
+    );
+  }
+
+  async function handleSignOut() {
+    const signedOut = await signOut();
+
+    if (signedOut) {
+      setIsProfileOpen(false);
+      setIsOrdersOpen(false);
+      setIsTrackingOpen(false);
+      setIsReturnsOpen(false);
+      setIsCheckoutOpen(false);
+    }
   }
 
   return (
     <>
+      {restoring && (
+        <p
+          dir={direction}
+          role="status"
+          className="m-0 bg-violet-50 px-4 py-2 text-center text-sm text-violet-700"
+        >
+          {text("Checking sign-in…", "سائن اِن کی جانچ ہو رہی ہے…")}
+        </p>
+      )}
+
+      {sessionError && (
+        <p
+          dir={direction}
+          role="alert"
+          className="m-0 bg-rose-50 px-4 py-3 text-center text-sm text-rose-700"
+        >
+          {text(
+            sessionError,
+            "اکاؤنٹ کی کارروائی مکمل نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+          )}
+        </p>
+      )}
+
       <Navbar
-        search={search}
-        onSearch={setSearch}
+        search={filters.search}
+        isSignedIn={Boolean(session)}
+        onSearch={(value) => updateFilters({ search: value })}
         wishlistCount={wishlist.count}
         cartCount={cart.count}
-        onAccount={() => setIsAuthOpen(true)}
-        onOrders={() => setIsOrdersOpen(true)}
+        onSignOut={handleSignOut}
+        onAccount={() => {
+          if (restoring) return;
+          if (session) setIsProfileOpen(true);
+          else setIsAuthOpen(true);
+        }}
+        onOrders={() => {
+          if (restoring) return;
+          if (!session) setIsAuthOpen(true);
+          else setIsOrdersOpen(true);
+        }}
         onTracking={() => setIsTrackingOpen(true)}
         onReturns={() => setIsReturnsOpen(true)}
-        onNotifications={() => setIsNotificationsOpen(true)}
         onWishlist={() => setIsWishlistOpen(true)}
         onCart={() => setIsCartOpen(true)}
         onProfile={() => setIsProfileOpen(true)}
+        onAbout={() => setIsAboutOpen(true)}
       />
 
-      <main id="top" className="mx-auto max-w-7xl scroll-mt-48 px-4 lg:px-6">
+      <main
+        id="top"
+        dir={direction}
+        className="mx-auto max-w-7xl scroll-mt-48 px-4 lg:px-6"
+      >
         <section
           aria-labelledby="hero-title"
           className="relative my-8 grid overflow-hidden rounded-3xl border border-solid border-violet-200 bg-linear-to-br from-violet-50 to-violet-200 p-6 sm:p-10 lg:grid-cols-2 lg:p-14"
         >
           <div className="relative z-10">
             <p className="m-0 text-xs font-bold tracking-widest text-violet-600">
-              EVERYDAY FINDS. ONE PLACE.
+              {text(
+                "EVERYDAY FINDS. ONE PLACE.",
+                "روزمرہ کی ضروریات، ایک جگہ۔",
+              )}
             </p>
 
             <h1
               id="hero-title"
-              className="my-5 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl"
+              className="mb-5 mt-4 text-4xl font-extrabold leading-tight text-slate-900 sm:text-5xl"
             >
-              Little upgrades.
+              {text("Little upgrades.", "چھوٹی تبدیلیاں۔")}
               <br />
-              <span className="text-violet-600">Big everyday joy.</span>
+              <span className="text-violet-700">
+                {text("Big everyday joy.", "روزمرہ کی بڑی خوشیاں۔")}
+              </span>
             </h1>
 
-            <p className="mb-6 max-w-md text-slate-600">
-              Explore electronics, fashion and home essentials. Find something
-              that fits your day.
+            <p className="mb-6 max-w-md text-sm leading-7 text-slate-600">
+              {text(
+                "Explore everyday essentials and discover your next favourite.",
+                "روزمرہ کی ضروریات دیکھیں اور اپنی پسند کی مصنوعات تلاش کریں۔",
+              )}
             </p>
 
             <a
               href="#products"
               className="inline-flex items-center gap-6 rounded-xl bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-700"
             >
-              Explore collection <span aria-hidden="true">↗</span>
+              {text("Explore collection", "مصنوعات دیکھیں")}
+              <span aria-hidden="true">{text("↗", "↖")}</span>
             </a>
 
             <div className="mt-7 flex flex-wrap gap-4 text-xs text-slate-600">
-              {["Electronics", "Fashion", "Home"].map((category) => (
+              {[
+                text("Electronics", "الیکٹرانکس"),
+                text("Fashion", "فیشن"),
+                text("Home", "گھر"),
+              ].map((category) => (
                 <span key={category}>
-                  <span aria-hidden="true" className="mr-2 text-violet-600">
+                  <span aria-hidden="true" className="me-2 text-violet-600">
                     •
                   </span>
                   {category}
@@ -413,18 +714,14 @@ export default function App() {
               <ProductIllustration type="headphones" />
             </div>
 
-            <div className="absolute bottom-0 right-0 rounded-2xl bg-white/90 px-5 py-3 shadow-lg">
+            <div className="absolute bottom-0 end-0 rounded-2xl bg-white/90 px-5 py-3 shadow-lg">
               <p className="m-0 text-xs tracking-widest text-slate-500">
-                EVERYDAY ESSENTIAL
+                {text("EVERYDAY ESSENTIAL", "روزمرہ کی ضرورت")}
               </p>
               <p className="mb-0 mt-1 font-bold text-slate-800">
-                Sound meets style.
+                {text("Sound meets style.", "آواز اور انداز کا حسین امتزاج۔")}
               </p>
             </div>
-
-            <span className="absolute right-2 top-0 text-4xl text-violet-600">
-              ✦
-            </span>
           </div>
         </section>
 
@@ -433,26 +730,35 @@ export default function App() {
           aria-labelledby="products-title"
           className="scroll-mt-48 pb-8"
         >
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="m-0 text-xs font-bold tracking-widest text-violet-600">
-                THE COLLECTION
+                {text("THE COLLECTION", "ہماری مصنوعات")}
               </p>
+
               <h2 id="products-title" className="mb-0 mt-2 text-3xl font-bold">
-                Find your favourites
+                {text("Find your favourites", "اپنی پسند کی مصنوعات تلاش کریں")}
               </h2>
             </div>
 
-            <p className="m-0 text-sm text-slate-500" aria-live="polite">
-              {visibleProducts.length} products found
+            <p role="status" className="m-0 text-sm text-slate-500">
+              {priceError
+                ? text("Check the price range", "قیمت کی حد چیک کریں")
+                : text(
+                    `${totalItems} products found`,
+                    `${totalItems} مصنوعات ملیں`,
+                  )}
             </p>
-          </div>
+          </header>
 
-          <div className="rounded-2xl border border-solid border-slate-200 bg-white p-4 sm:p-5">
+          <div className="grid gap-5 rounded-2xl border border-solid border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div
                 role="group"
-                aria-label="Filter by category"
+                aria-label={text(
+                  "Filter by category",
+                  "قسم کے مطابق فلٹر کریں",
+                )}
                 className="flex flex-wrap gap-2"
               >
                 {categories.map((category) => (
@@ -460,178 +766,272 @@ export default function App() {
                     key={category}
                     type="button"
                     aria-pressed={selectedCategory === category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`rounded-xl border-0 px-4 py-2 font-semibold ${
+                    onClick={() => updateFilters({ category })}
+                    className={`rounded-xl border-0 px-4 py-2 text-sm font-semibold ${
                       selectedCategory === category
                         ? "bg-violet-600 text-white"
                         : "bg-slate-100 text-slate-600 hover:bg-violet-100"
                     }`}
                   >
-                    {category === "All" ? "All products" : category}
+                    <bdi>
+                      {category === "All"
+                        ? text("All products", "تمام مصنوعات")
+                        : category}
+                    </bdi>
                   </button>
                 ))}
               </div>
 
-              <label
-                htmlFor="sort-products"
-                className="flex items-center gap-2 text-sm text-slate-500"
-              >
-                Sort by
+              <label className="flex items-center gap-2 text-sm text-slate-500">
+                {text("Sort by", "ترتیب")}
                 <select
-                  id="sort-products"
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value)}
+                  value={filters.sort}
+                  onChange={(event) =>
+                    updateFilters({ sort: event.target.value })
+                  }
                   className="min-w-0 rounded-lg border border-solid border-slate-200 bg-white p-2 text-slate-800"
                 >
-                  <option value="featured">Default order</option>
-                  <option value="price-low">Price: low to high</option>
-                  <option value="price-high">Price: high to low</option>
-                  <option value="name">Name: A–Z</option>
+                  <option value="featured">
+                    {query
+                      ? text("Best match", "بہترین مطابقت")
+                      : text("Default order", "بنیادی ترتیب")}
+                  </option>
+                  <option value="price-low">
+                    {text("Price: low to high", "قیمت: کم سے زیادہ")}
+                  </option>
+                  <option value="price-high">
+                    {text("Price: high to low", "قیمت: زیادہ سے کم")}
+                  </option>
+                  <option value="name">{text("Name: A–Z", "نام: A–Z")}</option>
+                  <option value="name-desc">
+                    {text("Name: Z–A", "نام: Z–A")}
+                  </option>
                 </select>
               </label>
             </div>
 
-            <fieldset className="mx-0 mb-0 mt-5 min-w-0 border-0 border-t border-solid border-slate-200 px-0 pb-0 pt-4">
-              <legend className="pr-3 text-xs font-semibold text-slate-500">
-                Price range · PKR
-              </legend>
-
-              <div className="flex flex-wrap items-end gap-3">
-                {[
-                  {
-                    id: "min-price",
-                    label: "Minimum",
-                    value: minPrice,
-                    setValue: setMinPrice,
-                  },
-                  {
-                    id: "max-price",
-                    label: "Maximum",
-                    value: maxPrice,
-                    setValue: setMaxPrice,
-                  },
-                ].map(({ id, label, value, setValue }) => (
-                  <label
-                    key={id}
-                    htmlFor={id}
-                    className="grid min-w-0 flex-[1_1_140px] gap-2 text-xs text-slate-500 sm:max-w-48"
-                  >
-                    {label}
-                    <input
-                      id={id}
-                      type="number"
-                      min="0"
-                      step="any"
-                      placeholder={`No ${label.toLowerCase()}`}
-                      value={value}
-                      onChange={(event) => setValue(event.target.value)}
-                      aria-invalid={Boolean(priceError)}
-                      aria-describedby={priceError ? "price-error" : undefined}
-                      className={`box-border w-full min-w-0 rounded-xl border border-solid bg-slate-50 p-3 text-slate-800 ${
-                        priceError ? "border-rose-500" : "border-slate-200"
-                      }`}
-                    />
-                  </label>
-                ))}
-
-                {hasFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="rounded-xl border-0 bg-violet-50 px-4 py-3 text-violet-700 hover:bg-violet-100 sm:ml-auto"
-                  >
-                    Clear filters ↺
-                  </button>
-                )}
-              </div>
-
-              {priceError && (
-                <p
-                  id="price-error"
-                  role="alert"
-                  className="mb-0 text-sm text-rose-700"
+            <div className="flex flex-wrap items-end gap-3 border-0 border-t border-solid border-slate-200 pt-4">
+              {[
+                ["minPrice", text("Minimum price · PKR", "کم سے کم قیمت")],
+                [
+                  "maxPrice",
+                  text("Maximum price · PKR", "زیادہ سے زیادہ قیمت"),
+                ],
+              ].map(([name, label]) => (
+                <label
+                  key={name}
+                  className="grid min-w-0 flex-[1_1_140px] gap-2 text-xs text-slate-500 sm:max-w-48"
                 >
-                  {priceError}
-                </p>
+                  {label}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={filters[name]}
+                    placeholder={text("Any", "کوئی بھی")}
+                    onChange={(event) =>
+                      updateFilters({ [name]: event.target.value })
+                    }
+                    aria-invalid={Boolean(priceError)}
+                    aria-describedby={priceError ? "price-error" : undefined}
+                    className={`${filterInput} ${
+                      priceError ? "border-rose-500" : ""
+                    }`}
+                  />
+                </label>
+              ))}
+
+              <label className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={filters.inStock}
+                  onChange={(event) =>
+                    updateFilters({ inStock: event.target.checked })
+                  }
+                  className="m-0 size-4 accent-violet-600"
+                />
+                {text("In stock only", "صرف دستیاب مصنوعات")}
+              </label>
+
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className={`${secondaryButton} py-3 sm:ms-auto`}
+                >
+                  {text("Clear filters ↺", "فلٹرز صاف کریں ↺")}
+                </button>
               )}
-            </fieldset>
-          </div>
+            </div>
 
-          <div role="status" aria-live="polite" className="my-5">
-            {notice && (
-              <div className="flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                <span>{notice}</span>
+            {priceError && (
+              <p
+                id="price-error"
+                role="alert"
+                className="m-0 text-sm text-rose-700"
+              >
+                {priceError}
+              </p>
+            )}
 
-                <button
-                  type="button"
-                  onClick={() => setIsCartOpen(true)}
-                  className="ml-auto rounded-lg border-0 bg-transparent px-2 py-1 font-semibold text-emerald-800 hover:bg-emerald-100"
-                >
-                  View cart →
-                </button>
-
-                <button
-                  type="button"
-                  aria-label="Dismiss cart notification"
-                  onClick={() => setNotice("")}
-                  className="grid size-8 place-items-center rounded-lg border-0 bg-transparent text-emerald-800 hover:bg-emerald-100"
-                >
-                  ×
-                </button>
-              </div>
+            {query && (
+              <p className="m-0 break-words text-xs text-slate-500">
+                {text("Searching for:", "تلاش:")}{" "}
+                <bdi>“{filters.search.trim()}”</bdi>
+              </p>
             )}
           </div>
 
-          {visibleProducts.length > 0 ? (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {visibleProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  quantity={
-                    cart.items.find((item) => item.id === product.id)
-                      ?.quantity ?? 0
-                  }
-                  onAdd={handleAdd}
-                  onView={setSelectedProduct}
-                  isWishlisted={wishlist.hasItem(product.id)}
-                  onToggleWishlist={wishlist.toggleItem}
-                />
-              ))}
+          {notice && (
+            <div
+              role="status"
+              className="mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+            >
+              <span>
+                <bdi>{notice.name}</bdi>{" "}
+                {text("added to your cart.", "آپ کی ٹوکری میں شامل ہو گیا۔")}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(true)}
+                className="ms-auto rounded-lg border-0 bg-transparent px-2 py-1 font-semibold text-emerald-800 hover:bg-emerald-100"
+              >
+                {text("View cart →", "ٹوکری دیکھیں ←")}
+              </button>
+
+              <button
+                type="button"
+                aria-label={text("Dismiss notification", "اطلاع بند کریں")}
+                onClick={() => setNotice(null)}
+                className="grid size-8 place-items-center rounded-lg border-0 bg-transparent text-emerald-800 hover:bg-emerald-100"
+              >
+                ×
+              </button>
             </div>
+          )}
+
+          {priceError ? (
+            <p className="my-6 rounded-xl bg-rose-50 p-4 text-sm text-rose-700">
+              {text(
+                "Correct the price range to view matching products.",
+                "مصنوعات دیکھنے کے لیے قیمت کی حد درست کریں۔",
+              )}
+            </p>
+          ) : totalItems > 0 ? (
+            <>
+              <div className="my-5 flex flex-wrap items-center justify-between gap-3">
+                <p className="m-0 text-sm text-slate-500">
+                  {text(
+                    `Showing ${firstItem}–${lastItem} of ${totalItems} products`,
+                    `${totalItems} میں سے ${firstItem} تا ${lastItem} مصنوعات`,
+                  )}
+                </p>
+
+                <label className="flex items-center gap-2 text-sm text-slate-500">
+                  {text("Per page", "فی صفحہ")}
+                  <select
+                    value={pageSize}
+                    onChange={(event) => {
+                      setPageSize(Number(event.target.value));
+                      setPage(0);
+                    }}
+                    className="rounded-lg border border-solid border-slate-200 bg-white p-2 text-slate-800"
+                  >
+                    {[12, 24, 48].map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                {visibleProducts.map(renderProduct)}
+              </div>
+
+              {totalPages > 1 && (
+                <nav
+                  aria-label={text("Product pages", "مصنوعات کے صفحات")}
+                  className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-solid border-slate-200 bg-white p-4"
+                >
+                  <button
+                    type="button"
+                    disabled={currentPage === 0}
+                    onClick={() => setPage(currentPage - 1)}
+                    className={secondaryButton}
+                  >
+                    {text("← Previous", "پچھلا →")}
+                  </button>
+
+                  <div className="flex flex-wrap gap-1">
+                    {pageNumbers.map((number) => (
+                      <button
+                        key={number}
+                        type="button"
+                        aria-label={text(
+                          `Page ${number + 1}`,
+                          `صفحہ ${number + 1}`,
+                        )}
+                        aria-current={
+                          currentPage === number ? "page" : undefined
+                        }
+                        onClick={() => setPage(number)}
+                        className={`grid size-9 place-items-center rounded-lg border-0 text-sm font-semibold ${
+                          currentPage === number
+                            ? "bg-violet-600 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-violet-100"
+                        }`}
+                      >
+                        {number + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={currentPage + 1 >= totalPages}
+                    onClick={() => setPage(currentPage + 1)}
+                    className={secondaryButton}
+                  >
+                    {text("Next →", "اگلا ←")}
+                  </button>
+                </nav>
+              )}
+            </>
           ) : (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
-              <h3 className="m-0 text-xl font-bold">No matches this time</h3>
+            <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
+              <h3 className="m-0 text-xl font-bold">
+                {text("No matching products", "کوئی متعلقہ مصنوع نہیں ملی")}
+              </h3>
+
               <p className="mb-6 text-slate-500">
-                Check your search, category and price range.
+                {text(
+                  "Try fewer search words or adjust the category, price and availability filters.",
+                  "تلاش کے الفاظ کم کریں یا قسم، قیمت اور دستیابی کے فلٹرز تبدیل کریں۔",
+                )}
               </p>
+
               <button
                 type="button"
                 onClick={clearFilters}
-                className="rounded-xl border-0 bg-violet-600 px-5 py-3 text-white hover:bg-violet-700"
+                className="rounded-xl border-0 bg-violet-600 px-5 py-3 font-semibold text-white hover:bg-violet-700"
               >
-                Clear all filters
+                {text("Clear all filters", "تمام فلٹرز صاف کریں")}
               </button>
             </div>
           )}
         </section>
+
         <Recommendations
-          products={[]}
-          renderProduct={(product) => (
-            <ProductCard
-              product={product}
-              quantity={
-                cart.items.find((item) => item.id === product.id)?.quantity ?? 0
-              }
-              onAdd={handleAdd}
-              onView={setSelectedProduct}
-              isWishlisted={wishlist.hasItem(product.id)}
-              onToggleWishlist={wishlist.toggleItem}
-              formatPrice={formatPrice}
-            />
-          )}
+          products={catalog}
+          cartItems={cart.items}
+          viewedProductIds={viewedProductIds}
+          renderProduct={renderProduct}
         />
       </main>
+
       <CartPanel
         cart={cart}
         formatPrice={formatPrice}
@@ -639,53 +1039,90 @@ export default function App() {
         onClose={() => setIsCartOpen(false)}
         onCheckout={() => {
           setIsCartOpen(false);
+
+          if (restoring) return;
+
+          if (!session || session.expiresAt <= Date.now()) {
+            setIsAuthOpen(true);
+            return;
+          }
+
           setIsCheckoutOpen(true);
         }}
       />
-      {isCheckoutOpen && (
+
+      {isCheckoutOpen && session && (
         <CheckoutModal
+          key={session.user.id}
           cart={cart}
           formatPrice={formatPrice}
+          session={session}
           onClose={() => setIsCheckoutOpen(false)}
         />
       )}
+
       {isReturnsOpen && (
         <ReturnsModal
-          eligibleItems={[]}
-          requests={[]}
+          key={session?.user.id ?? "guest"}
+          accessToken={session?.accessToken}
           onClose={() => setIsReturnsOpen(false)}
         />
       )}
+
       {isWishlistOpen && (
         <WishlistModal
           wishlist={wishlist}
-          products={demoProducts}
+          products={catalog}
           cart={cart}
           formatPrice={formatPrice}
           onAdd={handleAdd}
           onClose={() => setIsWishlistOpen(false)}
         />
       )}
+
       {isTrackingOpen && (
-        <TrackingModal orders={[]} onClose={() => setIsTrackingOpen(false)} />
+        <TrackingModal
+          key={session?.user.id ?? "guest"}
+          accessToken={session?.accessToken}
+          onClose={() => setIsTrackingOpen(false)}
+        />
       )}
-      {isAuthOpen && <AuthModal onClose={() => setIsAuthOpen(false)} />}
-      {isOrdersOpen && (
-        <OrdersModal
-          orders={[]}
+
+      {isAuthOpen && (
+        <AuthModal
+          onAuthenticated={(authenticatedSession) => {
+            signIn(authenticatedSession);
+
+            if (authenticatedSession.user.role === "ADMIN") {
+              navigate("/admin", { replace: true });
+            } else if (authenticatedSession.user.role === "RIDER") {
+              navigate("/rider", { replace: true });
+            }
+          }}
+          onClose={() => setIsAuthOpen(false)}
+        />
+      )}
+
+      {isOrdersOpen && session && (
+        <CustomerOrders
+          key={session.user.id}
+          accessToken={session.accessToken}
           formatPrice={formatPrice}
           onClose={() => setIsOrdersOpen(false)}
         />
       )}
-      {isNotificationsOpen && (
-        <NotificationsModal
-          notifications={[]}
-          onClose={() => setIsNotificationsOpen(false)}
+
+      {isProfileOpen && (
+        <ProfileModal
+          profile={session?.user ?? null}
+          loading={restoring}
+          accessToken={session?.accessToken}
+          onSave={saveProfile}
+          onLogout={handleSignOut}
+          onClose={() => setIsProfileOpen(false)}
         />
       )}
-      {isProfileOpen && (
-        <ProfileModal onClose={() => setIsProfileOpen(false)} />
-      )}
+
       <ProductDetails
         product={selectedProduct}
         quantity={
@@ -702,22 +1139,98 @@ export default function App() {
           <ProductIllustration type={selectedProduct.illustration} />
         )}
       </ProductDetails>
-      <footer className="mt-10 border-0 border-t border-solid border-slate-200 bg-white py-6">
+
+      {isAboutOpen && <AboutModal onClose={() => setIsAboutOpen(false)} />}
+
+      <footer
+        dir={direction}
+        className="mt-10 border-0 border-t border-solid border-slate-200 bg-white py-6"
+      >
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 lg:px-6">
           <a href="#top" className="text-2xl font-extrabold">
-            Shop<span className="text-violet-600">Mart</span>
+            <bdi>
+              Shop<span className="text-violet-600">Mart</span>
+            </bdi>
           </a>
 
           <p className="m-0 text-xs text-slate-500">
-            FYP development preview · Sample product data
+            {text(
+              "ShopMart · Final year project",
+              "شاپ مارٹ · فائنل ایئر پروجیکٹ",
+            )}
           </p>
 
           <a href="#top" className="text-sm text-violet-700 hover:underline">
-            Back to top ↑
+            {text("Back to top ↑", "واپس اوپر جائیں ↑")}
           </a>
         </div>
       </footer>
-      <ChatWidget />
+
+      <ChatWidget products={catalog} />
     </>
   );
+}
+
+export default function App() {
+  const { language, direction } = useLanguage();
+  const text = (en, ur) => (language === "ur" ? ur : en);
+
+  const [products, setProducts] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getProducts(controller.signal)
+      .then((items) => {
+        if (!controller.signal.aborted) setProducts(items);
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted) {
+          setError(failure.message || "Could not load products.");
+        }
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  if (error) {
+    return (
+      <main dir={direction} className="mx-auto max-w-xl p-6 text-center">
+        <h1 className="text-2xl font-bold">
+          {text("Could not load the catalog", "مصنوعات لوڈ نہیں ہو سکیں")}
+        </h1>
+
+        <p role="alert" className="text-rose-700">
+          {text(
+            error,
+            "مصنوعات حاصل نہیں ہو سکیں۔ اپنا کنکشن چیک کرکے دوبارہ کوشش کریں۔",
+          )}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-xl border-0 bg-violet-600 px-5 py-3 font-semibold text-white"
+        >
+          {text("Try again", "دوبارہ کوشش کریں")}
+        </button>
+      </main>
+    );
+  }
+
+  if (products === null) {
+    return (
+      <main dir={direction} className="p-10 text-center">
+        <p role="status" className="text-slate-500">
+          {text(
+            "Loading ShopMart products…",
+            "شاپ مارٹ کی مصنوعات لوڈ ہو رہی ہیں…",
+          )}
+        </p>
+      </main>
+    );
+  }
+
+  return <Storefront products={products} />;
 }
