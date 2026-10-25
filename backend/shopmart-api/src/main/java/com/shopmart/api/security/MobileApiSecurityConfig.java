@@ -53,6 +53,15 @@ public class MobileApiSecurityConfig {
                                 HttpMethod.POST,
                                 "/api/mobile/products/*/reviews")
                         .authenticated()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/mobile/returns",
+                                "/api/mobile/returns/eligible")
+                        .authenticated()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/mobile/returns")
+                        .authenticated()
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

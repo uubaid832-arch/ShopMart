@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/returns")
+@RequestMapping({ "/api/returns", "/api/mobile/returns" })
 public class ReturnController {
 
   private final ReturnService returns;
