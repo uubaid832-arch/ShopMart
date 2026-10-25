@@ -23,6 +23,7 @@ import ProductDetailsModal from "./src/products/ProductDetailsModal";
 import { useMobileWishlist } from "./src/wishlist/useMobileWishlist";
 import Svg, { Path } from "react-native-svg";
 import NotificationsModal from "./src/notifications/NotificationsModal";
+import ReturnsModal from "./src/returns/ReturnsModal";
 
 const paths = {
   home: "M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z",
@@ -117,7 +118,7 @@ function ShopMart() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [wishlistOnly, setWishlistOnly] = useState(false);
-
+  const [returnsOpen, setReturnsOpen] = useState(false);
   const wishlist = useMobileWishlist(auth.session?.user.id, !auth.restoring);
 
   useEffect(() => {
@@ -523,6 +524,10 @@ function ShopMart() {
           key={auth.session.user.id}
           session={auth.session}
           onClose={() => setOrdersOpen(false)}
+          onOpenReturns={() => {
+            setOrdersOpen(false);
+            setReturnsOpen(true);
+          }}
         />
       )}
       {notificationsOpen && auth.session && (
@@ -530,6 +535,13 @@ function ShopMart() {
           key={auth.session.user.id}
           session={auth.session}
           onClose={() => setNotificationsOpen(false)}
+        />
+      )}
+      {returnsOpen && auth.session && (
+        <ReturnsModal
+          key={auth.session.user.id}
+          session={auth.session}
+          onClose={() => setReturnsOpen(false)}
         />
       )}
       {authOpen && (
@@ -560,6 +572,7 @@ function ShopMart() {
               {auth.error ? (
                 <Text style={styles.error}>{auth.error}</Text>
               ) : null}
+
               <Pressable
                 accessibilityRole="button"
                 disabled={auth.signingOut}
