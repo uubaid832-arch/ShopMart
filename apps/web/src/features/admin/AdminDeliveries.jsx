@@ -10,6 +10,7 @@ import AdminCodModal from "./AdminCodModal";
 import AssignRiderModal from "./AssignRiderModal";
 import DeliveryDetailsModal from "./DeliveryDetailsModal";
 import WarehouseControls from "../delivery/WarehouseControls";
+import { Wallet } from "lucide-react";
 
 const buttonStyle =
   "rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40";
@@ -84,12 +85,39 @@ export default function AdminDeliveries() {
           Refresh
         </button>
       </header>
-      <div>
-        <button type="button" onClick={() => setCodOpen(true)} className={buttonStyle}>
+      <section
+        className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid p-5"
+        style={{
+          backgroundColor: "#f5f3ff",
+          borderColor: "#ddd6fe",
+        }}
+      >
+        <div>
+          <h2 className="m-0 text-lg font-bold" style={{ color: "#4c1d95" }}>
+            Cash reconciliation
+          </h2>
+          <p className="mb-0 mt-2 text-sm" style={{ color: "#6d6380" }}>
+            Review rider handovers and confirm COD cash received.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setCodOpen(true)}
+          className="flex min-h-12 items-center justify-center gap-3 rounded-xl border-0 px-6 py-3 text-sm font-bold shadow-md transition-opacity hover:opacity-90"
+          style={{
+            backgroundColor: "#7c3aed",
+            color: "#ffffff",
+            cursor: "pointer",
+          }}
+        >
+          <Wallet size={21} aria-hidden="true" />
           COD cash handovers
         </button>
-      </div>
-      {codOpen && token && <AdminCodModal token={token} onClose={() => setCodOpen(false)} />}
+      </section>
+      {codOpen && token && (
+        <AdminCodModal token={token} onClose={() => setCodOpen(false)} />
+      )}
       {feedback && (
         <p
           role="status"
