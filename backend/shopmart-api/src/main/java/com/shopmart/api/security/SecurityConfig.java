@@ -290,6 +290,12 @@ public class SecurityConfig {
                                                                 HttpMethod.PATCH,
                                                                 "/api/admin/users/*/password")
                                                 .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/admin/cod/handovers",
+                                                                "/api/admin/cod/handovers/*")
+                                                .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PATCH, "/api/admin/cod/handovers/*")
+                                                .hasRole("ADMIN")
                                                 .anyRequest().denyAll())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

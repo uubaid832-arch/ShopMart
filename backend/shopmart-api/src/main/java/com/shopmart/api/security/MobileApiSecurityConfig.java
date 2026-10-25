@@ -105,6 +105,20 @@ public class MobileApiSecurityConfig {
                         .requestMatchers(HttpMethod.PATCH,
                                 "/api/mobile/rider/deliveries/*/warehouse-return")
                         .hasRole("RIDER")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/mobile/rider/dashboard",
+                                "/api/mobile/rider/cod/collections",
+                                "/api/mobile/rider/cod/handovers",
+                                "/api/mobile/rider/cod/handovers/*")
+                        .hasRole("RIDER")
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/rider/cod/handovers")
+                        .hasRole("RIDER")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/mobile/admin/cod/handovers",
+                                "/api/mobile/admin/cod/handovers/*")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/mobile/admin/cod/handovers/*")
+                        .hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
