@@ -27,6 +27,7 @@ import ReturnsModal from "./src/returns/ReturnsModal";
 import ProfileModal from "./src/account/ProfileModal";
 import AccountModal from "./src/account/AccountModal";
 import ChangePasswordModal from "./src/account/ChangePasswordModal";
+import RiderScreen from "./src/rider/RiderScreen";
 import BiometricSettingsModal, {
   BiometricLockScreen,
   useBiometricLock,
@@ -203,6 +204,17 @@ function ShopMart() {
             setAuthOpen(true);
           }
         }}
+      />
+    );
+  }
+  if (auth.session?.user.role === "RIDER") {
+    return (
+      <RiderScreen
+        key={auth.session.user.id}
+        session={auth.session}
+        onSignOut={auth.signOut}
+        signingOut={auth.signingOut}
+        sessionError={auth.error}
       />
     );
   }
