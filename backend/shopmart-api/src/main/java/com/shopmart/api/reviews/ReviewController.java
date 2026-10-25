@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/products/{productId}/reviews")
+@RequestMapping({
+    "/api/products/{productId}/reviews",
+    "/api/mobile/products/{productId}/reviews"
+})
 public class ReviewController {
 
   private final ReviewService reviews;

@@ -41,6 +41,18 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/notifications/*/read",
                                 "/api/mobile/notifications/read-all")
                         .authenticated()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/mobile/products/*/reviews")
+                        .permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/mobile/products/*/reviews/eligibility")
+                        .authenticated()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/mobile/products/*/reviews")
+                        .authenticated()
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
