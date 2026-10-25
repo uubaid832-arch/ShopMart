@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Modal,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -27,8 +26,15 @@ import ReturnsModal from "./src/returns/ReturnsModal";
 import ProfileModal from "./src/account/ProfileModal";
 import AccountModal from "./src/account/AccountModal";
 import ChangePasswordModal from "./src/account/ChangePasswordModal";
+import BiometricSettingsModal, {
+  BiometricLockScreen,
+  useBiometricLock,
+} from "./src/account/BiometricSecurity";
 
 const paths = {
+  grid: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
+  laptop: "M4 4h16v12H4V4Zm-2 16h20M9 20h6",
+  shirt: "m8 3 4 2 4-2 6 5-4 4-2-2v11H8V10l-2 2-4-4 6-5Z",
   home: "M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z",
   heart:
     "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z",
@@ -68,7 +74,11 @@ function IconButton({ name, label, onPress, disabled, children }) {
       accessibilityLabel={label}
       onPress={onPress}
       disabled={disabled}
-      style={[styles.iconButton, disabled && styles.dim]}
+      style={({ pressed }) => [
+        styles.iconButton,
+        disabled && styles.dim,
+        pressed && styles.pressed,
+      ]}
     >
       <Icon name={name} />
       {children}
@@ -125,6 +135,9 @@ function ShopMart() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const wishlist = useMobileWishlist(auth.session?.user.id, !auth.restoring);
+  const [biometricOpen, setBiometricOpen] = useState(false);
+
+  const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -172,21 +185,41 @@ function ShopMart() {
     if (auth.session) action();
     else setAuthOpen(true);
   }
+  if (biometric.locked) {
+    return (
+      <BiometricLockScreen
+        security={biometric}
+        onUsePassword={async () => {
+          const signedOut = await biometric.usePassword(auth.clearLocalSession);
+
+          if (signedOut) {
+            setAccountOpen(false);
+            setProfileOpen(false);
+            setPasswordOpen(false);
+            setBiometricOpen(false);
+            setAuthOpen(true);
+          }
+        }}
+      />
+    );
+  }
 
   const header = (
     <View>
       <View style={styles.hero}>
+        <View pointerEvents="none" style={styles.heroOrb} />
         <View style={styles.heroCopy}>
+          <Text style={styles.heroEyebrow}>YOUR EVERYDAY EDIT</Text>
           <Text style={styles.greeting} numberOfLines={1}>
             Hi, {auth.session?.user.name?.split(" ")[0] || "there"}
           </Text>
-          <Text style={styles.heroText}>Find your everyday favorites.</Text>
-          <Text style={styles.heroCaption}>
-            A little something for every day.
+          <Text style={styles.heroText}>
+            Everyday finds. A little more you.
           </Text>
+          <Text style={styles.heroCaption}>Explore the things you love.</Text>
         </View>
         <View style={styles.heroArt}>
-          <Icon name="bag" size={55} color="#7c3aed" />
+          <Icon name="bag" size={48} color="#7c3aed" />
           <View style={styles.spark}>
             <Icon name="plus" size={17} color="#a78bfa" />
           </View>
@@ -198,7 +231,7 @@ function ShopMart() {
           accessibilityLabel="Search products"
           value={search}
           onChangeText={setSearch}
-          placeholder="Search products or categories"
+          placeholder="What are you looking for?"
           placeholderTextColor="#9299ac"
           autoCorrect={false}
           style={styles.search}
@@ -224,6 +257,21 @@ function ShopMart() {
             onPress={() => setCategory(name)}
             style={[styles.chip, category === name && styles.activeChip]}
           >
+            <Icon
+              name={
+                name === "All"
+                  ? "grid"
+                  : /electronic/i.test(name)
+                    ? "laptop"
+                    : /fashion|cloth/i.test(name)
+                      ? "shirt"
+                      : /home/i.test(name)
+                        ? "home"
+                        : "box"
+              }
+              size={15}
+              color={category === name ? "#fff" : "#8d849f"}
+            />
             <Text style={[styles.chipText, category === name && styles.white]}>
               {name}
             </Text>
@@ -236,17 +284,23 @@ function ShopMart() {
             {wishlistOnly ? "Your wishlist" : "Discover products"}
           </Text>
           <Text style={styles.sectionCaption}>
-            {products.length} products to explore
+            {loading
+              ? "Finding your favorites..."
+              : `${products.length} ${products.length === 1 ? "find" : "finds"} for you`}
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Refresh products"
           disabled={loading}
           onPress={() => setReload((value) => value + 1)}
           style={styles.refresh}
         >
-          <Icon name="refresh" size={17} color="#7c3aed" />
-          <Text style={styles.link}>Refresh</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#7c3aed" />
+          ) : (
+            <Icon name="refresh" size={19} color="#7c3aed" />
+          )}
         </Pressable>
       </View>
       {auth.error || wishlist.error ? (
@@ -382,6 +436,7 @@ function ShopMart() {
               <View style={styles.cardContent}>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`View ${item.name}`}
                   onPress={() => setSelectedProduct(item)}
                 >
                   <Text style={styles.productName} numberOfLines={2}>
@@ -496,7 +551,7 @@ function ShopMart() {
             accessibilityState={{ selected: Boolean(item.active) }}
             accessibilityLabel={item.label}
             onPress={item.action}
-            style={styles.bottomItem}
+            style={[styles.bottomItem, item.active && styles.bottomItemActive]}
           >
             <Icon
               name={item.name}
@@ -568,6 +623,16 @@ function ShopMart() {
           }}
         />
       )}
+      {biometricOpen && auth.session && (
+        <BiometricSettingsModal
+          security={biometric}
+          onClose={() => setBiometricOpen(false)}
+          onLock={() => {
+            setBiometricOpen(false);
+            biometric.lockNow();
+          }}
+        />
+      )}
       {authOpen && (
         <AuthModal onSignIn={auth.signIn} onClose={() => setAuthOpen(false)} />
       )}
@@ -596,6 +661,10 @@ function ShopMart() {
             setAccountOpen(false);
             setPasswordOpen(true);
           }}
+          onOpenBiometrics={() => {
+            setAccountOpen(false);
+            setBiometricOpen(true);
+          }}
         />
       )}
     </SafeAreaView>
@@ -611,178 +680,226 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
+  screen: { flex: 1, backgroundColor: "#fbfafc" },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 15,
+    paddingHorizontal: 22,
+    paddingTop: 10,
+    paddingBottom: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: "#fbfafc",
   },
   brand: {
     fontSize: 29,
     fontWeight: "900",
     letterSpacing: -1.3,
-    color: "#111a36",
+    color: "#20213a",
   },
   violet: { color: "#7c3aed" },
-  headerActions: { flexDirection: "row", gap: 8 },
+  headerActions: { flexDirection: "row", gap: 10 },
   iconButton: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
+    borderRadius: 15,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ece9f2",
   },
+  pressed: { opacity: 0.6 },
   badge: {
     position: "absolute",
-    right: -1,
-    top: 0,
+    right: -5,
+    top: -5,
     backgroundColor: "#7c3aed",
     borderRadius: 12,
-    minWidth: 21,
-    height: 21,
+    minWidth: 22,
+    height: 22,
     paddingHorizontal: 4,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "#fbfafc",
   },
   badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
-  list: { paddingHorizontal: 18, paddingBottom: 24 },
+  list: { paddingHorizontal: 20, paddingBottom: 26 },
   hero: {
-    borderRadius: 23,
-    backgroundColor: "#f0ebff",
-    padding: 20,
+    borderRadius: 25,
+    backgroundColor: "#efe8fc",
+    padding: 22,
     flexDirection: "row",
     alignItems: "center",
     overflow: "hidden",
-    minHeight: 130,
+    minHeight: 162,
+    borderWidth: 1,
+    borderColor: "#e7ddf9",
+  },
+  heroOrb: {
+    position: "absolute",
+    right: -35,
+    bottom: -70,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: "#e7dcfa",
   },
   heroCopy: { flex: 1, zIndex: 1 },
-  greeting: {
-    fontSize: 25,
+  heroEyebrow: {
+    fontSize: 8,
+    letterSpacing: 1.8,
     fontWeight: "800",
-    color: "#161c38",
-    letterSpacing: -0.7,
+    color: "#9b85bc",
+    marginBottom: 12,
   },
-  heroText: { marginTop: 8, color: "#69718e", fontSize: 14, lineHeight: 21 },
-  heroCaption: { marginTop: 9, fontSize: 10, color: "#9587b8" },
+  greeting: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#2b2443",
+    letterSpacing: -0.9,
+  },
+  heroText: { marginTop: 8, color: "#786c8e", fontSize: 13, lineHeight: 20 },
+  heroCaption: { marginTop: 13, fontSize: 10, color: "#9f8bb9" },
   heroArt: {
-    width: 77,
-    height: 90,
-    borderRadius: 40,
-    backgroundColor: "#e7ddff",
+    width: 76,
+    height: 94,
+    borderRadius: 25,
+    backgroundColor: "#e0d1f8",
+    borderWidth: 1,
+    borderColor: "#d8c6f4",
     alignItems: "center",
     justifyContent: "center",
     transform: [{ rotate: "-12deg" }],
-    marginLeft: 5,
+    marginLeft: 7,
   },
-  spark: { position: "absolute", right: -2, top: 2 },
+  spark: {
+    position: "absolute",
+    right: -7,
+    top: -9,
+    backgroundColor: "#f8f4ff",
+    padding: 5,
+    borderRadius: 12,
+  },
   searchBox: {
-    marginTop: 18,
+    marginTop: 20,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e3e6ee",
-    borderRadius: 16,
-    paddingLeft: 14,
+    borderColor: "#e8e4ef",
+    borderRadius: 17,
+    paddingLeft: 16,
     paddingRight: 5,
-    minHeight: 52,
-    backgroundColor: "#fdfdff",
+    minHeight: 54,
+    backgroundColor: "#fff",
   },
   search: {
     flex: 1,
     minWidth: 0,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 11,
     fontSize: 13,
-    color: "#18203b",
+    color: "#343047",
   },
-  chips: { gap: 9, paddingVertical: 17 },
+  chips: { gap: 9, paddingTop: 18, paddingBottom: 22 },
   chip: {
-    borderRadius: 24,
-    paddingHorizontal: 21,
-    paddingVertical: 12,
-    backgroundColor: "#f4f1fc",
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    backgroundColor: "#f0edf5",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderWidth: 1,
+    borderColor: "#ebe6f2",
   },
-  activeChip: { backgroundColor: "#7c3aed" },
-  chipText: { color: "#555b76", fontWeight: "600", fontSize: 12 },
+  activeChip: { backgroundColor: "#7c3aed", borderColor: "#7c3aed" },
+  chipText: { color: "#787087", fontWeight: "600", fontSize: 11 },
   white: { color: "#fff" },
   section: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 3,
-    marginBottom: 16,
+    marginTop: 2,
+    marginBottom: 18,
   },
   sectionTitle: {
-    color: "#141b35",
+    color: "#27253b",
     fontWeight: "800",
-    fontSize: 21,
-    letterSpacing: -0.6,
+    fontSize: 22,
+    letterSpacing: -0.7,
   },
-  sectionCaption: { color: "#9a9fb0", fontSize: 11, marginTop: 4 },
-  refresh: { flexDirection: "row", alignItems: "center", padding: 8, gap: 5 },
+  sectionCaption: { color: "#a19aaa", fontSize: 11, marginTop: 5 },
+  refresh: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f0eafa",
+    borderRadius: 14,
+  },
   link: { color: "#7c3aed", fontSize: 12, fontWeight: "700" },
-  row: { justifyContent: "space-between", marginBottom: 15 },
+  row: { justifyContent: "space-between", marginBottom: 17 },
   card: {
     width: "48%",
-    borderRadius: 19,
+    borderRadius: 21,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#e5e7ef",
+    borderColor: "#e8e4ee",
     backgroundColor: "#fff",
   },
-  art: { aspectRatio: 0.92, position: "relative" },
+  art: { aspectRatio: 0.95, position: "relative" },
   photoWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   productImage: { width: "100%", height: "100%" },
-  productInitial: { fontSize: 52, fontWeight: "800", color: "#b0a0db" },
+  productInitial: { fontSize: 49, fontWeight: "800", color: "#ac9acb" },
   stock: {
     position: "absolute",
-    top: 9,
-    left: 8,
+    bottom: 9,
+    left: 9,
     flexDirection: "row",
-    gap: 4,
+    gap: 5,
     alignItems: "center",
-    borderRadius: 12,
-    backgroundColor: "#f0fdf4",
-    paddingHorizontal: 7,
+    borderRadius: 9,
+    backgroundColor: "#f0fdf4f2",
+    paddingHorizontal: 8,
     paddingVertical: 6,
   },
   stockText: { color: "#15803d", fontSize: 8, fontWeight: "700" },
   dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: "#22a65a" },
-  outStock: { backgroundColor: "#fff1f2" },
+  outStock: { backgroundColor: "#fff1f2f2" },
   heart: {
     position: "absolute",
-    right: 5,
-    top: 5,
+    right: 8,
+    top: 8,
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: "#ffffffed",
+    borderRadius: 15,
+    backgroundColor: "#fffffff2",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#ffffffaa",
   },
-  cardContent: { padding: 11 },
+  cardContent: { padding: 12 },
   productName: {
-    color: "#19203c",
+    color: "#302a41",
     fontSize: 14,
-    fontWeight: "800",
-    minHeight: 36,
-    lineHeight: 18,
+    fontWeight: "700",
+    minHeight: 38,
+    lineHeight: 19,
+    letterSpacing: -0.2,
   },
-  category: { marginTop: 3, color: "#9297aa", fontSize: 11 },
+  category: { marginTop: 4, color: "#a29aaf", fontSize: 10 },
   price: {
-    marginTop: 9,
+    marginTop: 12,
     color: "#7c3aed",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
   },
   addButton: {
-    minHeight: 44,
-    marginTop: 12,
+    minHeight: 45,
+    marginTop: 13,
     borderRadius: 12,
     backgroundColor: "#7c3aed",
     flexDirection: "row",
@@ -792,29 +909,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   addText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  disabled: { backgroundColor: "#e4e6ee" },
+  disabled: { backgroundColor: "#e9e5ee" },
   dim: { opacity: 0.4 },
   stepper: {
-    minHeight: 44,
-    marginTop: 12,
+    minHeight: 45,
+    marginTop: 13,
     borderRadius: 12,
-    backgroundColor: "#f4f0ff",
+    backgroundColor: "#f2edfb",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   stepButton: {
     width: 44,
-    height: 44,
+    height: 45,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ede5ff",
+    backgroundColor: "#eae1fa",
   },
-  quantity: { fontSize: 16, color: "#202440", fontWeight: "800" },
+  quantity: { fontSize: 16, color: "#44315e", fontWeight: "800" },
   empty: { paddingVertical: 45, alignItems: "center", gap: 13 },
   emptyText: {
-    color: "#8990a4",
+    color: "#968b9f",
     fontSize: 13,
     textAlign: "center",
     lineHeight: 22,
@@ -823,62 +940,28 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexDirection: "row",
     borderTopWidth: 1,
-    borderTopColor: "#f0edf6",
-    paddingTop: 8,
-    paddingBottom: 3,
+    borderTopColor: "#ebe5f2",
+    paddingTop: 9,
+    paddingHorizontal: 12,
+    paddingBottom: 7,
     backgroundColor: "#fff",
+    gap: 5,
   },
   bottomItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 5,
-    gap: 4,
-    minHeight: 58,
+    justifyContent: "center",
+    paddingVertical: 9,
+    gap: 5,
+    minHeight: 63,
+    borderRadius: 17,
   },
-  bottomLabel: { fontSize: 10, color: "#7f879b", fontWeight: "600" },
+  bottomItemActive: { backgroundColor: "#f3edfc" },
+  bottomLabel: { fontSize: 10, color: "#91869e", fontWeight: "600" },
   indicator: {
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: "#7c3aed",
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: "#111a3666",
-    justifyContent: "center",
-    padding: 26,
-  },
-  accountCard: {
-    backgroundColor: "#fff",
-    borderRadius: 26,
-    padding: 25,
-    alignItems: "center",
-  },
-  accountAvatar: { backgroundColor: "#f1ebff", padding: 20, borderRadius: 40 },
-  accountName: {
-    fontSize: 23,
-    fontWeight: "800",
-    color: "#19203c",
-    marginTop: 17,
-    textAlign: "center",
-  },
-  accountEmail: {
-    fontSize: 13,
-    color: "#7f879b",
-    marginTop: 7,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  signOut: {
-    flexDirection: "row",
-    gap: 9,
-    padding: 15,
-    borderRadius: 13,
-    backgroundColor: "#fff1f2",
-    alignSelf: "stretch",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  signOutText: { color: "#be123c", fontWeight: "700" },
-  closeAccount: { padding: 17 },
 });
