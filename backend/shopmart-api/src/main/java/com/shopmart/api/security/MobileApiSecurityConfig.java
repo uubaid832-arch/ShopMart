@@ -99,6 +99,12 @@ public class MobileApiSecurityConfig {
                                 HttpMethod.DELETE,
                                 "/api/mobile/rider/deliveries/*/location")
                         .hasRole("RIDER")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/mobile/rider/deliveries/*/warehouse")
+                        .hasRole("RIDER")
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/mobile/rider/deliveries/*/warehouse-return")
+                        .hasRole("RIDER")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -24,7 +24,8 @@ public class WarehouseController {
 
   @GetMapping({
       "/admin/deliveries/{orderId}/warehouse",
-      "/rider/deliveries/{orderId}/warehouse"
+      "/rider/deliveries/{orderId}/warehouse",
+      "/mobile/rider/deliveries/{orderId}/warehouse"
   })
   public ResponseEntity<WarehouseService.WarehouseState> get(
       @AuthenticationPrincipal Jwt jwt,
@@ -35,7 +36,8 @@ public class WarehouseController {
         .body(warehouse.get(userId(jwt), orderId));
   }
 
-  @PatchMapping("/rider/deliveries/{orderId}/warehouse-return")
+  @PatchMapping({"/rider/deliveries/{orderId}/warehouse-return",
+      "/mobile/rider/deliveries/{orderId}/warehouse-return"})
   public ResponseEntity<Void> reportReturn(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID orderId,

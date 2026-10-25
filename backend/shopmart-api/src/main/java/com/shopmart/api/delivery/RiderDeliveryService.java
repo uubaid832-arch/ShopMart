@@ -38,7 +38,21 @@ public class RiderDeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID riderId, int page, int size) {
+        return list(riderId, page, size, "ALL");
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryPage list(UUID riderId, int page, int size, String section) {
         requireRider(riderId);
+        String filter = switch (section) {
+            case "ALL" -> "TRUE";
+            case "DELIVERED" -> "o.status = 'DELIVERED'";
+            case "FAILED" -> "o.status <> 'DELIVERED' AND attempt.id IS NOT NULL AND "
+                + "(attempt.resolved_at IS NULL OR attempt.resolution = 'CANCEL')";
+            case "ASSIGNED" -> "o.status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED') AND "
+                + "(attempt.id IS NULL OR (attempt.resolved_at IS NOT NULL AND attempt.resolution = 'RETRY'))";
+            default -> throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery section.");
+        };
 
         if (page < 0 || size < 1 || size > 50) {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid pagination.");
@@ -46,9 +60,14 @@ public class RiderDeliveryService {
 
         long total = jdbc.queryForObject("""
                 SELECT COUNT(*)
-                FROM public.delivery_assignments
-                WHERE rider_id = ?
-                """, Long.class, riderId);
+                FROM public.delivery_assignments a
+                JOIN public.orders o ON o.id = a.order_id
+                LEFT JOIN LATERAL (
+                    SELECT id, resolved_at, resolution FROM public.delivery_attempts
+                    WHERE order_id = o.id ORDER BY created_at DESC, id DESC LIMIT 1
+                ) attempt ON TRUE
+                WHERE a.rider_id = ? AND (%s)
+                """.formatted(filter), Long.class, riderId);
 
         List<RiderDelivery> items = jdbc.query("""
                 SELECT o.id, o.order_number, o.recipient_name,
@@ -61,16 +80,16 @@ public class RiderDeliveryService {
                 FROM public.delivery_assignments a
                 JOIN public.orders o ON o.id = a.order_id
                 LEFT JOIN LATERAL (
-                    SELECT reason, note, created_at
+                    SELECT id, reason, note, created_at, resolved_at, resolution
                     FROM public.delivery_attempts
                     WHERE order_id = o.id
                     ORDER BY created_at DESC, id DESC
                     LIMIT 1
                 ) attempt ON TRUE
-                WHERE a.rider_id = ?
+                WHERE a.rider_id = ? AND (%s)
                 ORDER BY a.assigned_at DESC, o.id DESC
                 LIMIT ? OFFSET ?
-                """,
+                """.formatted(filter),
                 (rs, row) -> {
                     var attemptAt = rs.getTimestamp("attempt_at");
 
