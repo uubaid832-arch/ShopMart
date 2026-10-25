@@ -6,6 +6,7 @@ import {
   assignDeliveryRider,
   updateDeliveryDetails,
 } from "../../api/deliveries";
+import AdminCodModal from "./AdminCodModal";
 import AssignRiderModal from "./AssignRiderModal";
 import DeliveryDetailsModal from "./DeliveryDetailsModal";
 import WarehouseControls from "../delivery/WarehouseControls";
@@ -16,6 +17,7 @@ const buttonStyle =
 export default function AdminDeliveries() {
   const { session } = useSession();
   const token = session?.accessToken;
+  const [codOpen, setCodOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
@@ -82,6 +84,12 @@ export default function AdminDeliveries() {
           Refresh
         </button>
       </header>
+      <div>
+        <button type="button" onClick={() => setCodOpen(true)} className={buttonStyle}>
+          COD cash handovers
+        </button>
+      </div>
+      {codOpen && token && <AdminCodModal token={token} onClose={() => setCodOpen(false)} />}
       {feedback && (
         <p
           role="status"
