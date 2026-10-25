@@ -47,10 +47,8 @@ public class RiderDeliveryService {
         String filter = switch (section) {
             case "ALL" -> "TRUE";
             case "DELIVERED" -> "o.status = 'DELIVERED'";
-            case "FAILED" -> "o.status <> 'DELIVERED' AND attempt.id IS NOT NULL AND "
-                + "(attempt.resolved_at IS NULL OR attempt.resolution = 'CANCEL')";
-            case "ASSIGNED" -> "o.status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED') AND "
-                + "(attempt.id IS NULL OR (attempt.resolved_at IS NOT NULL AND attempt.resolution = 'RETRY'))";
+            case "FAILED", "CANCELLED" -> "o.status = 'CANCELLED'";
+            case "ASSIGNED" -> "o.status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED')";
             default -> throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery section.");
         };
 
@@ -76,7 +74,13 @@ public class RiderDeliveryService {
                        o.total, o.currency,
                        attempt.reason AS attempt_reason,
                        attempt.note AS attempt_note,
-                       attempt.created_at AS attempt_at
+                       attempt.created_at AS attempt_at,
+                       EXISTS (
+                           SELECT 1 FROM public.delivery_attempts pending_return
+                           WHERE pending_return.order_id = o.id
+                             AND pending_return.warehouse_reported_at IS NOT NULL
+                             AND pending_return.resolved_at IS NULL
+                       ) AS warehouse_return_pending
                 FROM public.delivery_assignments a
                 JOIN public.orders o ON o.id = a.order_id
                 LEFT JOIN LATERAL (
@@ -111,7 +115,8 @@ public class RiderDeliveryService {
                             rs.getString("payment_status"),
                             rs.getBigDecimal("total").toPlainString(),
                             rs.getString("currency"),
-                            lastAttempt);
+                            lastAttempt,
+                            rs.getBoolean("warehouse_return_pending"));
                 },
                 riderId, size, (long) page * size);
 
@@ -353,7 +358,8 @@ public class RiderDeliveryService {
             String paymentStatus,
             String total,
             String currency,
-            DeliveryAttempt lastAttempt) {
+            DeliveryAttempt lastAttempt,
+            boolean warehouseReturnPending) {
     }
 
     public record DeliveryPage(
