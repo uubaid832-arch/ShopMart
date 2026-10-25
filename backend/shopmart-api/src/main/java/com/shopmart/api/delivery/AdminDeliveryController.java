@@ -30,10 +30,11 @@ public class AdminDeliveryController {
   public ResponseEntity<DeliveryService.DeliveryPage> list(
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "ALL") String status) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(deliveries.list(userId(jwt), page, size));
+        .body("ALL".equals(status) ? deliveries.list(userId(jwt), page, size) : deliveries.list(userId(jwt), page, size, status));
   }
 
   @GetMapping("/riders")

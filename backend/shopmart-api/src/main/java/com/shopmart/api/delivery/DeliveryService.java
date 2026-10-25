@@ -37,7 +37,15 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID adminId, int page, int size) {
+        return list(adminId, page, size, "ALL");
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryPage list(UUID adminId, int page, int size, String filterStatus) {
         requireAdmin(adminId);
+        if (!java.util.Set.of("ALL", "CONFIRMED", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
+            throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery status.");
+        }
 
         if (page < 0 || size < 1 || size > 50) {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid pagination.");
@@ -47,9 +55,9 @@ public class DeliveryService {
                 SELECT COUNT(*)
                 FROM public.orders o
                 LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
-                WHERE o.status IN ('CONFIRMED', 'DISPATCHED')
-                   OR a.id IS NOT NULL
-                """, Long.class);
+                WHERE (o.status IN ('CONFIRMED', 'DISPATCHED') OR a.id IS NOT NULL)
+                  AND (? = 'ALL' OR o.status = ?)
+                """, Long.class, filterStatus, filterStatus);
 
         List<DeliveryResponse> items = jdbc.query("""
                 SELECT o.id AS order_id, o.order_number,
@@ -65,12 +73,12 @@ public class DeliveryService {
                 LEFT JOIN LATERAL (
                     SELECT reason, note
                     FROM public.delivery_attempts
-                    WHERE order_id = o.id
+                    WHERE order_id = o.id AND resolved_at IS NULL
                     ORDER BY created_at DESC, id DESC
                     LIMIT 1
                 ) attempt ON TRUE
-                WHERE o.status IN ('CONFIRMED', 'DISPATCHED')
-                   OR a.id IS NOT NULL
+                WHERE (o.status IN ('CONFIRMED', 'DISPATCHED') OR a.id IS NOT NULL)
+                  AND (? = 'ALL' OR o.status = ?)
                 ORDER BY o.created_at DESC, o.id DESC
                 LIMIT ? OFFSET ?
                 """,
@@ -99,7 +107,7 @@ public class DeliveryService {
                             rs.getString("failure_note"),
                             canEdit);
                 },
-                size, (long) page * size);
+                filterStatus, filterStatus, size, (long) page * size);
 
         return new DeliveryPage(
                 items, page, size, total,

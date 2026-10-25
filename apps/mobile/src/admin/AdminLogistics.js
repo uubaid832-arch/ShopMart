@@ -309,7 +309,7 @@ export default function LogisticsModule({
   });
   const result = useAdminResource(
     session.accessToken,
-    `/deliveries?page=${page}&size=15`,
+    `/deliveries?page=${page}&size=15&status=${status}`,
     revision,
   );
   if (warehouse)
@@ -396,7 +396,7 @@ export default function LogisticsModule({
           <View style={ui.toolbar}>
             <Notice op={op} />
             <Choice
-              label="Status on this page"
+              label="Delivery status"
               value={status}
               options={[
                 "ALL",
@@ -406,7 +406,10 @@ export default function LogisticsModule({
                 "CANCELLED",
                 "RETURNED",
               ].map((value) => ({ value, label: readable(value) }))}
-              onChange={setStatus}
+              onChange={(value) => {
+                setStatus(value);
+                setPage(0);
+              }}
             />
           </View>
           <PagedList
@@ -440,31 +443,43 @@ export default function LogisticsModule({
                 )}
                 <View style={ui.row}>
                   <Button
-                    title="Manage order"
+                    title={
+                      ["DELIVERED", "CANCELLED", "RETURNED"].includes(
+                        delivery.status,
+                      )
+                        ? "View details & history"
+                        : "Manage order"
+                    }
                     icon="box"
                     secondary
                     disabled={op.busy}
                     onPress={() => onOpenOrder(delivery.orderId)}
                   />
-                  {delivery.canEditDetails && (
-                    <Button
-                      title="Edit address"
-                      icon="edit"
-                      secondary
-                      disabled={op.blocked}
-                      onPress={() => {
-                        op.reset();
-                        setEditor(delivery);
-                      }}
-                    />
-                  )}
-                  <Button
-                    title="Warehouse"
-                    icon="return"
-                    secondary
-                    disabled={op.busy}
-                    onPress={() => setWarehouse(delivery)}
-                  />
+                  {!["DELIVERED", "CANCELLED", "RETURNED"].includes(
+                    delivery.status,
+                  ) &&
+                    delivery.canEditDetails && (
+                      <Button
+                        title="Edit address"
+                        icon="edit"
+                        secondary
+                        disabled={op.blocked}
+                        onPress={() => {
+                          op.reset();
+                          setEditor(delivery);
+                        }}
+                      />
+                    )}
+                  {delivery.status === "DISPATCHED" &&
+                    delivery.failureReason && (
+                      <Button
+                        title="Warehouse return"
+                        icon="return"
+                        secondary
+                        disabled={op.busy}
+                        onPress={() => setWarehouse(delivery)}
+                      />
+                    )}
                 </View>
               </Card>
             )}

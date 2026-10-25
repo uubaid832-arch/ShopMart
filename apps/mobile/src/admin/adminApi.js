@@ -34,6 +34,7 @@ export async function adminRequest(
       }
       const error = new Error(
         detail?.message ||
+          detail?.detail ||
           {
             400: "Check the required fields and the selected action, then try again.",
             401: "Your session expired. Sign in again.",
@@ -43,7 +44,7 @@ export async function adminRequest(
             413: "The selected photos are too large. Use JPEG or PNG images under 5 MB each.",
             429: "Too many requests. Please wait and try again.",
           }[response.status] ||
-          "The server could not complete this request. Please try again.",
+          `The server could not complete this request (HTTP ${response.status}). Please try again.`,
       );
       error.status = response.status;
       throw error;

@@ -12,7 +12,7 @@ export function notificationReadChanged(userId) {
 
 export default function NotificationBell({ session, onPress, style }) {
   const [result, setResult] = useState(null);
-  const userId = session?.user.id;
+  const userId = session?.user?.id;
   const token = session?.accessToken;
   useEffect(() => {
     if (!userId || !token || !baseUrl) return;
@@ -22,7 +22,11 @@ export default function NotificationBell({ session, onPress, style }) {
     let pending = false;
     let again = false;
     async function load() {
-      if (!mounted || AppState.currentState !== "active") return;
+      if (
+        !mounted ||
+        ["background", "inactive"].includes(AppState.currentState)
+      )
+        return;
       if (pending) {
         again = true;
         return;
@@ -44,10 +48,11 @@ export default function NotificationBell({ session, onPress, style }) {
           const data = await response.json();
           if (
             mounted &&
-            Number.isSafeInteger(data.unreadCount) &&
-            data.unreadCount >= 0
+            Number.isSafeInteger(Number(data.unreadCount)) &&
+            data.unreadCount != null &&
+            Number(data.unreadCount) >= 0
           )
-            setResult({ userId, token, count: data.unreadCount });
+            setResult({ userId, token, count: Number(data.unreadCount) });
         } else if (mounted && [401, 403].includes(response.status))
           setResult({ userId, token, count: 0 });
       } catch {
@@ -55,7 +60,10 @@ export default function NotificationBell({ session, onPress, style }) {
       } finally {
         clearTimeout(timeout);
         pending = false;
-        if (mounted && AppState.currentState === "active") {
+        if (
+          mounted &&
+          !["background", "inactive"].includes(AppState.currentState)
+        ) {
           const delay = again ? 0 : 15000;
           again = false;
           timer = setTimeout(load, delay);
@@ -86,7 +94,13 @@ export default function NotificationBell({ session, onPress, style }) {
     };
   }, [userId, token]);
   const count =
-    result?.userId === userId && result?.token === token ? result.count : 0;
+    result &&
+    userId &&
+    token &&
+    result.userId === userId &&
+    result.token === token
+      ? (result.count ?? 0)
+      : 0;
   return (
     <Pressable
       accessibilityRole="button"
@@ -124,13 +138,13 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: -5,
-    right: -5,
+    top: 0,
+    right: 0,
     minWidth: 21,
     height: 21,
     paddingHorizontal: 4,
     borderRadius: 11,
-    backgroundColor: "#e44d76",
+    backgroundColor: "#dc2626",
     borderWidth: 2,
     borderColor: "#fff",
     alignItems: "center",

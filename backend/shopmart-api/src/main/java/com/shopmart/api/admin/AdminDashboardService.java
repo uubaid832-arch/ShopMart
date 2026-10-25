@@ -19,7 +19,7 @@ public class AdminDashboardService {
                 this.jdbc = jdbc;
         }
 
-        @Transactional(readOnly = true)
+        @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
         public DashboardResponse get(UUID adminId) {
                 Boolean allowed = jdbc.queryForObject("""
                                 SELECT EXISTS (
@@ -58,6 +58,23 @@ public class AdminDashboardService {
                                                 FROM public.orders o
                                                 """);
 
+                var cash = jdbc.queryForMap("""
+                    SELECT COUNT(*) AS pending_count, COALESCE(SUM(amount),0) AS pending_amount
+                    FROM public.rider_cod_handovers WHERE status='PENDING'
+                    """);
+                String codWithRiders = jdbc.queryForObject("""
+                    SELECT (SELECT COALESCE(SUM(amount),0) FROM public.rider_cod_collections)
+                         - (SELECT COALESCE(SUM(amount),0) FROM public.rider_cod_handovers WHERE status='CONFIRMED')
+                    """, java.math.BigDecimal.class).toPlainString();
+                var revenue = jdbc.queryForMap("""
+                    SELECT COALESCE(SUM(o.total),0) AS gross,
+                        COALESCE(SUM((SELECT COALESCE(SUM(r.refund_amount),0)
+                            FROM public.return_requests r JOIN public.order_items i ON i.id=r.order_item_id
+                            WHERE i.order_id=o.id AND r.refund_status='REFUNDED')),0) AS refunded
+                    FROM public.orders o WHERE o.currency='PKR' AND o.payment_method<>'DEMO'
+                        AND o.payment_status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED')
+                    """);
+
                 long activeProducts = jdbc.queryForObject("""
                                 SELECT COUNT(*)
                                 FROM public.products
@@ -70,7 +87,7 @@ public class AdminDashboardService {
                                 FROM public.orders o
                                 JOIN public.users u ON u.id = o.user_id
                                 ORDER BY o.created_at DESC, o.id DESC
-                                LIMIT 5
+                                LIMIT 4
                                 """,
                                 (rs, row) -> new RecentOrder(
                                                 rs.getObject("id", UUID.class),
@@ -86,7 +103,7 @@ public class AdminDashboardService {
                                 FROM public.products
                                 WHERE active = TRUE AND stock <= 5
                                 ORDER BY stock, name, id
-                                LIMIT 8
+                                LIMIT 4
                                 """,
                                 (rs, row) -> new LowStockProduct(
                                                 rs.getObject("id", UUID.class),
@@ -112,7 +129,10 @@ public class AdminDashboardService {
                                 recentOrders,
                                 lowStockProducts,
                                 ((Number) accountCounts.get("active_customers")).longValue(),
-                                ((Number) accountCounts.get("active_riders")).longValue());
+                                ((Number) accountCounts.get("active_riders")).longValue(),
+                                revenue.get("gross").toString(), revenue.get("refunded").toString(),
+                                ((Number) cash.get("pending_count")).longValue(),
+                                cash.get("pending_amount").toString(), codWithRiders);
         }
 
         public record DashboardResponse(
@@ -124,7 +144,14 @@ public class AdminDashboardService {
                         List<RecentOrder> recentOrders,
                         List<LowStockProduct> lowStockProducts,
                         long activeCustomers,
-                        long activeRiders) {
+                        long activeRiders, String grossPaidRevenue, String refundedAmount,
+                        long pendingCodHandovers, String pendingCodAmount, String codWithRiders) {
+                public DashboardResponse(long totalOrders, long pendingOrders, long activeProducts,
+                        String paidRevenue, String currency, List<RecentOrder> recentOrders,
+                        List<LowStockProduct> lowStockProducts, long activeCustomers, long activeRiders) {
+                    this(totalOrders, pendingOrders, activeProducts, paidRevenue, currency, recentOrders,
+                        lowStockProducts, activeCustomers, activeRiders, paidRevenue, "0.00", 0, "0.00", "0.00");
+                }
         }
 
         public record RecentOrder(

@@ -263,7 +263,7 @@ public class SecurityConfig {
                                                 .authenticated()
                                                 .requestMatchers(
                                                                 HttpMethod.GET,
-                                                                "/api/admin/orders/*/invoice")
+                                                                "/api/admin/orders/*/invoice", "/api/admin/orders/*/history")
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(
                                                                 HttpMethod.DELETE,

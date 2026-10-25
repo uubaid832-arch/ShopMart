@@ -146,6 +146,19 @@ export default function PeopleModule({ session, onClose, onChanged }) {
   );
   return (
     <Page
+      footerAction={
+        !editor ? (
+          <Button
+            title="Add rider"
+            icon="plus"
+            disabled={op.blocked}
+            onPress={() => {
+              op.reset();
+              setEditor("NEW");
+            }}
+          />
+        ) : null
+      }
       title={
         editor === "NEW"
           ? "Add rider"
@@ -228,15 +241,7 @@ export default function PeopleModule({ session, onClose, onChanged }) {
         <>
           <View style={ui.toolbar}>
             <Notice op={op} />
-            <Button
-              title="Add rider"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setEditor("NEW");
-              }}
-            />
+
             <Field
               label="Search all users"
               value={draft}

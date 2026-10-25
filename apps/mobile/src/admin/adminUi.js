@@ -18,6 +18,7 @@ import Svg, { Path } from "react-native-svg";
 import { readable } from "./adminApi";
 
 const icons = {
+  download: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
   ticket: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v2m0 3v2m0 3v2",
   box: "m12 3 9 5v9l-9 5-9-5V8l9-5Zm0 10 9-5M12 13 3 8m9 5v9M7.5 5.5l9 5",
   grid: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
@@ -218,6 +219,8 @@ export function Page({
   onBack,
   children,
   toolbar,
+  primaryAction,
+  footerAction,
 }) {
   return (
     <Modal
@@ -267,6 +270,14 @@ export function Page({
         </View>
         {toolbar}
         {children}
+        {footerAction ? (
+          <View style={ui.actionDock}>{footerAction}</View>
+        ) : null}
+        {primaryAction && (
+          <View style={ui.actionDock}>
+            <Button {...primaryAction} />
+          </View>
+        )}
       </SafeAreaView>
     </Modal>
   );
@@ -452,6 +463,13 @@ export function useMutation(onChanged) {
   };
 }
 export const ui = StyleSheet.create({
+  actionDock: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#eae3f2",
+  },
   screen: { flex: 1, backgroundColor: "#faf9fd" },
   grow: { flex: 1, minWidth: 0 },
   header: {

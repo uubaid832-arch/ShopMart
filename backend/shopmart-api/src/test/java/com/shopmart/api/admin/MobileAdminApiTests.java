@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // MVC and security tests only: no database, real mail, order updates or cash movements.
-@WebMvcTest(controllers = {AdminDashboardController.class, AdminOrderController.class, AdminDeliveryController.class})
+@WebMvcTest(controllers = {AdminDashboardController.class, AdminOrderController.class, AdminDeliveryController.class, com.shopmart.api.orders.OrderInvoiceController.class})
 @Import({SecurityConfig.class, MobileApiSecurityConfig.class, MobileAdminApiTests.WebSecurity.class})
 class MobileAdminApiTests {
   @TestConfiguration(proxyBeanMethods = false)
@@ -40,6 +40,8 @@ class MobileAdminApiTests {
   @MockitoBean AdminOrderService orders;
   @MockitoBean DeliveryService deliveries;
   @MockitoBean JdbcTemplate jdbc;
+  @MockitoBean com.shopmart.api.orders.OrderService customerOrders;
+  @MockitoBean com.shopmart.api.orders.OrderInvoiceService invoices;
   private static final UUID ADMIN = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID ORDER_ID = UUID.fromString("00000000-0000-0000-0000-000000000002");
   private static final UUID RIDER = UUID.fromString("00000000-0000-0000-0000-000000000003");
@@ -53,6 +55,7 @@ class MobileAdminApiTests {
   private String[][] routes() {
     return new String[][] {
         {"GET", "/dashboard"}, {"GET", "/orders"}, {"GET", "/orders/" + ORDER_ID},
+        {"GET", "/orders/" + ORDER_ID + "/history"}, {"GET", "/orders/" + ORDER_ID + "/invoice"},
         {"GET", "/deliveries/riders"}, {"GET", "/deliveries/" + ORDER_ID + "/assignment"},
         {"PATCH", "/orders/" + ORDER_ID + "/status"},
         {"PUT", "/deliveries/" + ORDER_ID + "/assignment"}
@@ -77,6 +80,20 @@ class MobileAdminApiTests {
           .andExpect(status().isForbidden());
     }
     verifyNoInteractions(dashboard, orders, deliveries, jdbc);
+  }
+
+  @Test void adminCanDownloadPdfAndReadHistoryWithoutWebCookies() throws Exception {
+    token("ADMIN");
+    var receipt = new OrderReceipt(ORDER_ID, "SM-TEST", "DELIVERED", "COD", "PAID", "100.00", "PKR", Instant.now(), List.of(), null);
+    when(orders.get(ADMIN, ORDER_ID)).thenReturn(receipt);
+    when(invoices.generate(receipt)).thenReturn("%PDF-test".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+    mvc.perform(get("/api/mobile/admin/orders/"+ORDER_ID+"/invoice").header("Authorization","Bearer test-token"))
+        .andExpect(status().isOk()).andExpect(content().contentType("application/pdf"))
+        .andExpect(header().string("Cache-Control","no-store"));
+    when(orders.history(ADMIN,ORDER_ID)).thenReturn(List.of(new AdminOrderService.HistoryEntry("DELIVERED", Instant.parse("2026-10-25T10:00:00Z"), "Rider")));
+    mvc.perform(get("/api/mobile/admin/orders/"+ORDER_ID+"/history").header("Authorization","Bearer test-token"))
+        .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("DELIVERED"));
+    verifyNoInteractions(customerOrders);
   }
 
   @Test void adminCanReadDashboardAndPaginatedOrders() throws Exception {

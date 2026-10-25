@@ -25,10 +25,14 @@ public class AdminProductController {
   public ResponseEntity<AdminProductService.ProductPage> list(
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) UUID categoryId,
+      @RequestParam(defaultValue = "false") boolean lowStock) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(products.list(userId(jwt), page, size));
+        .body(categoryId == null && !lowStock
+            ? products.list(userId(jwt), page, size)
+            : products.list(userId(jwt), page, size, categoryId, lowStock));
   }
 
   @PostMapping

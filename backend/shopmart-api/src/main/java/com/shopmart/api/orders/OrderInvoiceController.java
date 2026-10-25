@@ -43,7 +43,7 @@ public class OrderInvoiceController {
     return download(order);
   }
 
-  @GetMapping(value = "/api/admin/orders/{id}/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
+  @GetMapping(value = {"/api/admin/orders/{id}/invoice", "/api/mobile/admin/orders/{id}/invoice"}, produces = MediaType.APPLICATION_PDF_VALUE)
   public ResponseEntity<byte[]> adminInvoice(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id) {

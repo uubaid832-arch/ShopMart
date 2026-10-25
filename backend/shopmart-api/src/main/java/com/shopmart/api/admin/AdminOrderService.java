@@ -216,6 +216,33 @@ public class AdminOrderService {
     return orders.getOrder(customerId, orderId);
   }
 
+  @Transactional(readOnly = true)
+  public List<HistoryEntry> history(UUID adminId, UUID orderId) {
+    get(adminId, orderId);
+    return jdbc.query("""
+        SELECT status, created_at, actor_name FROM (
+          SELECT h.id, h.status, h.created_at, u.name AS actor_name
+          FROM public.order_status_history h LEFT JOIN public.users u ON u.id=h.changed_by
+          WHERE h.order_id=?
+          UNION ALL
+          SELECT a.id, 'DELIVERY_FAILED: ' || a.reason, a.created_at, r.name
+          FROM public.delivery_attempts a LEFT JOIN public.users r ON r.id=a.rider_id
+          WHERE a.order_id=?
+          UNION ALL
+          SELECT a.id, 'RETURNED_TO_WAREHOUSE', a.warehouse_reported_at, r.name
+          FROM public.delivery_attempts a LEFT JOIN public.users r ON r.id=a.rider_id
+          WHERE a.order_id=? AND a.warehouse_reported_at IS NOT NULL
+          UNION ALL
+          SELECT a.id, 'WAREHOUSE_RECEIPT_CONFIRMED', a.warehouse_received_at, NULL
+          FROM public.delivery_attempts a
+          WHERE a.order_id=? AND a.warehouse_received_at IS NOT NULL
+        ) events ORDER BY created_at, id, status
+        """, (rs, row) -> new HistoryEntry(rs.getString("status"),
+            rs.getTimestamp("created_at").toInstant(), rs.getString("actor_name")), orderId, orderId, orderId, orderId);
+  }
+
+  public record HistoryEntry(String status, Instant createdAt, String actorName) {}
+
   private void requireAdmin(UUID userId) {
     Boolean allowed = jdbc.queryForObject("""
         SELECT EXISTS (

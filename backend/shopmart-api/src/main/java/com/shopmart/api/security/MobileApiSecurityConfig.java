@@ -123,6 +123,8 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/admin/dashboard",
                                 "/api/mobile/admin/orders",
                                 "/api/mobile/admin/orders/*",
+                                "/api/mobile/admin/orders/*/history",
+                                "/api/mobile/admin/orders/*/invoice",
                                 "/api/mobile/admin/deliveries/riders",
                                 "/api/mobile/admin/deliveries/*/assignment")
                         .hasRole("ADMIN")

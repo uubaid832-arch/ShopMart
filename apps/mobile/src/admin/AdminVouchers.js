@@ -128,6 +128,19 @@ export default function VouchersModule({ session, onClose, onChanged }) {
   );
   return (
     <Page
+      footerAction={
+        !creating ? (
+          <Button
+            title="Generate voucher"
+            icon="plus"
+            disabled={op.blocked}
+            onPress={() => {
+              op.reset();
+              setCreating(true);
+            }}
+          />
+        ) : null
+      }
       title={creating ? "Create voucher" : "Vouchers & discounts"}
       onClose={onClose}
       busy={op.busy}
@@ -206,15 +219,6 @@ export default function VouchersModule({ session, onClose, onChanged }) {
         <>
           <View style={ui.toolbar}>
             <Notice op={op} />
-            <Button
-              title="Generate voucher"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setCreating(true);
-              }}
-            />
           </View>
           <PagedList
             result={result}

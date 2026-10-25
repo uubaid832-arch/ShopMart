@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Switch, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { File } from "expo-file-system";
 import {
   adminRequest,
   imageUrl,
@@ -164,32 +166,44 @@ function Photos({ session, product, onClose, onBack, onChanged }) {
       });
       if (selected.canceled) return { cancelled: true };
       const asset = selected.assets[0];
-      check(
-        !asset.fileSize || asset.fileSize <= 5 * 1024 * 1024,
-        "Choose a photo smaller than 5 MB.",
+      // Convert HEIC/WEBP and large camera photos to a bounded JPEG.
+      const context = ImageManipulator.manipulate(asset.uri);
+      context.resize(
+        asset.width >= asset.height
+          ? { width: Math.min(asset.width, 1600) }
+          : { height: Math.min(asset.height, 1600) },
       );
-      const type =
-        asset.mimeType ||
-        (/\.png$/i.test(asset.uri) ? "image/png" : "image/jpeg");
-      check(
-        ["image/jpeg", "image/png"].includes(type),
-        "Select a JPEG or PNG photo.",
-      );
-      const form = new FormData();
-      form.append(
-        "files",
-        asset.file || {
-          uri: asset.uri,
-          name:
-            asset.fileName || `product.${type === "image/png" ? "png" : "jpg"}`,
-          type,
-        },
-      );
-      return adminRequest(
-        session.accessToken,
-        `/products/${product.id}/images`,
-        { method: "POST", formData: form },
-      );
+      const rendered = await context.renderAsync();
+      let photo;
+      try {
+        photo = await rendered.saveAsync({
+          format: SaveFormat.JPEG,
+          compress: 0.8,
+        });
+      } finally {
+        rendered.release();
+        context.release();
+      }
+      const file = new File(photo.uri);
+      try {
+        check(
+          file.size > 0 && file.size <= 5 * 1024 * 1024,
+          "Use a photo smaller than 5 MB after compression.",
+        );
+        const form = new FormData();
+        form.append("files", {
+          uri: photo.uri,
+          name: "product.jpg",
+          type: "image/jpeg",
+        });
+        return await adminRequest(
+          session.accessToken,
+          `/products/${product.id}/images`,
+          { method: "POST", formData: form },
+        );
+      } finally {
+        if (file.exists) file.delete();
+      }
     }, "Photo uploaded.");
   }
   return (
@@ -288,15 +302,22 @@ function Photos({ session, product, onClose, onBack, onChanged }) {
     </Page>
   );
 }
-export function ProductsModule({ session, onClose, onChanged }) {
+export function ProductsModule({
+  session,
+  onClose,
+  onChanged,
+  initialLowStock = false,
+}) {
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState(null);
   const [photos, setPhotos] = useState(null);
+  const [category, setCategory] = useState("");
+  const [lowStock, setLowStock] = useState(initialLowStock);
   const result = useAdminResource(
     session.accessToken,
-    `/products?page=${page}&size=15`,
+    `/products?page=${page}&size=15${category ? `&categoryId=${encodeURIComponent(category)}` : ""}&lowStock=${lowStock}`,
     revision,
   );
   const categories = useCategories(revision);
@@ -321,6 +342,19 @@ export function ProductsModule({ session, onClose, onChanged }) {
     );
   return (
     <Page
+      primaryAction={
+        !editor
+          ? {
+              title: "Add product",
+              icon: "plus",
+              disabled: op.blocked,
+              onPress: () => {
+                op.reset();
+                setEditor("NEW");
+              },
+            }
+          : undefined
+      }
       title={
         editor
           ? editor === "NEW"
@@ -384,13 +418,31 @@ export function ProductsModule({ session, onClose, onChanged }) {
         <>
           <View style={ui.toolbar}>
             <Notice op={op} />
-            <Button
-              title="Add product"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setEditor("NEW");
+            <Choice
+              label="Product category"
+              value={category}
+              options={[
+                { value: "", label: "All categories" },
+                ...(categories.data || []).map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                })),
+              ]}
+              onChange={(value) => {
+                setCategory(value);
+                setPage(0);
+              }}
+            />
+            <Choice
+              label="Stock"
+              value={lowStock ? "LOW" : "ALL"}
+              options={[
+                { value: "ALL", label: "All stock levels" },
+                { value: "LOW", label: "Low stock (5 or fewer)" },
+              ]}
+              onChange={(value) => {
+                setLowStock(value === "LOW");
+                setPage(0);
               }}
             />
           </View>
@@ -470,6 +522,20 @@ export function CategoriesModule({ session, onClose, onChanged }) {
   });
   return (
     <Page
+      footerAction={
+        !editor ? (
+          <Button
+            title="Add category"
+            icon="plus"
+            disabled={op.blocked}
+            onPress={() => {
+              op.reset();
+              setName("");
+              setEditor("NEW");
+            }}
+          />
+        ) : null
+      }
       title="Categories"
       onClose={onClose}
       busy={op.busy}
@@ -527,16 +593,6 @@ export function CategoriesModule({ session, onClose, onChanged }) {
         <>
           <View style={ui.toolbar}>
             <Notice op={op} />
-            <Button
-              title="Add category"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setName("");
-                setEditor("NEW");
-              }}
-            />
           </View>
           <PagedList
             result={result}

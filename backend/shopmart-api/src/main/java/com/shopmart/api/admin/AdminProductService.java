@@ -32,6 +32,11 @@ public class AdminProductService {
 
     @Transactional(readOnly = true)
     public ProductPage list(UUID adminId, int page, int size) {
+        return list(adminId, page, size, null, false);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductPage list(UUID adminId, int page, int size, UUID categoryId, boolean lowStock) {
         requireAdmin(adminId);
 
         if (page < 0 || size < 1 || size > 100) {
@@ -39,18 +44,20 @@ public class AdminProductService {
         }
 
         long total = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM public.products",
-                Long.class);
+                "SELECT COUNT(*) FROM public.products p WHERE (CAST(? AS uuid) IS NULL OR p.category_id=?) AND (NOT ? OR (p.active=TRUE AND p.stock<=5))",
+                Long.class, categoryId, categoryId, lowStock);
 
         List<ProductResponse> items = jdbc.query("""
                 SELECT p.*, c.name AS category_name
                 FROM public.products p
                 JOIN public.categories c ON c.id = p.category_id
+                WHERE (CAST(? AS uuid) IS NULL OR p.category_id=?)
+                  AND (NOT ? OR (p.active=TRUE AND p.stock<=5))
                 ORDER BY p.name, p.id
                 LIMIT ? OFFSET ?
                 """,
                 this::mapProduct,
-                size,
+                categoryId, categoryId, lowStock, size,
                 (long) page * size);
 
         return new ProductPage(

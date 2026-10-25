@@ -42,6 +42,13 @@ public class AdminOrderController {
         .body(orders.get(userId(jwt), id));
   }
 
+  @GetMapping("/{id}/history")
+  public ResponseEntity<java.util.List<AdminOrderService.HistoryEntry>> history(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(orders.history(userId(jwt), id));
+  }
+
   @PatchMapping("/{id}/status")
   public ResponseEntity<OrderReceipt> updateStatus(
       @AuthenticationPrincipal Jwt jwt,
