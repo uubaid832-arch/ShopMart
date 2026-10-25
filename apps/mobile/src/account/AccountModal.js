@@ -30,6 +30,7 @@ export default function AccountModal({
   error,
   onEditProfile,
   onChangePassword,
+  onOpenBiometrics,
   onSignOut,
   onClose,
 }) {
@@ -119,6 +120,29 @@ export default function AccountModal({
               <Text style={styles.actionTitle}>Change password</Text>
               <Text style={styles.actionDescription}>
                 Keep your account secure
+              </Text>
+            </View>
+
+            <Icon name="arrow" size={17} color="#a49ab9" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            disabled={busy}
+            onPress={onOpenBiometrics}
+            style={({ pressed }) => [
+              styles.action,
+              pressed && styles.pressed,
+              busy && styles.dim,
+            ]}
+          >
+            <View style={styles.actionIcon}>
+              <Icon name="lock" />
+            </View>
+
+            <View style={styles.actionCopy}>
+              <Text style={styles.actionTitle}>Fingerprint & security</Text>
+              <Text style={styles.actionDescription}>
+                Manage biometric app unlock
               </Text>
             </View>
 

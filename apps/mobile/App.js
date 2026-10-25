@@ -215,6 +215,12 @@ function ShopMart() {
         onSignOut={auth.signOut}
         signingOut={auth.signingOut}
         sessionError={auth.error}
+        onUpdateUser={auth.updateUser}
+        onPasswordChanged={async () => {
+          await auth.clearLocalSession();
+          setAuthOpen(true);
+        }}
+        security={biometric}
       />
     );
   }

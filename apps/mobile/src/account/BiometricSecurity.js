@@ -19,20 +19,28 @@ export function useBiometricLock(userId, sessionReady) {
   keyRef.current = key;
   const generation = useRef(0);
   const pending = useRef(false);
+  const passwordFallbackFor = useRef(null);
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!sessionReady || !key) return;
+    generation.current += 1;
+    if (!sessionReady || !key) {
+      setState(null);
+      setError("");
+      return;
+    }
     let active = true;
     SecureStore.getItemAsync(key)
       .then((value) => {
         if (active) {
+          const passwordVerifiedSession = passwordFallbackFor.current === key;
+          if (passwordVerifiedSession) passwordFallbackFor.current = null;
           setState({
             key,
             enabled: value === "true",
-            unlocked: value !== "true",
+            unlocked: value !== "true" || passwordVerifiedSession,
           });
           setError("");
         }
@@ -143,9 +151,11 @@ export function useBiometricLock(userId, sessionReady) {
     setError("");
     const operationKey = key;
     try {
-      // Remove the signed-in session BEFORE resetting the device preference.
+      // End the session while preserving this account's saved preference.
       await clearLocalSession();
-      await SecureStore.deleteItemAsync(operationKey);
+      // Password (and required OTP) sign-in grants access for the next session.
+      // Subsequent backgrounding still locks it using the saved preference.
+      passwordFallbackFor.current = operationKey;
       return true;
     } catch {
       setError("Could not finish signing out. Please try again.");
@@ -294,9 +304,9 @@ export default function BiometricSettingsModal({ security, onClose, onLock }) {
             </Pressable>
           )}
           <Text style={styles.note}>
-            This protects access to an existing session on this phone. Password
-            sign-in and required OTP verification still apply when signing in
-            again.
+            This setting is saved separately for each account on this phone,
+            including after sign-out. Password sign-in and required OTP
+            verification still apply when signing in again.
           </Text>
           {security.error ? (
             <Text accessibilityRole="alert" style={styles.error}>
