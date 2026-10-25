@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { notificationReadChanged } from "./NotificationBell";
 import {
   ActivityIndicator,
   FlatList,
@@ -88,6 +89,7 @@ export default function NotificationsModal({ session, onClose }) {
         id ? `/${encodeURIComponent(id)}/read` : "/read-all",
         "PATCH",
       );
+      notificationReadChanged(session.user.id);
       setReload((value) => value + 1);
     } catch (error) {
       setActionError(error.message);

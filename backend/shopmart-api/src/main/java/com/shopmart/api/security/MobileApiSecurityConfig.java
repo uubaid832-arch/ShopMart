@@ -165,6 +165,10 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/admin/products/*/images/*",
                                 "/api/mobile/admin/categories/*")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/vouchers/quote").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/admin/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/admin/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/mobile/admin/vouchers/*").hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

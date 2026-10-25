@@ -181,6 +181,12 @@ export default function OrdersModal({
                       </p>
                       <p className="mb-0 mt-1 text-xl font-extrabold text-violet-700">
                         <bdi>{formatPrice(order.total)}</bdi>
+                        {Number(order.discountAmount) > 0 && (
+                          <span className="block text-xs font-normal text-emerald-700">
+                            Voucher {order.voucherCode}: -
+                            {formatPrice(order.discountAmount)}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>

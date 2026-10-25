@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Users,
+  TicketPercent,
 } from "lucide-react";
 import { useSession } from "../auth/useSession";
 import NotificationBell from "../notifications/NotificationBell";
@@ -24,6 +25,7 @@ const links = [
     Icon: LayoutDashboard,
     end: true,
   },
+  { to: "/admin/vouchers", label: "Vouchers", Icon: TicketPercent },
   { to: "/admin/products", label: "Products", Icon: Package },
   { to: "/admin/categories", label: "Categories", Icon: FolderTree },
   { to: "/admin/orders", label: "Orders", Icon: ShoppingBag },

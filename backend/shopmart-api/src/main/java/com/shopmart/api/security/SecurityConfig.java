@@ -296,7 +296,11 @@ public class SecurityConfig {
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.PATCH, "/api/admin/cod/handovers/*")
                                                 .hasRole("ADMIN")
-                                                .anyRequest().denyAll())
+                                                .requestMatchers(HttpMethod.POST, "/api/vouchers/quote").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/admin/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/admin/vouchers/*").hasRole("ADMIN")
+                        .anyRequest().denyAll())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .oauth2ResourceServer(resourceServer -> resourceServer

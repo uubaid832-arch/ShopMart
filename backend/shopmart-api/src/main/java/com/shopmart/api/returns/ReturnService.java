@@ -143,7 +143,7 @@ public class ReturnService {
     }
 
     var items = jdbc.queryForList("""
-        SELECT unit_price, quantity
+        SELECT unit_price, quantity, discount_amount
         FROM public.order_items
         WHERE id = ? AND order_id = ?
         """, request.orderItemId(), request.orderId());
@@ -169,7 +169,8 @@ public class ReturnService {
 
     BigDecimal amount = ((BigDecimal) item.get("unit_price"))
         .multiply(BigDecimal.valueOf(
-            ((Number) item.get("quantity")).longValue()));
+            ((Number) item.get("quantity")).longValue()))
+        .subtract((BigDecimal)item.get("discount_amount"));
 
     UUID id = UUID.randomUUID();
 

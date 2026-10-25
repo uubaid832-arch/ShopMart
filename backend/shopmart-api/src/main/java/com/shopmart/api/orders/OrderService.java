@@ -1,6 +1,7 @@
 package com.shopmart.api.orders;
 
 import java.math.BigDecimal;
+import com.shopmart.api.vouchers.VoucherService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -32,12 +33,15 @@ public class OrderService {
 
     private final JdbcTemplate jdbc;
     private final NotificationService notifications;
+    private final VoucherService vouchers;
 
     public OrderService(
             JdbcTemplate jdbc,
-            NotificationService notifications) {
+            NotificationService notifications,
+            VoucherService vouchers) {
         this.jdbc = jdbc;
         this.notifications = notifications;
+        this.vouchers = vouchers;
     }
 
     @Transactional
@@ -97,6 +101,10 @@ public class OrderService {
         List<String> fingerprintParts = new ArrayList<>(
                 List.of(name, email, phone, address, city, paymentMethod));
 
+        String voucherCode = VoucherService.normalize(request.voucherCode());
+        // Keep legacy request hashes unchanged for carts without a voucher.
+        if (voucherCode != null) fingerprintParts.add("voucher:" + voucherCode);
+        if (request.expectedTotal()!=null) fingerprintParts.add("expected:" + request.expectedTotal().stripTrailingZeros().toPlainString());
         quantities.forEach((id, quantity) -> fingerprintParts.add(id + ":" + quantity));
 
         String requestHash = fingerprint(fingerprintParts);
@@ -163,6 +171,9 @@ public class OrderService {
                     price.multiply(BigDecimal.valueOf(quantity)));
         }
 
+        var pricing = vouchers.forOrder(userId, voucherCode, lines);
+        if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(pricing.discount()))!=0)
+            throw new VoucherService.Rejected("Prices changed. Remove and apply the voucher again to confirm the new total.");
         UUID orderId = UUID.randomUUID();
         String orderNumber = "SM-" + orderId;
 
@@ -172,10 +183,10 @@ public class OrderService {
                 INSERT INTO public.orders (
                     id, order_number, user_id, idempotency_key, request_hash,
                     recipient_name, email, phone, address_line, city,
-                    subtotal, shipping_fee, total,
+                    subtotal, shipping_fee, total, voucher_id, voucher_code, discount_amount,
                     payment_method, payment_status
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 orderId,
                 orderNumber,
@@ -189,22 +200,24 @@ public class OrderService {
                 city,
                 subtotal,
                 BigDecimal.ZERO,
-                subtotal,
+                subtotal.subtract(pricing.discount()),
+                pricing.voucherId(), pricing.code(), pricing.discount(),
                 paymentMethod,
                 paymentStatus);
 
-        for (OrderLine line : lines) {
+        for (int lineIndex=0; lineIndex<lines.size(); lineIndex++) {
+            OrderLine line=lines.get(lineIndex);
             jdbc.update("""
                     INSERT INTO public.order_items (
-                        order_id, product_id, product_name, unit_price, quantity
+                        order_id, product_id, product_name, unit_price, quantity, discount_amount
                     )
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     orderId,
                     line.productId(),
                     line.name(),
                     new BigDecimal(line.price()),
-                    line.quantity());
+                    line.quantity(), pricing.lineDiscounts().get(lineIndex));
 
             int updated = jdbc.update("""
                     UPDATE public.products
@@ -233,6 +246,7 @@ public class OrderService {
                 orderId,
                 userId);
 
+        vouchers.redeem(userId, orderId, pricing);
         notifications.orderPlaced(userId, orderId, orderNumber);
 
         return getOrder(userId, orderId);
@@ -242,7 +256,7 @@ public class OrderService {
     public OrderReceipt getOrder(UUID userId, UUID orderId) {
         var orders = jdbc.queryForList("""
                 SELECT id, order_number, status, payment_method,
-                       payment_status, total, currency, created_at,
+                       payment_status, total, currency, created_at, subtotal, discount_amount, voucher_code,
                        recipient_name, email, phone, address_line, city
                 FROM public.orders
                 WHERE id = ? AND user_id = ?
@@ -257,7 +271,7 @@ public class OrderService {
         var order = orders.get(0);
 
         List<OrderLine> lines = jdbc.query("""
-                SELECT product_id, product_name, unit_price, quantity
+                SELECT product_id, product_name, unit_price, quantity, discount_amount
                 FROM public.order_items
                 WHERE order_id = ?
                 ORDER BY product_name, product_id
@@ -266,7 +280,7 @@ public class OrderService {
                         rs.getObject("product_id", UUID.class),
                         rs.getString("product_name"),
                         rs.getBigDecimal("unit_price").toPlainString(),
-                        rs.getInt("quantity")),
+                        rs.getInt("quantity"), rs.getBigDecimal("discount_amount").toPlainString()),
                 orderId);
 
         return new OrderReceipt(
@@ -284,7 +298,8 @@ public class OrderService {
                         (String) order.get("email"),
                         (String) order.get("phone"),
                         (String) order.get("address_line"),
-                        (String) order.get("city")));
+                        (String) order.get("city")),
+                order.get("subtotal").toString(), order.get("discount_amount").toString(), (String)order.get("voucher_code"));
     }
 
     @Transactional(readOnly = true)
@@ -319,10 +334,10 @@ public class OrderService {
 
         jdbc.query("""
                 SELECT selected.*, item.product_id, item.product_name,
-                       item.unit_price, item.quantity
+                       item.unit_price, item.quantity, item.discount_amount AS line_discount
                 FROM (
                     SELECT id, order_number, status, payment_method,
-                           payment_status, total, currency, created_at,
+                           payment_status, total, currency, created_at, subtotal, discount_amount, voucher_code,
                            recipient_name, email, phone, address_line, city
                     FROM public.orders
                     WHERE user_id = ?
@@ -354,7 +369,8 @@ public class OrderService {
                                         rs.getString("email"),
                                         rs.getString("phone"),
                                         rs.getString("address_line"),
-                                        rs.getString("city")));
+                                        rs.getString("city")),
+                                rs.getBigDecimal("subtotal").toPlainString(), rs.getBigDecimal("discount_amount").toPlainString(), rs.getString("voucher_code"));
 
                         results.put(orderId, receipt);
                     }
@@ -366,7 +382,7 @@ public class OrderService {
                                 productId,
                                 rs.getString("product_name"),
                                 rs.getBigDecimal("unit_price").toPlainString(),
-                                rs.getInt("quantity")));
+                                rs.getInt("quantity"), rs.getBigDecimal("line_discount").toPlainString()));
                     }
                 },
                 userId,

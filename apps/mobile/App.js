@@ -23,6 +23,7 @@ import ProductDetailsModal from "./src/products/ProductDetailsModal";
 import { useMobileWishlist } from "./src/wishlist/useMobileWishlist";
 import Svg, { Path } from "react-native-svg";
 import NotificationsModal from "./src/notifications/NotificationsModal";
+import NotificationBell from "./src/notifications/NotificationBell";
 import ReturnsModal from "./src/returns/ReturnsModal";
 import ProfileModal from "./src/account/ProfileModal";
 import AccountModal from "./src/account/AccountModal";
@@ -363,9 +364,8 @@ function ShopMart() {
             label="Shopping assistant"
             onPress={() => setChatOpen(true)}
           />
-          <IconButton
-            name="bell"
-            label="Notifications"
+          <NotificationBell
+            session={auth.session}
             onPress={() => openSignedIn(() => setNotificationsOpen(true))}
           />
           <IconButton

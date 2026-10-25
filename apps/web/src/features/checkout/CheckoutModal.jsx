@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import Modal from "../../components/Modal";
 import { placeCodOrder, processMockPayment } from "../../api/orders";
 import MockPaymentGateway from "./MockPaymentGateway";
+import { useVoucher } from "./useVoucher";
+import VoucherField from "./VoucherField";
 import { getAddresses } from "../../api/addresses";
 import { useLanguage } from "../language/useLanguage";
 
@@ -61,7 +63,13 @@ const textButton =
 const inputStyle =
   "box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 font-[inherit] text-slate-800 focus:border-violet-500";
 
-function OrderSummary({ items, subtotal, formatPrice }) {
+function OrderSummary({
+  items,
+  subtotal,
+  formatPrice,
+  discount = 0,
+  voucherCode,
+}) {
   const { language } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
 
@@ -84,6 +92,20 @@ function OrderSummary({ items, subtotal, formatPrice }) {
         ))}
       </ul>
 
+      {Number(discount) > 0 && (
+        <>
+          <div className="mb-2 flex justify-between text-sm">
+            <span>{text("Product subtotal", "مصنوعات کی کل رقم")}</span>
+            <span>{formatPrice(Number(subtotal) + Number(discount))}</span>
+          </div>
+          <div className="mb-4 flex justify-between text-sm font-semibold text-emerald-700">
+            <span>
+              {text("Voucher", "واؤچر")} {voucherCode}
+            </span>
+            <span>-{formatPrice(discount)}</span>
+          </div>
+        </>
+      )}
       <div className="flex flex-wrap justify-between gap-2 border-0 border-t border-solid border-violet-200 pt-4 font-bold">
         <span>{text("Order total", "آرڈر کی کل رقم")}</span>
         <span>
@@ -119,6 +141,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [gatewayOpen, setGatewayOpen] = useState(false);
+  const [submittedTotal, setSubmittedTotal] = useState(null);
 
   const [details, setDetails] = useState({
     name: session?.user.name ?? "",
@@ -128,6 +151,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     city: "",
   });
 
+  const voucher = useVoucher(session, cart.items);
   const accessToken = session?.accessToken;
 
   useEffect(() => {
@@ -226,13 +250,17 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     });
   }
   async function submitOrder(paymentDetails = null) {
-    if (inFlight.current || confirmation) return;
+    if (inFlight.current || confirmation || voucher.busy) return;
 
     if (!accessToken || session.expiresAt <= Date.now()) {
       setError("Please close checkout and sign in again.");
       return;
     }
 
+    if (!requestRef.current && voucher.code.trim() && !voucher.quote) {
+      setError("Apply or remove the voucher before placing your order.");
+      return;
+    }
     if (!requestRef.current) {
       if (cart.items.length === 0) {
         setError("Your cart is empty.");
@@ -247,9 +275,14 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         items: cart.items.map(({ id, quantity }) => ({ id, quantity })),
         paymentMethod,
         paymentDetails,
+        voucherCode: voucher.quote?.code || null,
+        expectedTotal: voucher.quote?.total || null,
       };
     }
 
+    setSubmittedTotal(
+      (current) => current ?? voucher.quote?.total ?? cart.total,
+    );
     inFlight.current = true;
     setSubmitting(true);
     setLocked(true);
@@ -282,6 +315,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
 
       if (rejected) {
         requestRef.current = null;
+        setSubmittedTotal(null);
         setLocked(false);
       }
 
@@ -299,7 +333,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    if (inFlight.current || confirmation) return;
+    if (inFlight.current || confirmation || voucher.busy) return;
 
     if (!accessToken || session.expiresAt <= Date.now()) {
       setError("Please close checkout and sign in again.");
@@ -402,7 +436,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         <button
           type="button"
           aria-label={text("Close checkout", "چیک آؤٹ بند کریں")}
-          disabled={submitting}
+          disabled={submitting || voucher.busy}
           onClick={close}
           className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-2xl text-slate-600 disabled:opacity-50"
         >
@@ -451,6 +485,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                 price: Number(item.price),
               }))}
               subtotal={Number(confirmation.total)}
+              discount={confirmation.discountAmount}
+              voucherCode={confirmation.voucherCode}
               formatPrice={formatPrice}
             />
 
@@ -466,7 +502,9 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
           <div className="grid gap-4">
             <MockPaymentGateway
               method={paymentMethod}
-              amount={cart.total}
+              amount={Number(
+                submittedTotal ?? voucher.quote?.total ?? cart.total,
+              )}
               formatPrice={formatPrice}
               busy={submitting}
               locked={locked}
@@ -497,7 +535,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
             </p>
 
             <fieldset
-              disabled={submitting}
+              disabled={submitting || voucher.busy}
               className="m-0 grid min-w-0 gap-4 border-0 p-0"
             >
               {step === 1 ? (
@@ -630,9 +668,15 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                     ))}
                   </fieldset>
 
+                  <VoucherField
+                    voucher={voucher}
+                    disabled={submitting || locked}
+                  />
                   <OrderSummary
                     items={cart.items}
-                    subtotal={cart.total}
+                    subtotal={Number(voucher.quote?.total ?? cart.total)}
+                    discount={voucher.quote?.discountAmount}
+                    voucherCode={voucher.quote?.code}
                     formatPrice={formatPrice}
                   />
                 </>

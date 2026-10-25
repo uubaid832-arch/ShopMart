@@ -4,6 +4,8 @@ async function placeOrder({
   details,
   items,
   paymentMethod,
+  voucherCode,
+  expectedTotal,
 }) {
   if (!accessToken) {
     throw new Error("Please sign in before placing your order.");
@@ -40,6 +42,8 @@ async function placeOrder({
       address: details.address.trim(),
       city: details.city.trim(),
       paymentMethod,
+      voucherCode,
+      expectedTotal,
       items: items.map((item) => ({
         productId: item.id,
         quantity: item.quantity,
@@ -55,8 +59,15 @@ async function placeOrder({
       409: "Stock or checkout details changed. Please review your order.",
     };
 
+    let detail = null;
+    try {
+      detail = await response.json();
+    } catch {
+      /* Use the status fallback. */
+    }
     const error = new Error(
-      messages[response.status] ??
+      detail?.message ??
+        messages[response.status] ??
         "Could not confirm the order. Retry without changing your details.",
     );
 
@@ -135,6 +146,8 @@ export async function processMockPayment({
   details,
   items,
   paymentDetails,
+  voucherCode,
+  expectedTotal,
 }) {
   if (!accessToken) {
     throw new Error("Please sign in before placing your order.");
@@ -174,6 +187,8 @@ export async function processMockPayment({
         address: details.address.trim(),
         city: details.city.trim(),
         paymentMethod: "DEMO",
+        voucherCode,
+        expectedTotal,
         items: items.map(({ id, quantity }) => ({
           productId: id,
           quantity,
@@ -191,8 +206,15 @@ export async function processMockPayment({
       422: "Test payment declined. No order was created. Try the successful test details.",
     };
 
+    let detail = null;
+    try {
+      detail = await response.json();
+    } catch {
+      /* Use the status fallback. */
+    }
     const error = new Error(
-      messages[response.status] ??
+      detail?.message ??
+        messages[response.status] ??
         "Could not confirm the order. Retry here using the same details.",
     );
 

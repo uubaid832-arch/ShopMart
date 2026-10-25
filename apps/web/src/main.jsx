@@ -16,6 +16,7 @@ import RiderDeliveries from "./features/rider/RiderDeliveries";
 import SessionProvider from "./features/auth/SessionProvider";
 import LanguageProvider from "./features/language/LanguageProvider";
 import AdminUsers from "./features/admin/AdminUsers";
+import AdminVouchers from "./features/vouchers/AdminVouchers";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -30,6 +31,7 @@ createRoot(document.getElementById("root")).render(
               <Route path="categories" element={<AdminCategories />} />
               <Route path="orders" element={<AdminOrdersPage />} />
               <Route path="users" element={<AdminUsers />} />
+              <Route path="vouchers" element={<AdminVouchers />} />
               <Route path="deliveries" element={<AdminDeliveries />} />
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="returns" element={<AdminReturns />} />

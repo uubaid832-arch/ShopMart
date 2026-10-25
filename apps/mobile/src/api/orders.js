@@ -25,8 +25,15 @@ async function orderRequest(accessToken, path = "", { values, signal } = {}) {
       409: "Stock or product availability changed. Refresh your cart.",
     };
 
+    let detail = null;
+    try {
+      detail = await response.json();
+    } catch {
+      /* Use the status fallback. */
+    }
     const error = new Error(
-      messages[response.status] ??
+      detail?.message ??
+        messages[response.status] ??
         "The request could not be confirmed. Please try again.",
     );
 

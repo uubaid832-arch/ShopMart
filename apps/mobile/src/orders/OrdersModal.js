@@ -349,6 +349,12 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                       </View>
                     ))}
                   </View>
+                  {Number(item.discountAmount) > 0 && (
+                    <Text style={styles.payment}>
+                      Voucher {item.voucherCode}: -
+                      {formatPrice(item.discountAmount, item.currency)}
+                    </Text>
+                  )}
                   <View style={styles.totalRow}>
                     <View style={styles.grow}>
                       <Text style={styles.totalLabel}>Order total</Text>

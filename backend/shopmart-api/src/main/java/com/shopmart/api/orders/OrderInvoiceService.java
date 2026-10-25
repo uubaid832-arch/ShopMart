@@ -115,6 +115,11 @@ public class OrderInvoiceService {
                 : "Simulated success - no money charged"
             : readable(order.paymentStatus());
 
+        if (new BigDecimal(order.discountAmount()).signum() > 0) {
+          writer.line("Product subtotal: " + amount(new BigDecimal(order.subtotal())), false, 10);
+          writer.line("Voucher " + order.voucherCode() + ": -" + amount(new BigDecimal(order.discountAmount())), true, 10);
+          writer.space(8);
+        }
         writer.totalPanel(
             order.currency(),
             amount(new BigDecimal(order.total())),

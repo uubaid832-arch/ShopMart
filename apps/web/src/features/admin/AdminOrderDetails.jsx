@@ -151,6 +151,12 @@ export default function AdminOrderDetails({ order, onClose }) {
               {formatPrice(order.total)}
             </p>
 
+            {Number(order.discountAmount) > 0 && (
+              <p className="text-sm font-semibold text-emerald-700">
+                Voucher {order.voucherCode}: -
+                {formatPrice(order.discountAmount)}
+              </p>
+            )}
             <span
               className={`mt-3 inline-block rounded-lg px-2 py-1 text-xs font-semibold ${
                 order.paymentStatus === "Paid"

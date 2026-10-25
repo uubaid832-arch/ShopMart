@@ -15,6 +15,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 import { placeMobileOrder } from "../api/orders";
 import SavedAddresses from "./SavedAddresses";
+import { useVoucher } from "../vouchers/useVoucher";
+import VoucherField from "../vouchers/VoucherField";
 const fields = [
   ["name", "Recipient name", 150],
   ["email", "Email address", 254],
@@ -44,6 +46,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState(null);
+  const voucher = useVoucher(session, cart.items);
   const pending = useRef(false);
   const snapshot = useRef(null);
 
@@ -76,13 +79,17 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   }
 
   async function submit() {
-    if (pending.current || confirmation) return;
+    if (pending.current || confirmation || voucher.busy) return;
 
     if (!session || session.expiresAt <= Date.now()) {
       setError("Please close checkout and sign in again.");
       return;
     }
 
+    if (!snapshot.current && voucher.code.trim() && !voucher.quote) {
+      setError("Apply or remove the voucher before placing your order.");
+      return;
+    }
     if (!snapshot.current) {
       const values = Object.fromEntries(
         Object.entries(details).map(([key, value]) => [key, value.trim()]),
@@ -113,13 +120,17 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
           ...values,
           idempotencyKey: Crypto.randomUUID(),
           paymentMethod: "COD",
+          voucherCode: voucher.quote?.code || null,
+          expectedTotal: voucher.quote?.total || null,
           items: cart.items.map((item) => ({
             productId: item.id,
             quantity: item.quantity,
           })),
         },
         items: cart.items.map((item) => ({ ...item })),
-        total: cart.total,
+        total: voucher.quote?.total ?? cart.total,
+        discount: voucher.quote?.discountAmount || "0.00",
+        subtotal: voucher.quote?.subtotal ?? cart.total,
       };
     }
 
@@ -162,7 +173,12 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   }
 
   const summaryItems = snapshot.current?.items ?? cart.items;
-  const summaryTotal = snapshot.current?.total ?? cart.total;
+  const summaryTotal =
+    snapshot.current?.total ?? voucher.quote?.total ?? cart.total;
+  const summarySubtotal =
+    snapshot.current?.subtotal ?? voucher.quote?.subtotal ?? cart.total;
+  const summaryDiscount =
+    snapshot.current?.discount ?? voucher.quote?.discountAmount ?? "0.00";
 
   return (
     <Modal
@@ -233,6 +249,15 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                     </View>
                   ))}
 
+                  {Number(confirmation.discountAmount) > 0 && (
+                    <Text style={styles.description}>
+                      Voucher {confirmation.voucherCode}: -
+                      {formatPrice(
+                        confirmation.discountAmount,
+                        confirmation.currency,
+                      )}
+                    </Text>
+                  )}
                   <Text style={styles.total}>
                     {formatPrice(confirmation.total, confirmation.currency)}
                   </Text>
@@ -292,6 +317,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   </View>
                 ))}
 
+                <VoucherField voucher={voucher} disabled={saving || locked} />
                 <View style={styles.summary}>
                   <Text style={styles.summaryTitle}>Order summary</Text>
 
@@ -306,6 +332,14 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                     </View>
                   ))}
 
+                  <Text style={styles.description}>
+                    Product subtotal: {formatPrice(summarySubtotal)}
+                  </Text>
+                  {Number(summaryDiscount) > 0 && (
+                    <Text style={styles.description}>
+                      Voucher discount: -{formatPrice(summaryDiscount)}
+                    </Text>
+                  )}
                   <Text style={styles.description}>Shipping: PKR 0</Text>
                   <Text style={styles.total}>{formatPrice(summaryTotal)}</Text>
                 </View>
@@ -318,7 +352,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
 
                 <Pressable
                   accessibilityRole="button"
-                  disabled={saving}
+                  disabled={saving || voucher.busy}
                   onPress={submit}
                   style={[styles.primary, saving && styles.disabled]}
                 >

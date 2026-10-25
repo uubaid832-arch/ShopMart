@@ -19,6 +19,7 @@ import WarehouseReturnModal from "./WarehouseReturnModal";
 import { useRiderLocation } from "./useRiderLocation";
 import DeliveryFailureModal from "./DeliveryFailureModal";
 import NotificationsModal from "../notifications/NotificationsModal";
+import NotificationBell from "../notifications/NotificationBell";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -240,14 +241,10 @@ export default function RiderScreen({
                 : "Your deliveries"}
           </Text>
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
+        <NotificationBell
+          session={session}
           onPress={() => setNotificationsOpen(true)}
-          style={styles.iconButton}
-        >
-          <Icon name="bell" />
-        </Pressable>
+        />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Sign out"
