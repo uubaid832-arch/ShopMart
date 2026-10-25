@@ -62,6 +62,14 @@ public class MobileApiSecurityConfig {
                                 HttpMethod.POST,
                                 "/api/mobile/returns")
                         .authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/addresses")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/addresses")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/mobile/addresses/*")
+                        .authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/mobile/addresses/*")
+                        .authenticated()
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import static com.shopmart.api.addresses.AddressModels.*;
 
 @RestController
-@RequestMapping("/api/addresses")
+@RequestMapping({ "/api/addresses", "/api/mobile/addresses" })
 public class AddressController {
 
   private final AddressService addresses;
