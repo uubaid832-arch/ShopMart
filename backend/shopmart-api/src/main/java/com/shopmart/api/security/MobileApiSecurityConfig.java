@@ -119,6 +119,17 @@ public class MobileApiSecurityConfig {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/mobile/admin/cod/handovers/*")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/mobile/admin/dashboard",
+                                "/api/mobile/admin/orders",
+                                "/api/mobile/admin/orders/*",
+                                "/api/mobile/admin/deliveries/riders",
+                                "/api/mobile/admin/deliveries/*/assignment")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/mobile/admin/orders/*/status")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/mobile/admin/deliveries/*/assignment")
+                        .hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

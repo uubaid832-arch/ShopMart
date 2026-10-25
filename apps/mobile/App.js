@@ -28,6 +28,7 @@ import ProfileModal from "./src/account/ProfileModal";
 import AccountModal from "./src/account/AccountModal";
 import ChangePasswordModal from "./src/account/ChangePasswordModal";
 import RiderScreen from "./src/rider/RiderScreen";
+import AdminScreen from "./src/admin/AdminScreen";
 import BiometricSettingsModal, {
   BiometricLockScreen,
   useBiometricLock,
@@ -204,6 +205,23 @@ function ShopMart() {
             setAuthOpen(true);
           }
         }}
+      />
+    );
+  }
+  if (auth.session?.user.role === "ADMIN") {
+    return (
+      <AdminScreen
+        key={auth.session.user.id}
+        session={auth.session}
+        onSignOut={auth.signOut}
+        signingOut={auth.signingOut}
+        sessionError={auth.error}
+        onUpdateUser={auth.updateUser}
+        onPasswordChanged={async () => {
+          await auth.clearLocalSession();
+          setAuthOpen(true);
+        }}
+        security={biometric}
       />
     );
   }

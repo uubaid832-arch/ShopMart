@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/admin/deliveries")
+@RequestMapping({"/api/admin/deliveries", "/api/mobile/admin/deliveries"})
 public class AdminDeliveryController {
 
   private final DeliveryService deliveries;

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/admin/dashboard")
+@RequestMapping({"/api/admin/dashboard", "/api/mobile/admin/dashboard"})
 public class AdminDashboardController {
 
   private final AdminDashboardService dashboard;
