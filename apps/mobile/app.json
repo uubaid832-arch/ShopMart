@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "ShopMart",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "shopmart",
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.uubaid832.shopmart",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -21,7 +23,33 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow ShopMart to unlock your account using biometrics."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "defaultChannel": "shopmart",
+          "color": "#7c3aed"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "27379a57-d3ae-4e43-8687-085dc0a14e18"
+      }
+    },
+    "owner": "shopmart"
   }
 }

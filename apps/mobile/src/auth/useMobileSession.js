@@ -7,6 +7,25 @@ const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "");
 
 let queue = Promise.resolve();
 let refreshInFlight = null;
+let currentSession = null;
+const sessionListeners = new Set();
+let sessionCleanup = async () => {};
+
+export function registerSessionCleanup(cleanup) {
+  sessionCleanup = cleanup;
+}
+export function observeMobileSession(listener) {
+  sessionListeners.add(listener);
+  return () => sessionListeners.delete(listener);
+}
+function publishSession(value) {
+  currentSession = value;
+  for (const listener of sessionListeners) listener(value);
+}
+async function forgetSession() {
+  await SecureStore.deleteItemAsync(STORAGE_KEY);
+  publishSession(null);
+}
 
 function sequential(action) {
   const result = queue.then(action);
@@ -19,12 +38,20 @@ async function request(path, values) {
     throw new Error("The mobile API address is missing.");
   }
 
-  const response = await fetch(`${baseUrl}/api/mobile/auth/${path}`, {
-    method: "POST",
-    credentials: "omit",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(values),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+  let response;
+  try {
+    response = await fetch(`${baseUrl}/api/mobile/auth/${path}`, {
+      signal: controller.signal,
+      method: "POST",
+      credentials: "omit",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     const messages = {
@@ -64,35 +91,56 @@ async function saveSession(value) {
 
   await SecureStore.setItemAsync(STORAGE_KEY, value.refreshToken);
 
-  return {
+  const session = {
     accessToken: value.accessToken,
     user: value.user,
     expiresAt: Date.now() + value.expiresIn * 1000,
   };
+  publishSession(session);
+  return session;
 }
 
+async function readAndRefreshSession() {
+  const refreshToken = await SecureStore.getItemAsync(STORAGE_KEY);
+  if (!refreshToken) {
+    publishSession(null);
+    return null;
+  }
+  try {
+    return await saveSession(await request("refresh", { refreshToken }));
+  } catch (error) {
+    if ([400, 401].includes(error.status)) {
+      await forgetSession();
+      return null;
+    }
+    throw error;
+  }
+}
 function restoreSession() {
   if (!refreshInFlight) {
-    refreshInFlight = sequential(async () => {
-      const refreshToken = await SecureStore.getItemAsync(STORAGE_KEY);
-      if (!refreshToken) return null;
-
-      try {
-        return await saveSession(await request("refresh", { refreshToken }));
-      } catch (error) {
-        if ([400, 401].includes(error.status)) {
-          await SecureStore.deleteItemAsync(STORAGE_KEY);
-          return null;
-        }
-
-        throw error;
-      }
-    }).finally(() => {
+    refreshInFlight = sequential(readAndRefreshSession).finally(() => {
       refreshInFlight = null;
     });
   }
-
   return refreshInFlight;
+}
+
+// Background GPS and foreground authentication share the same refresh-token queue.
+// Include the upload in this queue so logout cannot race an in-flight upload.
+export function withRiderSession(userId, action) {
+  return sequential(async () => {
+    let value = currentSession;
+    if (!value || value.expiresAt <= Date.now() + 60000)
+      value = await readAndRefreshSession();
+    if (!value || value.user.id !== userId || value.user.role !== "RIDER") {
+      const error = new Error(
+        "Rider sign-in is no longer available. Location sharing stopped.",
+      );
+      error.status = 401;
+      throw error;
+    }
+    return action(value.accessToken);
+  });
 }
 
 export function registerMobileAccount(values) {
@@ -112,6 +160,9 @@ export function useMobileSession() {
 
   useEffect(() => {
     let active = true;
+    const unsubscribe = observeMobileSession((value) => {
+      if (active && !logoutPending.current) setSession(value);
+    });
 
     restoreSession()
       .then((value) => {
@@ -128,6 +179,7 @@ export function useMobileSession() {
 
     return () => {
       active = false;
+      unsubscribe();
     };
   }, []);
 
@@ -153,8 +205,10 @@ export function useMobileSession() {
         }
       } catch {
         if (active && !logoutPending.current) {
-          setSession(null);
-          setError("Could not renew sign-in. Please sign in again.");
+          // A temporary network error must not discard a valid refresh session.
+          setError(
+            "Could not renew sign-in. Check your connection and reopen ShopMart.",
+          );
         }
       } finally {
         pending = false;
@@ -216,6 +270,7 @@ export function useMobileSession() {
     setError("");
 
     try {
+      await sessionCleanup();
       await sequential(async () => {
         const refreshToken = await SecureStore.getItemAsync(STORAGE_KEY);
 
@@ -223,7 +278,7 @@ export function useMobileSession() {
           await request("logout", { refreshToken });
         }
 
-        await SecureStore.deleteItemAsync(STORAGE_KEY);
+        await forgetSession();
       });
 
       setSession(null);
@@ -241,7 +296,8 @@ export function useMobileSession() {
     );
   }
   async function clearLocalSession() {
-    await sequential(() => SecureStore.deleteItemAsync(STORAGE_KEY));
+    await sessionCleanup();
+    await sequential(forgetSession);
     setSession(null);
     setError("");
   }
