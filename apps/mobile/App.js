@@ -18,6 +18,7 @@ import { useMobileCart } from "./src/cart/useMobileCart";
 import CartFlow from "./src/cart/CartFlow";
 import OrdersModal from "./src/orders/OrdersModal";
 import ProductDetailsModal from "./src/products/ProductDetailsModal";
+import { useMobileWishlist } from "./src/wishlist/useMobileWishlist";
 const colors = {
   lavender: "#eeebfc",
   peach: "#fbede5",
@@ -59,6 +60,9 @@ function ShopMart() {
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [wishlistOnly, setWishlistOnly] = useState(false);
+
+  const wishlist = useMobileWishlist(auth.session?.user.id, !auth.restoring);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -91,9 +95,10 @@ function ShopMart() {
   const loading = result?.reload !== reload;
   const error = loading ? "" : result.error;
   const query = search.trim().toLowerCase();
-
-  const products = (loading ? [] : result.items).filter((product) =>
-    `${product.name} ${product.category}`.toLowerCase().includes(query),
+  const products = (loading ? [] : result.items).filter(
+    (product) =>
+      (!wishlistOnly || wishlist.hasItem(product.id)) &&
+      `${product.name} ${product.category}`.toLowerCase().includes(query),
   );
 
   return (
@@ -180,7 +185,23 @@ function ShopMart() {
       <View style={styles.intro}>
         <Text style={styles.eyebrow}>YOUR EVERYDAY FINDS</Text>
         <Text style={styles.title}>Find something you love.</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: wishlistOnly }}
+          disabled={wishlist.loading}
+          onPress={() => setWishlistOnly((current) => !current)}
+          style={styles.refresh}
+        >
+          <Text style={styles.headerButtonText}>
+            {wishlistOnly ? "Show all products" : "View wishlist"}
+          </Text>
+        </Pressable>
 
+        {wishlist.error ? (
+          <Text accessibilityRole="alert" style={styles.error}>
+            {wishlist.error}
+          </Text>
+        ) : null}
         <TextInput
           accessibilityLabel="Search products"
           placeholder="Search products or categories"
@@ -255,6 +276,21 @@ function ShopMart() {
                     <Text style={styles.productName}>{item.name}</Text>
                   </Pressable>
                   <Text style={styles.price}>{formatPrice(item.price)}</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      wishlist.hasItem(item.id)
+                        ? `Remove ${item.name} from wishlist`
+                        : `Save ${item.name} to wishlist`
+                    }
+                    disabled={wishlist.loading}
+                    onPress={() => wishlist.toggleItem(item.id)}
+                    style={{ paddingVertical: 12 }}
+                  >
+                    <Text style={styles.headerButtonText}>
+                      {wishlist.hasItem(item.id) ? "♥ Saved" : "♡ Save"}
+                    </Text>
+                  </Pressable>
 
                   <Pressable
                     accessibilityRole="button"
