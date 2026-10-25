@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import ChatModal from "./src/chatbot/ChatModal";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { getProducts } from "./src/api/products";
@@ -50,6 +51,7 @@ const paths = {
   cart: "M2 3h3l3 12h11l3-9H6M9 20h.01M18 20h.01",
   close: "m6 6 12 12M6 18 18 6",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
+  chat: "M21 11a9 9 0 0 1-9 9H5l-4 3 2-7a9 9 0 1 1 18-5Z",
 };
 
 function Icon({ name, size = 22, color = "#17203b", filled = false }) {
@@ -138,6 +140,7 @@ function ShopMart() {
   const [biometricOpen, setBiometricOpen] = useState(false);
 
   const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -319,6 +322,11 @@ function ShopMart() {
           Shop<Text style={styles.violet}>Mart</Text>
         </Text>
         <View style={styles.headerActions}>
+          <IconButton
+            name="chat"
+            label="Shopping assistant"
+            onPress={() => setChatOpen(true)}
+          />
           <IconButton
             name="bell"
             label="Notifications"
@@ -630,6 +638,16 @@ function ShopMart() {
           onLock={() => {
             setBiometricOpen(false);
             biometric.lockNow();
+          }}
+        />
+      )}
+      {chatOpen && (
+        <ChatModal
+          products={result?.items || []}
+          onClose={() => setChatOpen(false)}
+          onViewProduct={(product) => {
+            setChatOpen(false);
+            setSelectedProduct(product);
           }}
         />
       )}
