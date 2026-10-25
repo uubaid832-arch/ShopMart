@@ -24,6 +24,9 @@ import { useMobileWishlist } from "./src/wishlist/useMobileWishlist";
 import Svg, { Path } from "react-native-svg";
 import NotificationsModal from "./src/notifications/NotificationsModal";
 import ReturnsModal from "./src/returns/ReturnsModal";
+import ProfileModal from "./src/account/ProfileModal";
+import AccountModal from "./src/account/AccountModal";
+import ChangePasswordModal from "./src/account/ChangePasswordModal";
 
 const paths = {
   home: "M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z",
@@ -119,6 +122,8 @@ function ShopMart() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [wishlistOnly, setWishlistOnly] = useState(false);
   const [returnsOpen, setReturnsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const wishlist = useMobileWishlist(auth.session?.user.id, !auth.restoring);
 
   useEffect(() => {
@@ -544,6 +549,25 @@ function ShopMart() {
           onClose={() => setReturnsOpen(false)}
         />
       )}
+      {profileOpen && auth.session && (
+        <ProfileModal
+          key={auth.session.user.id}
+          session={auth.session}
+          onSaved={auth.updateUser}
+          onClose={() => setProfileOpen(false)}
+        />
+      )}
+      {passwordOpen && auth.session && (
+        <ChangePasswordModal
+          session={auth.session}
+          onClose={() => setPasswordOpen(false)}
+          onChanged={async () => {
+            await auth.clearLocalSession();
+            setPasswordOpen(false);
+            setAuthOpen(true);
+          }}
+        />
+      )}
       {authOpen && (
         <AuthModal onSignIn={auth.signIn} onClose={() => setAuthOpen(false)} />
       )}
@@ -556,47 +580,23 @@ function ShopMart() {
         />
       )}
       {accountOpen && auth.session && (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => setAccountOpen(false)}
-        >
-          <SafeAreaView style={styles.overlay}>
-            <View style={styles.accountCard}>
-              <View style={styles.accountAvatar}>
-                <Icon name="user" size={35} color="#7c3aed" />
-              </View>
-              <Text style={styles.accountName}>{auth.session.user.name}</Text>
-              <Text style={styles.accountEmail}>{auth.session.user.email}</Text>
-              {auth.error ? (
-                <Text style={styles.error}>{auth.error}</Text>
-              ) : null}
-
-              <Pressable
-                accessibilityRole="button"
-                disabled={auth.signingOut}
-                onPress={() => {
-                  setAccountOpen(false);
-                  auth.signOut();
-                }}
-                style={styles.signOut}
-              >
-                <Icon name="logout" size={19} color="#be123c" />
-                <Text style={styles.signOutText}>
-                  {auth.signingOut ? "Signing out..." : "Sign out"}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setAccountOpen(false)}
-                style={styles.closeAccount}
-              >
-                <Text style={styles.link}>Close</Text>
-              </Pressable>
-            </View>
-          </SafeAreaView>
-        </Modal>
+        <AccountModal
+          session={auth.session}
+          busy={auth.signingOut}
+          error={auth.error}
+          onClose={() => setAccountOpen(false)}
+          onEditProfile={() => {
+            setAccountOpen(false);
+            setProfileOpen(true);
+          }}
+          onSignOut={() => {
+            auth.signOut();
+          }}
+          onChangePassword={() => {
+            setAccountOpen(false);
+            setPasswordOpen(true);
+          }}
+        />
       )}
     </SafeAreaView>
   );

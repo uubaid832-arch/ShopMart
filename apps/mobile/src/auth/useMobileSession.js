@@ -118,6 +118,11 @@ export function useMobileSession() {
       .finally(() => {
         if (active) setRestoring(false);
       });
+    async function clearLocalSession() {
+      await sequential(() => SecureStore.deleteItemAsync(STORAGE_KEY));
+      setSession(null);
+      setError("");
+    }
 
     return () => {
       active = false;
@@ -208,6 +213,24 @@ export function useMobileSession() {
       setSigningOut(false);
     }
   }
-
-  return { session, restoring, signingOut, error, signIn, signOut };
+  function updateUser(user) {
+    setSession((current) =>
+      current?.user.id === user.id ? { ...current, user } : current,
+    );
+  }
+  async function clearLocalSession() {
+    await sequential(() => SecureStore.deleteItemAsync(STORAGE_KEY));
+    setSession(null);
+    setError("");
+  }
+  return {
+    session,
+    restoring,
+    signingOut,
+    error,
+    signIn,
+    signOut,
+    updateUser,
+    clearLocalSession,
+  };
 }
