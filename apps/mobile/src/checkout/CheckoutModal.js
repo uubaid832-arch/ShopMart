@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 import { placeMobileOrder } from "../api/orders";
-
+import SavedAddresses from "./SavedAddresses";
 const fields = [
   ["name", "Recipient name", 150],
   ["email", "Email address", 254],
@@ -252,7 +252,22 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   Pay cash when your order arrives. Final prices and stock are
                   checked before the order is accepted.
                 </Text>
-
+                {session && (
+                  <SavedAddresses
+                    key={session.user.id}
+                    session={session}
+                    details={details}
+                    disabled={saving || locked}
+                    onSelect={(address) => {
+                      if (saving || locked) return;
+                      setDetails((current) => ({
+                        ...current,
+                        ...address,
+                      }));
+                      setError("");
+                    }}
+                  />
+                )}
                 {fields.map(([name, label, maxLength]) => (
                   <View key={name} style={styles.field}>
                     <Text style={styles.label}>{label}</Text>
