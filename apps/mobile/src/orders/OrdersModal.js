@@ -12,6 +12,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMobileOrders, getMobileTracking } from "../api/orders";
+import RiderLocation from "./RiderLocation";
 
 const readable = (value = "") => value.replaceAll("_", " ").toLowerCase();
 
@@ -240,6 +241,11 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                     Updates appear here as your order progresses.
                   </Text>
                 </View>
+                <RiderLocation
+                  key={selected.id}
+                  session={session}
+                  order={selected}
+                />
                 <Text style={styles.sectionTitle}>Delivery timeline</Text>
                 <View style={styles.card}>
                   {trackingResult.data.events.length === 0 && (
