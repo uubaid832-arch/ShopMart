@@ -514,6 +514,7 @@ function ShopMart() {
         <ProductDetailsModal
           key={selectedProduct.id}
           product={selectedProduct}
+          session={auth.session}
           onClose={() => setSelectedProduct(null)}
         />
       )}

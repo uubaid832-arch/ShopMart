@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ProductReviews from "./ProductReviews";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -39,8 +40,7 @@ function Photo({ uri, name }) {
     </View>
   );
 }
-
-export default function ProductDetailsModal({ product, onClose }) {
+export default function ProductDetailsModal({ product, session, onClose }) {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -144,6 +144,11 @@ export default function ProductDetailsModal({ product, onClose }) {
           <Text style={styles.description}>
             {product.description || "No description available."}
           </Text>
+          <ProductReviews
+            key={`${product.id}:${session?.user.id || "guest"}`}
+            productId={product.id}
+            session={session}
+          />
         </ScrollView>
       </SafeAreaView>
     </Modal>
