@@ -82,6 +82,15 @@ public class MobileApiSecurityConfig {
                                 HttpMethod.PATCH,
                                 "/api/mobile/profile/password")
                         .authenticated()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/mobile/rider/deliveries")
+                        .hasRole("RIDER")
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/mobile/rider/deliveries/*/complete",
+                                "/api/mobile/rider/deliveries/*/failed")
+                        .hasRole("RIDER")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

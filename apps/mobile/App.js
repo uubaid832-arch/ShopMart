@@ -652,7 +652,11 @@ function ShopMart() {
         />
       )}
       {authOpen && (
-        <AuthModal onSignIn={auth.signIn} onClose={() => setAuthOpen(false)} />
+        <AuthModal
+          onSignIn={auth.signIn}
+          onVerify={auth.verifySignIn}
+          onClose={() => setAuthOpen(false)}
+        />
       )}
       {cartOpen && (
         <CartFlow

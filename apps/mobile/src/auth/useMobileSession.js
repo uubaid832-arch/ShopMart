@@ -28,13 +28,16 @@ async function request(path, values) {
 
   if (!response.ok) {
     const messages = {
-      400: "Check your details. Passwords must contain 8–72 characters.",
+      400: path.startsWith("login/")
+        ? "Invalid or expired code. Try again or start a new sign-in."
+        : "Check your details. Passwords must contain 8–72 characters.",
       401:
         path === "login"
           ? "Invalid email or password."
           : "Your session has expired. Please sign in again.",
       409: "An account with this email already exists.",
-      429: "Too many attempts. Please try again later.",
+      429: "Too many attempts. Please wait before trying again.",
+      503: "Email delivery is unavailable. Please try again later.",
     };
 
     const error = new Error(
@@ -96,6 +99,10 @@ export function registerMobileAccount(values) {
   return request("register", values);
 }
 
+export function resendMobileSignIn(challengeId) {
+  return request("login/resend", { challengeId });
+}
+
 export function useMobileSession() {
   const [session, setSession] = useState(null);
   const [restoring, setRestoring] = useState(true);
@@ -118,11 +125,6 @@ export function useMobileSession() {
       .finally(() => {
         if (active) setRestoring(false);
       });
-    async function clearLocalSession() {
-      await sequential(() => SecureStore.deleteItemAsync(STORAGE_KEY));
-      setSession(null);
-      setError("");
-    }
 
     return () => {
       active = false;
@@ -178,10 +180,30 @@ export function useMobileSession() {
   }, [session]);
 
   async function signIn(values) {
-    const value = await sequential(async () =>
-      saveSession(await request("login", values)),
-    );
+    const result = await sequential(async () => {
+      const response = await request("login", values);
+      if (response?.challengeId) {
+        if (
+          !Number.isFinite(Date.parse(response.expiresAt)) ||
+          !Number.isFinite(Date.parse(response.resendAt))
+        ) {
+          throw new Error("Unexpected verification response.");
+        }
+        return { requiresOtp: true, ...response };
+      }
+      return { requiresOtp: false, session: await saveSession(response) };
+    });
 
+    setError("");
+    if (result.requiresOtp) return result;
+    setSession(result.session);
+    return null;
+  }
+
+  async function verifySignIn(values) {
+    const value = await sequential(async () =>
+      saveSession(await request("login/verify", values)),
+    );
     setError("");
     setSession(value);
   }
@@ -229,6 +251,7 @@ export function useMobileSession() {
     signingOut,
     error,
     signIn,
+    verifySignIn,
     signOut,
     updateUser,
     clearLocalSession,
