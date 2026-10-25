@@ -52,7 +52,7 @@ public class PasswordController {
         .build();
   }
 
-  @PatchMapping("/api/admin/users/{id}/password")
+  @PatchMapping({"/api/admin/users/{id}/password", "/api/mobile/admin/users/{id}/password"})
   public ResponseEntity<Void> resetRider(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id,

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/admin/reviews")
+@RequestMapping({"/api/admin/reviews", "/api/mobile/admin/reviews"})
 public class AdminReviewController {
 
   private final AdminReviewService reviews;

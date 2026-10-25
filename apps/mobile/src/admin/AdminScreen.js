@@ -23,6 +23,7 @@ import {
   readable,
   useAdminResource,
 } from "./adminApi";
+import { AdminModuleMenu, AdminModule } from "./AdminModules";
 import NotificationsModal from "../notifications/NotificationsModal";
 import ProfileModal from "../account/ProfileModal";
 import ChangePasswordModal from "../account/ChangePasswordModal";
@@ -695,6 +696,7 @@ export default function AdminScreen({
   const [revision, setRevision] = useState(0);
   const [orders, setOrders] = useState(null);
   const [panel, setPanel] = useState("");
+  const [module, setModule] = useState("");
   const dashboard = useAdminResource(
     session.accessToken,
     "/dashboard",
@@ -759,6 +761,7 @@ export default function AdminScreen({
             <Icon name="grid" size={32} />
           </View>
         </View>
+        <AdminModuleMenu onOpen={setModule} />
         {sessionError ? (
           <Text accessibilityRole="alert" style={s.error}>
             {sessionError}
@@ -924,6 +927,18 @@ export default function AdminScreen({
           )
         )}
       </ScrollView>
+      {module && (
+        <AdminModule
+          name={module}
+          session={session}
+          onClose={() => setModule("")}
+          onChanged={refresh}
+          onOpenOrder={(id) => {
+            setModule("");
+            setOrders({ initialId: id });
+          }}
+        />
+      )}
       {orders && (
         <OrdersModal
           session={session}

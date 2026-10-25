@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/admin/categories")
+@RequestMapping({"/api/admin/categories", "/api/mobile/admin/categories"})
 public class AdminCategoryController {
 
   private final AdminCategoryService categories;

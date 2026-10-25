@@ -51,7 +51,7 @@ public class ProductImageController {
         .body(images.file(imageId));
   }
 
-  @GetMapping("/admin/products/{productId}/images")
+  @GetMapping({"/admin/products/{productId}/images", "/mobile/admin/products/{productId}/images"})
   public ResponseEntity<List<ProductImageService.ProductImage>> list(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID productId) {
@@ -61,7 +61,7 @@ public class ProductImageController {
         .body(images.list(userId(jwt), productId));
   }
 
-  @PostMapping(value = "/admin/products/{productId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PostMapping(value = {"/admin/products/{productId}/images", "/mobile/admin/products/{productId}/images"}, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<List<ProductImageService.ProductImage>> upload(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID productId,
@@ -72,7 +72,7 @@ public class ProductImageController {
         .body(images.upload(userId(jwt), productId, files));
   }
 
-  @PatchMapping("/admin/products/{productId}/images/{imageId}/primary")
+  @PatchMapping({"/admin/products/{productId}/images/{imageId}/primary", "/mobile/admin/products/{productId}/images/{imageId}/primary"})
   public ResponseEntity<List<ProductImageService.ProductImage>> primary(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID productId,
@@ -83,7 +83,7 @@ public class ProductImageController {
         .body(images.makePrimary(userId(jwt), productId, imageId));
   }
 
-  @DeleteMapping("/admin/products/{productId}/images/{imageId}")
+  @DeleteMapping({"/admin/products/{productId}/images/{imageId}", "/mobile/admin/products/{productId}/images/{imageId}"})
   public ResponseEntity<List<ProductImageService.ProductImage>> delete(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID productId,

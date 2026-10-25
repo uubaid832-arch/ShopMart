@@ -24,6 +24,7 @@ public class WarehouseController {
 
   @GetMapping({
       "/admin/deliveries/{orderId}/warehouse",
+      "/mobile/admin/deliveries/{orderId}/warehouse",
       "/rider/deliveries/{orderId}/warehouse",
       "/mobile/rider/deliveries/{orderId}/warehouse"
   })
@@ -47,7 +48,7 @@ public class WarehouseController {
     return noContent();
   }
 
-  @PatchMapping("/admin/deliveries/{orderId}/warehouse-receipt")
+  @PatchMapping({"/admin/deliveries/{orderId}/warehouse-receipt", "/mobile/admin/deliveries/{orderId}/warehouse-receipt"})
   public ResponseEntity<Void> confirmReceipt(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID orderId,
@@ -57,7 +58,7 @@ public class WarehouseController {
     return noContent();
   }
 
-  @PostMapping("/admin/deliveries/{orderId}/resolution")
+  @PostMapping({"/admin/deliveries/{orderId}/resolution", "/mobile/admin/deliveries/{orderId}/resolution"})
   public ResponseEntity<Void> resolve(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID orderId,

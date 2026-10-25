@@ -130,6 +130,41 @@ public class MobileApiSecurityConfig {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/mobile/admin/deliveries/*/assignment")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/mobile/admin/products",
+                                "/api/mobile/admin/products/*/images",
+                                "/api/mobile/admin/users",
+                                "/api/mobile/admin/deliveries",
+                                "/api/mobile/admin/deliveries/*/warehouse",
+                                "/api/mobile/admin/returns",
+                                "/api/mobile/admin/reviews")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/mobile/admin/products",
+                                "/api/mobile/admin/products/*/images",
+                                "/api/mobile/admin/categories",
+                                "/api/mobile/admin/users/riders",
+                                "/api/mobile/admin/deliveries/*/resolution",
+                                "/api/mobile/admin/returns/*/refund")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/mobile/admin/products/*",
+                                "/api/mobile/admin/categories/*")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH,
+                                "/api/mobile/admin/products/*/images/*/primary",
+                                "/api/mobile/admin/users/*/enabled",
+                                "/api/mobile/admin/users/*/password",
+                                "/api/mobile/admin/deliveries/*/details",
+                                "/api/mobile/admin/deliveries/*/warehouse-receipt",
+                                "/api/mobile/admin/returns/*/status",
+                                "/api/mobile/admin/reviews/*/visibility")
+                        .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE,
+                                "/api/mobile/admin/products/*",
+                                "/api/mobile/admin/products/*/images/*",
+                                "/api/mobile/admin/categories/*")
+                        .hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

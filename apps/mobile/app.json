@@ -43,6 +43,14 @@
           "defaultChannel": "shopmart",
           "color": "#7c3aed"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ShopMart administrators to select product photos.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
     ],
     "extra": {

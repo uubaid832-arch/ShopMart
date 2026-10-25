@@ -6,14 +6,14 @@ const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
 export async function adminRequest(
   token,
   path,
-  { method = "GET", values, signal } = {},
+  { method = "GET", values, signal, formData } = {},
 ) {
   if (!baseUrl) throw new Error("The mobile API address is missing.");
   const controller = new AbortController();
   const abort = () => controller.abort();
   if (signal?.aborted) controller.abort();
   else signal?.addEventListener("abort", abort);
-  const timeout = setTimeout(abort, 30000);
+  const timeout = setTimeout(abort, formData ? 90000 : 30000);
   try {
     const response = await fetch(`${baseUrl}/api/mobile/admin${path}`, {
       method,
@@ -21,18 +21,19 @@ export async function adminRequest(
       signal: controller.signal,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(values ? { "Content-Type": "application/json" } : {}),
+        ...(values && !formData ? { "Content-Type": "application/json" } : {}),
       },
-      body: values ? JSON.stringify(values) : undefined,
+      body: formData || (values ? JSON.stringify(values) : undefined),
     });
     if (!response.ok) {
       const error = new Error(
         {
-          400: "Check the selected rider or order action, then try again.",
+          400: "Check the required fields and the selected action, then try again.",
           401: "Your session expired. Sign in again.",
-          403: "Administrator access is required. Only the assigned rider can confirm delivery.",
+          403: "This action is not allowed for this account or record.",
           404: "This record was not found. Check that the latest backend has deployed.",
-          409: "This order changed or the action is unavailable. Refresh the order and check its rider assignment.",
+          409: "This record changed, has linked records, or this action is unavailable at its current stage. Refresh before trying again.",
+          413: "The selected photos are too large. Use JPEG or PNG images under 5 MB each.",
           429: "Too many requests. Please wait and try again.",
         }[response.status] ||
           "The server could not complete this request. Please try again.",
@@ -101,4 +102,22 @@ export function dateLabel(value) {
         hour: "2-digit",
         minute: "2-digit",
       });
+}
+
+export const apiBaseUrl = baseUrl;
+export function imageUrl(value) {
+  return !value
+    ? null
+    : /^https?:\/\//i.test(value)
+      ? value
+      : `${baseUrl}/${value.replace(/^\/+/, "")}`;
+}
+export async function loadCategories(signal) {
+  const response = await fetch(`${baseUrl}/api/categories`, {
+    credentials: "omit",
+    signal,
+  });
+  if (!response.ok)
+    throw new Error("Could not load categories. Refresh and try again.");
+  return (await response.json()).items;
 }
