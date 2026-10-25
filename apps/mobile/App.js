@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -29,6 +30,24 @@ const formatPrice = (value) =>
     currency: "PKR",
     maximumFractionDigits: 2,
   }).format(value);
+
+function ProductPhoto({ uri, name }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!uri || failed) {
+    return <Text style={styles.productInitial}>{name.charAt(0)}</Text>;
+  }
+
+  return (
+    <Image
+      source={{ uri }}
+      accessibilityLabel={name}
+      resizeMode="cover"
+      style={styles.productImage}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 function ShopMart() {
   const auth = useMobileSession();
@@ -93,7 +112,7 @@ function ShopMart() {
             style={styles.headerButton}
           >
             <Text style={styles.headerButtonText}>
-              Cart {cart.loading ? "…" : `(${cart.count})`}
+              Cart {cart.loading ? "..." : `(${cart.count})`}
             </Text>
           </Pressable>
 
@@ -108,9 +127,9 @@ function ShopMart() {
           >
             <Text style={styles.headerButtonText}>
               {auth.restoring
-                ? "Loading…"
+                ? "Loading..."
                 : auth.signingOut
-                  ? "Signing out…"
+                  ? "Signing out..."
                   : auth.session
                     ? "Sign out"
                     : "Sign in"}
@@ -183,7 +202,7 @@ function ShopMart() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#7c3aed" />
-          <Text style={styles.subtitle}>Loading products…</Text>
+          <Text style={styles.subtitle}>Loading products...</Text>
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -214,9 +233,11 @@ function ShopMart() {
                     },
                   ]}
                 >
-                  <Text style={styles.productInitial}>
-                    {item.name.charAt(0)}
-                  </Text>
+                  <ProductPhoto
+                    key={item.imageUrl || item.id}
+                    uri={item.imageUrl}
+                    name={item.name}
+                  />
                   <Text style={styles.stock}>
                     {unavailable ? "Out of stock" : "In stock"}
                   </Text>
@@ -337,6 +358,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   art: { height: 110, alignItems: "center", justifyContent: "center" },
+  productImage: { width: "100%", height: "100%" },
   productInitial: { fontSize: 44, fontWeight: "900", color: "#51478a" },
   stock: {
     position: "absolute",
