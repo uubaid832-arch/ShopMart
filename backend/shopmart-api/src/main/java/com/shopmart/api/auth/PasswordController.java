@@ -40,6 +40,18 @@ public class PasswordController {
         .build();
   }
 
+  @PatchMapping("/api/mobile/profile/password")
+  public ResponseEntity<Void> changeMobile(
+      @AuthenticationPrincipal Jwt jwt,
+      @Valid @RequestBody PasswordService.ChangePasswordRequest request) {
+
+    passwords.change(userId(jwt), request);
+
+    return ResponseEntity.noContent()
+        .cacheControl(CacheControl.noStore())
+        .build();
+  }
+
   @PatchMapping("/api/admin/users/{id}/password")
   public ResponseEntity<Void> resetRider(
       @AuthenticationPrincipal Jwt jwt,

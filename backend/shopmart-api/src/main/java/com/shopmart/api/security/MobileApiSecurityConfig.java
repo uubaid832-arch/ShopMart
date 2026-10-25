@@ -78,6 +78,10 @@ public class MobileApiSecurityConfig {
                         .authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/mobile/profile")
                         .authenticated()
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/mobile/profile/password")
+                        .authenticated()
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
