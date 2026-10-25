@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Path } from "react-native-svg";
+import DeliveryFailureModal from "./DeliveryFailureModal";
 import NotificationsModal from "../notifications/NotificationsModal";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
@@ -82,6 +83,7 @@ export default function RiderScreen({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [failureDelivery, setFailureDelivery] = useState(null);
   const pending = useRef(false);
 
   useEffect(() => {
@@ -322,6 +324,21 @@ export default function RiderScreen({
                       <Text style={styles.link}>Directions</Text>
                     </Pressable>
                   </View>
+                  {dispatched && (
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={Boolean(busyId)}
+                      onPress={() => setFailureDelivery(item)}
+                      style={[
+                        styles.failureButton,
+                        Boolean(busyId) && styles.dim,
+                      ]}
+                    >
+                      <Text style={styles.failureText}>
+                        Report delivery failure
+                      </Text>
+                    </Pressable>
+                  )}
                   {item.lastAttempt && (
                     <View style={styles.attempt}>
                       <Text style={styles.attemptTitle}>
@@ -382,6 +399,23 @@ export default function RiderScreen({
             </View>
           )}
         </>
+      )}
+      {failureDelivery && (
+        <DeliveryFailureModal
+          session={session}
+          delivery={failureDelivery}
+          onClose={() => {
+            setFailureDelivery(null);
+            setReload((value) => value + 1);
+          }}
+          onRecorded={() => {
+            setFailureDelivery(null);
+            setNotice(
+              "Delivery failure recorded. The administrator has been notified.",
+            );
+            setReload((value) => value + 1);
+          }}
+        />
       )}
       {notificationsOpen && (
         <NotificationsModal
@@ -521,6 +555,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     fontWeight: "700",
+  },
+  failureButton: {
+    backgroundColor: "#fff3f5",
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#f8dfe6",
+  },
+  failureText: {
+    color: "#c45b78",
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
   },
   dim: { opacity: 0.5 },
   stageNote: { color: "#a59aaf", fontSize: 11, lineHeight: 19, marginTop: 14 },
