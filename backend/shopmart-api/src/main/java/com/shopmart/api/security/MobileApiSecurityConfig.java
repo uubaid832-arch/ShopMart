@@ -91,6 +91,14 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/rider/deliveries/*/complete",
                                 "/api/mobile/rider/deliveries/*/failed")
                         .hasRole("RIDER")
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/mobile/rider/deliveries/*/location")
+                        .hasRole("RIDER")
+                        .requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/mobile/rider/deliveries/*/location")
+                        .hasRole("RIDER")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

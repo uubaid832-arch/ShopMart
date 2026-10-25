@@ -21,7 +21,10 @@ public class DeliveryLocationController {
     this.locations = locations;
   }
 
-  @PutMapping("/api/rider/deliveries/{id}/location")
+  @PutMapping({
+      "/api/rider/deliveries/{id}/location",
+      "/api/mobile/rider/deliveries/{id}/location"
+  })
   public ResponseEntity<Void> update(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id,
@@ -34,7 +37,10 @@ public class DeliveryLocationController {
         .build();
   }
 
-  @DeleteMapping("/api/rider/deliveries/{id}/location")
+  @DeleteMapping({
+      "/api/rider/deliveries/{id}/location",
+      "/api/mobile/rider/deliveries/{id}/location"
+  })
   public ResponseEntity<Void> stop(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id) {
