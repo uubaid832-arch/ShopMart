@@ -46,7 +46,10 @@ public class DeliveryLocationController {
         .build();
   }
 
-  @GetMapping("/api/orders/{id}/location")
+  @GetMapping({
+      "/api/orders/{id}/location",
+      "/api/mobile/orders/{id}/location"
+  })
   public ResponseEntity<DeliveryLocationService.LocationResponse> get(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id) {
