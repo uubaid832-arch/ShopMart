@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping({ "/api/notifications", "/api/mobile/notifications" })
 public class NotificationController {
 
   private final NotificationService notifications;
