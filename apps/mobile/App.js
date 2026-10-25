@@ -17,6 +17,7 @@ import AuthModal from "./src/auth/AuthModal";
 import { useMobileCart } from "./src/cart/useMobileCart";
 import CartFlow from "./src/cart/CartFlow";
 import OrdersModal from "./src/orders/OrdersModal";
+import ProductDetailsModal from "./src/products/ProductDetailsModal";
 const colors = {
   lavender: "#eeebfc",
   peach: "#fbede5",
@@ -57,6 +58,7 @@ function ShopMart() {
   const [result, setResult] = useState(null);
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -245,7 +247,13 @@ function ShopMart() {
 
                 <View style={styles.cardContent}>
                   <Text style={styles.category}>{item.category}</Text>
-                  <Text style={styles.productName}>{item.name}</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${item.name}`}
+                    onPress={() => setSelectedProduct(item)}
+                  >
+                    <Text style={styles.productName}>{item.name}</Text>
+                  </Pressable>
                   <Text style={styles.price}>{formatPrice(item.price)}</Text>
 
                   <Pressable
@@ -277,7 +285,13 @@ function ShopMart() {
           }}
         />
       )}
-
+      {selectedProduct && (
+        <ProductDetailsModal
+          key={selectedProduct.id}
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
       {authOpen && (
         <AuthModal onSignIn={auth.signIn} onClose={() => setAuthOpen(false)} />
       )}

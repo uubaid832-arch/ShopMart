@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { registerMobileAccount } from "./useMobileSession";
-
+import ForgotPasswordModal from "./ForgotPasswordModal";
 export default function AuthModal({ onSignIn, onClose }) {
   const [registering, setRegistering] = useState(false);
   const [values, setValues] = useState({
@@ -24,6 +24,7 @@ export default function AuthModal({ onSignIn, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
   const pending = useRef(false);
 
   function close() {
@@ -99,6 +100,23 @@ export default function AuthModal({ onSignIn, onClose }) {
       ? [{ name: "confirmation", label: "Confirm password" }]
       : []),
   ];
+  if (forgotOpen) {
+    return (
+      <ForgotPasswordModal
+        initialEmail={values.email}
+        onClose={() => {
+          setForgotOpen(false);
+          setValues((current) => ({
+            ...current,
+            password: "",
+            confirmation: "",
+          }));
+          setError("");
+          setNotice("");
+        }}
+      />
+    );
+  }
 
   return (
     <Modal visible animationType="slide" onRequestClose={close}>
@@ -190,7 +208,16 @@ export default function AuthModal({ onSignIn, onClose }) {
                     : "Sign in"}
               </Text>
             </Pressable>
-
+            {!registering && (
+              <Pressable
+                accessibilityRole="button"
+                disabled={saving}
+                onPress={() => setForgotOpen(true)}
+                style={styles.switch}
+              >
+                <Text style={styles.switchText}>Forgot password?</Text>
+              </Pressable>
+            )}
             <Pressable
               accessibilityRole="button"
               disabled={saving}
