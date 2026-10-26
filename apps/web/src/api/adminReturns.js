@@ -1,4 +1,8 @@
-async function adminReturnRequest(token, path, { signal, status } = {}) {
+async function adminReturnRequest(
+  token,
+  path,
+  { signal, status, rejectionReason } = {},
+) {
   const headers = {
     Authorization: `Bearer ${token}`,
   };
@@ -24,7 +28,7 @@ async function adminReturnRequest(token, path, { signal, status } = {}) {
     cache: "no-store",
     headers,
     signal,
-    body: status ? JSON.stringify({ status }) : undefined,
+    body: status ? JSON.stringify({ status, rejectionReason }) : undefined,
   });
 
   if (!response.ok) {
@@ -48,8 +52,8 @@ async function adminReturnRequest(token, path, { signal, status } = {}) {
 export const getAdminReturns = (token, page, signal) =>
   adminReturnRequest(token, `?page=${page}&size=20`, { signal });
 
-export const updateAdminReturnStatus = (token, id, status) =>
-  adminReturnRequest(token, `/${id}/status`, { status });
+export const updateAdminReturnStatus = (token, id, status, rejectionReason) =>
+  adminReturnRequest(token, `/${id}/status`, { status, rejectionReason });
 
 export async function recordCodRefund(token, id, reference) {
   const csrfResponse = await fetch("/api/auth/csrf", {

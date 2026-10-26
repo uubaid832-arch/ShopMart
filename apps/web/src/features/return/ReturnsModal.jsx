@@ -12,9 +12,9 @@ const buttonStyle =
 
 const statusLabels = {
   PENDING: ["Pending", "زیرِ التوا"],
-  APPROVED: ["Approved", "منظور شدہ"],
+  APPROVED: ["Accepted after inspection", "جانچ کے بعد منظور شدہ"],
   REJECTED: ["Rejected", "مسترد"],
-  RECEIVED: ["Received", "موصول ہو گیا"],
+  RECEIVED: ["Received - awaiting inspection", "موصول، جانچ باقی ہے"],
   NOT_INITIATED: ["Not initiated", "ابھی شروع نہیں ہوئی"],
   PROCESSING: ["Processing", "کارروائی جاری ہے"],
   REFUNDED: ["Refunded", "رقم واپس کر دی گئی"],
@@ -398,6 +398,7 @@ export default function ReturnsModal({ accessToken, onClose }) {
                         className="whitespace-pre-wrap break-words text-sm text-slate-600"
                       >
                         {request.reason}
+                        {request.rejectionReason && <span className="block text-rose-700">Inspection rejection: {request.rejectionReason}. Your product will be shipped back soon.</span>}
                       </p>
 
                       <p className="text-sm font-semibold">

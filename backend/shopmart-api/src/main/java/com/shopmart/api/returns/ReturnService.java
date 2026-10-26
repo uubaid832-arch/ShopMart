@@ -104,7 +104,7 @@ public class ReturnService {
             rs.getString("status"),
             rs.getBigDecimal("refund_amount").toPlainString(),
             rs.getString("refund_status"),
-            rs.getTimestamp("created_at").toInstant()),
+            rs.getTimestamp("created_at").toInstant(), rs.getString("rejection_reason")),
         userId, size, (long) page * size);
 
     return new Page<>(
@@ -238,7 +238,11 @@ public class ReturnService {
       String status,
       String refundAmount,
       String refundStatus,
-      Instant createdAt) {
+      Instant createdAt, String rejectionReason) {
+    public ReturnResponse(UUID id, UUID orderId, UUID orderItemId, String orderNumber, String productName,
+        int quantity, String reason, String status, String refundAmount, String refundStatus, Instant createdAt) {
+      this(id,orderId,orderItemId,orderNumber,productName,quantity,reason,status,refundAmount,refundStatus,createdAt,null);
+    }
   }
 
   public record Page<T>(

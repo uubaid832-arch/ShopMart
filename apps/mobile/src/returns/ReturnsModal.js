@@ -17,7 +17,7 @@ const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
   .replace(/\/+$/, "");
 
-const label = (value) => String(value || "Not initiated").replace(/_/g, " ");
+const label = (value) => String(value === "APPROVED" ? "Accepted after inspection" : value === "RECEIVED" ? "Received - awaiting inspection" : value || "Not initiated").replace(/_/g, " ");
 
 async function request(token, path, values, signal) {
   const response = await fetch(`${baseUrl}/api/mobile/returns${path}`, {
@@ -271,6 +271,12 @@ export default function ReturnsModal({ session, onClose }) {
                         Quantity: {item.quantity}
                       </Text>
                       <Text style={styles.description}>{item.reason}</Text>
+                      {item.rejectionReason ? (
+                        <Text style={styles.description}>
+                          Rejection reason: {item.rejectionReason}. Your product
+                          will be shipped back soon.
+                        </Text>
+                      ) : null}
                       <Text style={styles.name}>
                         Refund: {label(item.refundStatus)}
                       </Text>

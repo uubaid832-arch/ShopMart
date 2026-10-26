@@ -10,9 +10,9 @@ import RefundModal from "./RefundModal";
 const statusOptions = [
   ["ALL", "All"],
   ["PENDING", "Pending"],
-  ["APPROVED", "Approved"],
+  ["APPROVED", "Accepted after inspection"],
   ["REJECTED", "Rejected"],
-  ["RECEIVED", "Received"],
+  ["RECEIVED", "Received - awaiting inspection"],
 ];
 
 const statusColors = {
@@ -99,9 +99,28 @@ export default function AdminReturns() {
         ? "Confirm the returned goods have physically arrived? This does not refund money or restock products."
         : next === "REJECTED"
           ? "Reject this return request?"
-          : "Approve this return request? This does not issue a refund.";
+          : "Confirm inspection found the product in its original condition? Acceptance allows refund recording.";
 
-    if (!window.confirm(message)) return;
+    let rejectionReason;
+    if (next === "REJECTED") {
+      rejectionReason = window.prompt(
+        "Why was the received product rejected? This reason will be sent to the customer, with a notice that the product will be shipped back soon.",
+      );
+      if (!rejectionReason?.trim()) return;
+      rejectionReason = rejectionReason.trim();
+      if (rejectionReason.length > 1000) {
+        setActionError("Use a rejection reason of up to 1000 characters.");
+        return;
+      }
+    }
+    if (
+      !window.confirm(
+        next === "CONTACTED"
+          ? "Confirm you actually sent the warehouse return instructions to the customer?"
+          : message,
+      )
+    )
+      return;
 
     inFlight.current = true;
     setSavingId(request.id);
@@ -109,7 +128,7 @@ export default function AdminReturns() {
     setActionError("");
 
     try {
-      await updateAdminReturnStatus(token, request.id, next);
+      await updateAdminReturnStatus(token, request.id, next, rejectionReason);
       setFeedback("Return request updated.");
       setReload((current) => current + 1);
     } catch (error) {
@@ -245,37 +264,51 @@ export default function AdminReturns() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  {request.status === "PENDING" && (
+                  {request.status === "PENDING" &&
+                    (request.instructionsSentAt ? (
+                      <button
+                        type="button"
+                        disabled={Boolean(savingId)}
+                        onClick={() => changeStatus(request, "RECEIVED")}
+                        className={buttonStyle}
+                      >
+                        Confirm goods physically received
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={Boolean(savingId)}
+                        onClick={() => changeStatus(request, "CONTACTED")}
+                        className={buttonStyle}
+                      >
+                        Confirm return instructions sent
+                      </button>
+                    ))}
+                  {request.status === "RECEIVED" && (
                     <>
                       <button
                         type="button"
                         disabled={Boolean(savingId)}
                         onClick={() => changeStatus(request, "APPROVED")}
-                        className="rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+                        className={buttonStyle}
                       >
-                        Approve return
+                        Accept after inspection
                       </button>
-
                       <button
                         type="button"
                         disabled={Boolean(savingId)}
                         onClick={() => changeStatus(request, "REJECTED")}
-                        className="rounded-xl border-0 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 disabled:opacity-50"
+                        className={buttonStyle}
                       >
-                        Reject return
+                        Reject after inspection
                       </button>
                     </>
                   )}
-
-                  {request.status === "APPROVED" && (
-                    <button
-                      type="button"
-                      disabled={Boolean(savingId)}
-                      onClick={() => changeStatus(request, "RECEIVED")}
-                      className="rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                      Confirm goods received
-                    </button>
+                  {request.rejectionReason && (
+                    <p>
+                      Inspection rejection: {request.rejectionReason}. Product
+                      to be shipped back to the customer.
+                    </p>
                   )}
                 </div>
 
@@ -285,7 +318,7 @@ export default function AdminReturns() {
                   </p>
                 )}
 
-                {request.status === "RECEIVED" &&
+                {request.status === "APPROVED" &&
                   request.refundStatus === "NOT_INITIATED" &&
                   request.paymentMethod === "COD" && (
                     <button

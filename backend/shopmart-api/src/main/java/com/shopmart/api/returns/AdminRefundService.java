@@ -79,10 +79,10 @@ public class AdminRefundService {
           "A refund has already been recorded for this request.");
     }
 
-    if (!"RECEIVED".equals(returned.get("status"))) {
+    if (!"APPROVED".equals(returned.get("status"))) {
       throw failure(
           HttpStatus.CONFLICT,
-          "Confirm receipt of the returned goods first.");
+          "Inspect and accept the returned goods before recording a refund.");
     }
 
     if (!"COD".equals(order.get("payment_method"))
