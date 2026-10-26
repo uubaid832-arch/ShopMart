@@ -1,15 +1,16 @@
+import ProductCatalogPage from "./ProductCatalogPage";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Switch, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { File } from "expo-file-system";
 import {
   adminRequest,
   imageUrl,
   loadCategories,
-  money,
   useAdminResource,
 } from "./adminApi";
 import {
-  Badge,
   Button,
   Card,
   check,
@@ -164,32 +165,40 @@ function Photos({ session, product, onClose, onBack, onChanged }) {
       });
       if (selected.canceled) return { cancelled: true };
       const asset = selected.assets[0];
-      check(
-        !asset.fileSize || asset.fileSize <= 5 * 1024 * 1024,
-        "Choose a photo smaller than 5 MB.",
+      // Convert HEIC/WEBP and large camera photos to a bounded JPEG.
+      const context = ImageManipulator.manipulate(asset.uri);
+      context.resize(
+        asset.width >= asset.height
+          ? { width: Math.min(asset.width, 1600) }
+          : { height: Math.min(asset.height, 1600) },
       );
-      const type =
-        asset.mimeType ||
-        (/\.png$/i.test(asset.uri) ? "image/png" : "image/jpeg");
-      check(
-        ["image/jpeg", "image/png"].includes(type),
-        "Select a JPEG or PNG photo.",
-      );
-      const form = new FormData();
-      form.append(
-        "files",
-        asset.file || {
-          uri: asset.uri,
-          name:
-            asset.fileName || `product.${type === "image/png" ? "png" : "jpg"}`,
-          type,
-        },
-      );
-      return adminRequest(
-        session.accessToken,
-        `/products/${product.id}/images`,
-        { method: "POST", formData: form },
-      );
+      const rendered = await context.renderAsync();
+      let photo;
+      try {
+        photo = await rendered.saveAsync({
+          format: SaveFormat.JPEG,
+          compress: 0.8,
+        });
+      } finally {
+        rendered.release();
+        context.release();
+      }
+      const file = new File(photo.uri);
+      try {
+        check(
+          file.size > 0 && file.size <= 5 * 1024 * 1024,
+          "Use a photo smaller than 5 MB after compression.",
+        );
+        const form = new FormData();
+        form.append("files", file);
+        return await adminRequest(
+          session.accessToken,
+          `/products/${product.id}/images`,
+          { method: "POST", formData: form },
+        );
+      } finally {
+        if (file.exists) file.delete();
+      }
     }, "Photo uploaded.");
   }
   return (
@@ -288,15 +297,22 @@ function Photos({ session, product, onClose, onBack, onChanged }) {
     </Page>
   );
 }
-export function ProductsModule({ session, onClose, onChanged }) {
+export function ProductsModule({
+  session,
+  onClose,
+  onChanged,
+  initialLowStock = false,
+}) {
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
   const [editor, setEditor] = useState(null);
   const [photos, setPhotos] = useState(null);
+  const [category, setCategory] = useState("");
+  const [lowStock, setLowStock] = useState(initialLowStock);
   const result = useAdminResource(
     session.accessToken,
-    `/products?page=${page}&size=15`,
+    `/products?page=${page}&size=15${category ? `&categoryId=${encodeURIComponent(category)}` : ""}&lowStock=${lowStock}`,
     revision,
   );
   const categories = useCategories(revision);
@@ -315,8 +331,65 @@ export function ProductsModule({ session, onClose, onChanged }) {
         session={session}
         product={photos}
         onClose={onClose}
-        onBack={() => setPhotos(null)}
+        onBack={() => {
+          setPhotos(null);
+          refresh();
+        }}
         onChanged={onChanged}
+      />
+    );
+  if (!editor)
+    return (
+      <ProductCatalogPage
+        result={result}
+        categories={categories}
+        category={category}
+        onCategory={(value) => {
+          setCategory(value);
+          setPage(0);
+        }}
+        lowStock={lowStock}
+        onStock={(value) => {
+          setLowStock(value);
+          setPage(0);
+        }}
+        page={page}
+        onPage={setPage}
+        search={search}
+        onSearch={setSearch}
+        revision={revision}
+        op={op}
+        onClose={onClose}
+        onRefresh={() => {
+          op.reset();
+          refresh();
+        }}
+        onAdd={() => {
+          op.reset();
+          setEditor("NEW");
+        }}
+        onEdit={(product) => {
+          op.reset();
+          setEditor(product);
+        }}
+        onPhotos={setPhotos}
+        onDelete={(product) =>
+          confirm(
+            "Delete product?",
+            "Orders may prevent deletion. You can hide the product by turning off catalog visibility instead.",
+            () =>
+              op.run(
+                () =>
+                  adminRequest(
+                    session.accessToken,
+                    `/products/${product.id}?version=${product.version}`,
+                    { method: "DELETE" },
+                  ),
+                "Product deleted.",
+              ),
+            true,
+          )
+        }
       />
     );
   return (
@@ -380,80 +453,7 @@ export function ProductsModule({ session, onClose, onChanged }) {
             )
           }
         />
-      ) : (
-        <>
-          <View style={ui.toolbar}>
-            <Notice op={op} />
-            <Button
-              title="Add product"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setEditor("NEW");
-              }}
-            />
-          </View>
-          <PagedList
-            result={result}
-            page={page}
-            onPage={setPage}
-            search={search}
-            onSearch={setSearch}
-            renderItem={(product) => (
-              <Card title={product.name} subtitle={product.category}>
-                <View style={ui.between}>
-                  <Text style={ui.amount}>{money(product.price)}</Text>
-                  <Badge value={product.active ? "Active" : "Hidden"} />
-                </View>
-                <Text style={ui.body}>Stock: {product.stock}</Text>
-                <View style={ui.row}>
-                  <Button
-                    title="Edit"
-                    icon="edit"
-                    secondary
-                    disabled={op.blocked}
-                    onPress={() => {
-                      op.reset();
-                      setEditor(product);
-                    }}
-                  />
-                  <Button
-                    title="Photos"
-                    icon="image"
-                    secondary
-                    disabled={op.blocked}
-                    onPress={() => setPhotos(product)}
-                  />
-                  <Button
-                    title="Delete"
-                    icon="trash"
-                    danger
-                    disabled={op.blocked}
-                    onPress={() =>
-                      confirm(
-                        "Delete product?",
-                        "Orders may prevent deletion. You can hide the product by turning off catalog visibility instead.",
-                        () =>
-                          op.run(
-                            () =>
-                              adminRequest(
-                                session.accessToken,
-                                `/products/${product.id}?version=${product.version}`,
-                                { method: "DELETE" },
-                              ),
-                            "Product deleted.",
-                          ),
-                        true,
-                      )
-                    }
-                  />
-                </View>
-              </Card>
-            )}
-          />
-        </>
-      )}
+      ) : null}
     </Page>
   );
 }
@@ -470,6 +470,20 @@ export function CategoriesModule({ session, onClose, onChanged }) {
   });
   return (
     <Page
+      footerAction={
+        !editor ? (
+          <Button
+            title="Add category"
+            icon="plus"
+            disabled={op.blocked}
+            onPress={() => {
+              op.reset();
+              setName("");
+              setEditor("NEW");
+            }}
+          />
+        ) : null
+      }
       title="Categories"
       onClose={onClose}
       busy={op.busy}
@@ -525,20 +539,12 @@ export function CategoriesModule({ session, onClose, onChanged }) {
         </Form>
       ) : (
         <>
-          <View style={ui.toolbar}>
-            <Notice op={op} />
-            <Button
-              title="Add category"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setName("");
-                setEditor("NEW");
-              }}
-            />
-          </View>
           <PagedList
+            toolbar={
+              <View style={ui.toolbar}>
+                <Notice op={op} />
+              </View>
+            }
             result={result}
             page={0}
             onPage={() => {}}

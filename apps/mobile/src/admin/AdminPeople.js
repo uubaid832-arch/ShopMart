@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { adminRequest, useAdminResource } from "./adminApi";
 import {
@@ -139,6 +139,13 @@ export default function PeopleModule({ session, onClose, onChanged }) {
     refresh();
     onChanged();
   });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(draft.trim());
+      setPage(0);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [draft]);
   const result = useAdminResource(
     session.accessToken,
     `/users?page=${page}&size=15&role=${role}&search=${encodeURIComponent(search)}`,
@@ -146,6 +153,19 @@ export default function PeopleModule({ session, onClose, onChanged }) {
   );
   return (
     <Page
+      footerAction={
+        !editor ? (
+          <Button
+            title="Add rider"
+            icon="plus"
+            disabled={op.blocked}
+            onPress={() => {
+              op.reset();
+              setEditor("NEW");
+            }}
+          />
+        ) : null
+      }
       title={
         editor === "NEW"
           ? "Add rider"
@@ -226,61 +246,32 @@ export default function PeopleModule({ session, onClose, onChanged }) {
         />
       ) : (
         <>
-          <View style={ui.toolbar}>
-            <Notice op={op} />
-            <Button
-              title="Add rider"
-              icon="plus"
-              disabled={op.blocked}
-              onPress={() => {
-                op.reset();
-                setEditor("NEW");
-              }}
-            />
-            <Field
-              label="Search all users"
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="Name or email"
-              autoCapitalize="none"
-            />
-            <View style={ui.row}>
-              <Button
-                title="Search"
-                icon="search"
-                secondary
-                disabled={op.busy}
-                onPress={() => {
-                  setSearch(draft.trim());
-                  setPage(0);
-                }}
-              />
-              <Button
-                title="Clear"
-                secondary
-                disabled={op.busy}
-                onPress={() => {
-                  setDraft("");
-                  setSearch("");
-                  setPage(0);
-                }}
-              />
-            </View>
-            <Choice
-              label="Account role"
-              value={role}
-              options={["ALL", "CUSTOMER", "RIDER", "ADMIN"].map((value) => ({
-                value,
-                label: value === "ALL" ? "All accounts" : value,
-              }))}
-              onChange={(value) => {
-                setRole(value);
-                setPage(0);
-              }}
-              disabled={op.busy}
-            />
-          </View>
           <PagedList
+            serverSearch
+            search={draft}
+            onSearch={setDraft}
+            toolbar={
+              <View style={ui.toolbar}>
+                <Notice op={op} />
+
+                <Choice
+                  compact
+                  label="Account role"
+                  value={role}
+                  options={["ALL", "CUSTOMER", "RIDER", "ADMIN"].map(
+                    (value) => ({
+                      value,
+                      label: value === "ALL" ? "All accounts" : value,
+                    }),
+                  )}
+                  onChange={(value) => {
+                    setRole(value);
+                    setPage(0);
+                  }}
+                  disabled={op.busy}
+                />
+              </View>
+            }
             result={result}
             page={page}
             onPage={setPage}

@@ -1,3 +1,4 @@
+import { fetch as expoFetch } from "expo/fetch";
 import { useEffect, useState } from "react";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
@@ -15,7 +16,8 @@ export async function adminRequest(
   else signal?.addEventListener("abort", abort);
   const timeout = setTimeout(abort, formData ? 90000 : 30000);
   try {
-    const response = await fetch(`${baseUrl}/api/mobile/admin${path}`, {
+    const send = formData ? expoFetch : fetch;
+    const response = await send(`${baseUrl}/api/mobile/admin${path}`, {
       method,
       credentials: "omit",
       signal: controller.signal,
@@ -26,17 +28,25 @@ export async function adminRequest(
       body: formData || (values ? JSON.stringify(values) : undefined),
     });
     if (!response.ok) {
+      let detail = null;
+      try {
+        detail = await response.json();
+      } catch {
+        /* Status fallback. */
+      }
       const error = new Error(
-        {
-          400: "Check the required fields and the selected action, then try again.",
-          401: "Your session expired. Sign in again.",
-          403: "This action is not allowed for this account or record.",
-          404: "This record was not found. Check that the latest backend has deployed.",
-          409: "This record changed, has linked records, or this action is unavailable at its current stage. Refresh before trying again.",
-          413: "The selected photos are too large. Use JPEG or PNG images under 5 MB each.",
-          429: "Too many requests. Please wait and try again.",
-        }[response.status] ||
-          "The server could not complete this request. Please try again.",
+        detail?.message ||
+          detail?.detail ||
+          {
+            400: "Check the required fields and the selected action, then try again.",
+            401: "Your session expired. Sign in again.",
+            403: "This action is not allowed for this account or record.",
+            404: "This record was not found. Check that the latest backend has deployed.",
+            409: "This record changed, has linked records, or this action is unavailable at its current stage. Refresh before trying again.",
+            413: "The selected photos are too large. Use JPEG or PNG images under 5 MB each.",
+            429: "Too many requests. Please wait and try again.",
+          }[response.status] ||
+          `The server could not complete this request (HTTP ${response.status}). Please try again.`,
       );
       error.status = response.status;
       throw error;

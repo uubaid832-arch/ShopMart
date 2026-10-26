@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { cloneElement, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +18,10 @@ import Svg, { Path } from "react-native-svg";
 import { readable } from "./adminApi";
 
 const icons = {
+  mail: "M3 5h18v14H3V5Zm0 0 9 7 9-7",
+  chat: "M21 11a9 9 0 0 1-9 9H4l-3 3V11a10 10 0 0 1 20 0Z",
+  download: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
+  ticket: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v2m0 3v2m0 3v2",
   box: "m12 3 9 5v9l-9 5-9-5V8l9-5Zm0 10 9-5M12 13 3 8m9 5v9M7.5 5.5l9 5",
   grid: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
   users:
@@ -60,6 +64,7 @@ export function Button({
   disabled,
   danger = false,
   secondary = false,
+  compact = false,
 }) {
   return (
     <Pressable
@@ -68,6 +73,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         ui.button,
+        compact && ui.compactButton,
         secondary && ui.secondary,
         danger && ui.danger,
         (disabled || pressed) && ui.dim,
@@ -139,20 +145,39 @@ export function Field({
     </View>
   );
 }
-export function Choice({ label, value, options, onChange, disabled }) {
+export function Choice({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  compact = false,
+}) {
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
   return (
-    <View style={ui.field}>
-      <Text style={ui.label}>{label}</Text>
+    <View style={compact ? ui.compactFilter : ui.field}>
+      {!compact && <Text style={ui.label}>{label}</Text>}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${selected?.label || "Choose an option"}`}
         accessibilityState={{ expanded: open }}
         disabled={disabled}
         onPress={() => setOpen((v) => !v)}
-        style={ui.select}
+        style={[ui.select, compact && { minHeight: 44, paddingVertical: 10 }]}
       >
+        {compact && (
+          <Icon
+            name={
+              label.includes("role")
+                ? "users"
+                : label.includes("Voucher")
+                  ? "ticket"
+                  : "box"
+            }
+            size={18}
+          />
+        )}
         <Text style={[ui.body, ui.grow]}>
           {selected?.label || "Choose an option"}
         </Text>
@@ -217,6 +242,8 @@ export function Page({
   onBack,
   children,
   toolbar,
+  primaryAction,
+  footerAction,
 }) {
   return (
     <Modal
@@ -227,29 +254,25 @@ export function Page({
       }}
     >
       <SafeAreaView style={ui.screen}>
-        <View style={ui.header}>
+        <View style={ui.topActions}>
           {onBack && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back"
               disabled={busy}
-              style={ui.iconButton}
+              style={[ui.iconButton, { marginRight: "auto" }]}
               onPress={onBack}
             >
               <Icon name="back" />
             </Pressable>
           )}
-          <View style={ui.grow}>
-            <Text style={ui.eyebrow}>SHOPMART ADMIN</Text>
-            <Text style={ui.heading}>{title}</Text>
-          </View>
           {onRefresh && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Refresh"
               disabled={busy}
-              onPress={onRefresh}
               style={ui.iconButton}
+              onPress={onRefresh}
             >
               <Icon name="refresh" />
             </Pressable>
@@ -258,11 +281,27 @@ export function Page({
             accessibilityRole="button"
             accessibilityLabel="Close module"
             disabled={busy}
-            onPress={onClose}
             style={ui.iconButton}
+            onPress={onClose}
           >
             <Icon name="close" />
           </Pressable>
+        </View>
+        <View style={ui.header}>
+          <View style={ui.grow}>
+            <Text style={ui.eyebrow}>SHOPMART ADMIN</Text>
+            <Text style={ui.heading}>{title}</Text>
+          </View>
+          {footerAction ? (
+            cloneElement(footerAction, {
+              compact: true,
+              title: footerAction.props.title.includes("voucher")
+                ? "Generate"
+                : "Add",
+            })
+          ) : primaryAction ? (
+            <Button {...primaryAction} compact title="Add" />
+          ) : null}
         </View>
         {toolbar}
         {children}
@@ -294,6 +333,7 @@ export function PagedList({
   onSearch,
   filter,
   toolbar,
+  serverSearch = false,
 }) {
   const data = result.data;
   const items = Array.isArray(data) ? data : data?.items || [];
@@ -301,7 +341,9 @@ export function PagedList({
   const filtered = items.filter(
     (item) =>
       (!filter || filter(item)) &&
-      (!query || JSON.stringify(item).toLowerCase().includes(query)),
+      (serverSearch ||
+        !query ||
+        JSON.stringify(item).toLowerCase().includes(query)),
   );
   return (
     <>
@@ -309,8 +351,12 @@ export function PagedList({
         <View style={ui.searchBox}>
           <Icon name="search" size={18} />
           <TextInput
-            accessibilityLabel="Search current page"
-            placeholder="Search this page"
+            accessibilityLabel={
+              serverSearch ? "Search all records" : "Search current page"
+            }
+            placeholder={
+              serverSearch ? "Search name or email" : "Search this page"
+            }
             placeholderTextColor="#9b8eac"
             value={search}
             onChangeText={onSearch}
@@ -323,7 +369,7 @@ export function PagedList({
         {Array.isArray(data)
           ? `${items.length} records`
           : `${data?.totalItems ?? 0} records in total`}
-        {onSearch ? " · Search applies to this page" : ""}
+        {onSearch && !serverSearch ? " · Search applies to this page" : ""}
       </Text>
       {result.loading ? (
         <ActivityIndicator size="large" color="#7c3aed" style={ui.loader} />
@@ -451,7 +497,30 @@ export function useMutation(onChanged) {
   };
 }
 export const ui = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#faf9fd" },
+  topActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    gap: 9,
+    paddingHorizontal: 18,
+    paddingTop: 9,
+  },
+  compactButton: {
+    minHeight: 42,
+    marginTop: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+  },
+  compactFilter: { flex: 1, minWidth: 140, marginTop: 0 },
+  actionDock: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#eae3f2",
+  },
+  screen: { flex: 1, backgroundColor: "#faf8ff" },
   grow: { flex: 1, minWidth: 0 },
   header: {
     paddingHorizontal: 18,
@@ -462,14 +531,14 @@ export const ui = StyleSheet.create({
   },
   eyebrow: {
     color: "#9a80b4",
-    fontSize: 8,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
-  heading: { color: "#352442", fontSize: 23, fontWeight: "800", marginTop: 5 },
+  heading: { color: "#352442", fontSize: 27, fontWeight: "900", marginTop: 5 },
   iconButton: {
-    width: 44,
-    height: 44,
+    width: 38,
+    height: 38,
     borderRadius: 14,
     backgroundColor: "#eee7f8",
     alignItems: "center",
@@ -480,8 +549,8 @@ export const ui = StyleSheet.create({
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#eae3f2",
-    borderRadius: 20,
-    padding: 17,
+    borderRadius: 15,
+    padding: 15,
     marginBottom: 14,
   },
   title: { color: "#493451", fontWeight: "800", fontSize: 16, marginBottom: 5 },
@@ -517,7 +586,7 @@ export const ui = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
-  secondary: { backgroundColor: "#f0eafa" },
+  secondary: { backgroundColor: "#f6f1fd", paddingVertical: 10, minHeight: 42 },
   link: { color: "#7c3aed", fontSize: 11, fontWeight: "700" },
   danger: { backgroundColor: "#fff0f3" },
   dangerText: { color: "#ba3658" },
@@ -583,8 +652,8 @@ export const ui = StyleSheet.create({
   chosen: { backgroundColor: "#eee4fc" },
   pagination: {
     padding: 13,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
+    backgroundColor: "#faf8ff",
+    borderTopWidth: 0,
     borderTopColor: "#eae3f2",
     flexDirection: "row",
     alignItems: "center",
@@ -634,7 +703,13 @@ export const ui = StyleSheet.create({
     borderRadius: 15,
     backgroundColor: "#f4f0fa",
   },
-  toolbar: { paddingHorizontal: 20, paddingBottom: 14 },
+  toolbar: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
   divider: {
     borderBottomWidth: 1,
     borderBottomColor: "#eee7f5",

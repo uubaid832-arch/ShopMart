@@ -4,9 +4,17 @@ import PeopleModule from "./AdminPeople";
 import LogisticsModule from "./AdminLogistics";
 import { ReturnsModule, ReviewsModule } from "./AdminAfterSales";
 import CashModule from "./AdminCash";
+import VouchersModule from "./AdminVouchers";
 import { Icon } from "./adminUi";
 
 const modules = [
+  {
+    id: "vouchers",
+    title: "Vouchers",
+    caption: "Discount codes & limits",
+    icon: "ticket",
+    color: "#f0e7fd",
+  },
   {
     id: "products",
     title: "Products",
@@ -95,6 +103,7 @@ export function AdminModule({ name, ...props }) {
     returns: ReturnsModule,
     reviews: ReviewsModule,
     cash: CashModule,
+    vouchers: VouchersModule,
   }[name];
   return Component ? <Component {...props} /> : null;
 }
