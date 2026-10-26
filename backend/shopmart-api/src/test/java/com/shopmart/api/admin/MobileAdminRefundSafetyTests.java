@@ -24,7 +24,7 @@ class MobileAdminRefundSafetyTests {
     when(jdbc.queryForObject(contains("SELECT EXISTS"),eq(Boolean.class),eq(admin))).thenReturn(true);
     when(jdbc.queryForList(contains("SELECT i.order_id"),eq(returnId))).thenReturn(List.of(Map.of("order_id",orderId)));
     order=new HashMap<>(Map.of("total",new BigDecimal("100.00"),"payment_method","COD","payment_status","PAID"));
-    returned=new HashMap<>(Map.of("status","APPROVED","refund_status","PENDING","refund_amount",new BigDecimal("50.00")));
+    returned=new HashMap<>(Map.of("status","RECEIVED","refund_status","PENDING","refund_amount",new BigDecimal("50.00")));
     when(jdbc.queryForMap(contains("FROM public.orders"),eq(orderId))).thenReturn(order);
     when(jdbc.queryForMap(contains("FROM public.return_requests"),eq(returnId))).thenReturn(returned);
     when(jdbc.queryForObject(contains("COALESCE(SUM"),eq(BigDecimal.class),eq(orderId))).thenReturn(BigDecimal.ZERO);
@@ -35,8 +35,8 @@ class MobileAdminRefundSafetyTests {
     when(jdbc.queryForObject(contains("SELECT EXISTS"),eq(Boolean.class),eq(admin))).thenReturn(false);
     assertEquals(403,reject().getStatusCode().value());noWrites();
   }
-  @Test void goodsMustBeAcceptedAfterInspectionBeforeRefundRecord() {
-    returned.put("status","RECEIVED");assertEquals(409,reject().getStatusCode().value());noWrites();
+  @Test void goodsMustBePhysicallyReceivedBeforeRefundRecord() {
+    returned.put("status","APPROVED");assertEquals(409,reject().getStatusCode().value());noWrites();
   }
   @Test void demoPaymentsCannotBeRecordedAsRealCashRefunds() {
     order.put("payment_method","DEMO");order.put("payment_status","DEMO_PAID");assertEquals(409,reject().getStatusCode().value());noWrites();

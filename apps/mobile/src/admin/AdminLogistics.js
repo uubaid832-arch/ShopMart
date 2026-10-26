@@ -1,4 +1,3 @@
-import CustomerContact from "./CustomerContact";
 import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import {
@@ -85,7 +84,7 @@ function DeliveryEditor({ delivery, op, onSave }) {
     </Form>
   );
 }
-export function Warehouse({ session, delivery, onClose, onBack, onChanged }) {
+function Warehouse({ session, delivery, onClose, onBack, onChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
   const refresh = () => setRevision((v) => v + 1);
@@ -297,7 +296,6 @@ export default function LogisticsModule({
   onChanged,
   onOpenOrder,
 }) {
-  const [contact, setContact] = useState(null);
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
@@ -311,29 +309,9 @@ export default function LogisticsModule({
   });
   const result = useAdminResource(
     session.accessToken,
-    `/deliveries?page=${page}&size=15&status=${status}`,
+    `/deliveries?page=${page}&size=15`,
     revision,
   );
-  if (contact)
-    return (
-      <CustomerContact
-        key={contact.orderId}
-        session={session}
-        item={contact}
-        mode="delivery"
-        onClose={() => setContact(null)}
-        onUpdateDetails={
-          contact.canEditDetails &&
-          !["DELIVERED", "CANCELLED", "RETURNED"].includes(contact.status)
-            ? () => {
-                op.reset();
-                setEditor(contact);
-                setContact(null);
-              }
-            : undefined
-        }
-      />
-    );
   if (warehouse)
     return (
       <Warehouse
@@ -415,29 +393,23 @@ export default function LogisticsModule({
         />
       ) : (
         <>
+          <View style={ui.toolbar}>
+            <Notice op={op} />
+            <Choice
+              label="Status on this page"
+              value={status}
+              options={[
+                "ALL",
+                "CONFIRMED",
+                "DISPATCHED",
+                "DELIVERED",
+                "CANCELLED",
+                "RETURNED",
+              ].map((value) => ({ value, label: readable(value) }))}
+              onChange={setStatus}
+            />
+          </View>
           <PagedList
-            toolbar={
-              <View style={ui.toolbar}>
-                <Notice op={op} />
-                <Choice
-                  compact
-                  label="Delivery status"
-                  value={status}
-                  options={[
-                    "ALL",
-                    "CONFIRMED",
-                    "DISPATCHED",
-                    "DELIVERED",
-                    "CANCELLED",
-                    "RETURNED",
-                  ].map((value) => ({ value, label: readable(value) }))}
-                  onChange={(value) => {
-                    setStatus(value);
-                    setPage(0);
-                  }}
-                />
-              </View>
-            }
             result={result}
             page={page}
             onPage={setPage}
@@ -466,55 +438,33 @@ export default function LogisticsModule({
                     <Text style={ui.muted}>{delivery.failureNote}</Text>
                   </View>
                 )}
-                {delivery.failureReason && (
-                  <Button
-                    title="Contact & verify customer"
-                    icon="chat"
-                    secondary
-                    disabled={op.busy}
-                    onPress={() => setContact(delivery)}
-                  />
-                )}
                 <View style={ui.row}>
                   <Button
-                    title={
-                      ["DELIVERED", "CANCELLED", "RETURNED"].includes(
-                        delivery.status,
-                      )
-                        ? "View details & history"
-                        : "Manage order"
-                    }
+                    title="Manage order"
                     icon="box"
                     secondary
                     disabled={op.busy}
                     onPress={() => onOpenOrder(delivery.orderId)}
                   />
-                  {!delivery.failureReason &&
-                    !["DELIVERED", "CANCELLED", "RETURNED"].includes(
-                      delivery.status,
-                    ) &&
-                    delivery.canEditDetails && (
-                      <Button
-                        title="Edit address"
-                        icon="edit"
-                        secondary
-                        disabled={op.blocked}
-                        onPress={() => {
-                          op.reset();
-                          setEditor(delivery);
-                        }}
-                      />
-                    )}
-                  {delivery.status === "DISPATCHED" &&
-                    delivery.failureReason && (
-                      <Button
-                        title="Warehouse return"
-                        icon="return"
-                        secondary
-                        disabled={op.busy}
-                        onPress={() => setWarehouse(delivery)}
-                      />
-                    )}
+                  {delivery.canEditDetails && (
+                    <Button
+                      title="Edit address"
+                      icon="edit"
+                      secondary
+                      disabled={op.blocked}
+                      onPress={() => {
+                        op.reset();
+                        setEditor(delivery);
+                      }}
+                    />
+                  )}
+                  <Button
+                    title="Warehouse"
+                    icon="return"
+                    secondary
+                    disabled={op.busy}
+                    onPress={() => setWarehouse(delivery)}
+                  />
                 </View>
               </Card>
             )}

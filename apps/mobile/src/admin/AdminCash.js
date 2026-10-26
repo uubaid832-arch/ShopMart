@@ -208,26 +208,21 @@ export default function CashModule({ session, onClose, onChanged }) {
     );
   return (
     <Page title="COD cash handovers" onClose={onClose} onRefresh={refresh}>
+      <View style={ui.toolbar}>
+        <Choice
+          label="Handover status"
+          value={status}
+          options={["PENDING", "CONFIRMED", "REJECTED", "ALL"].map((value) => ({
+            value,
+            label: readable(value),
+          }))}
+          onChange={(value) => {
+            setStatus(value);
+            setPage(0);
+          }}
+        />
+      </View>
       <PagedList
-        toolbar={
-          <View style={ui.toolbar}>
-            <Choice
-              compact
-              label="Handover status"
-              value={status}
-              options={["PENDING", "CONFIRMED", "REJECTED", "ALL"].map(
-                (value) => ({
-                  value,
-                  label: readable(value),
-                }),
-              )}
-              onChange={(value) => {
-                setStatus(value);
-                setPage(0);
-              }}
-            />
-          </View>
-        }
         result={result}
         page={page}
         onPage={setPage}

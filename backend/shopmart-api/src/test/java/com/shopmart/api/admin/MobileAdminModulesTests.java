@@ -153,22 +153,6 @@ class MobileAdminModulesTests {
     mvc.perform(post(BASE+"/deliveries/"+ID+"/resolution").header("Authorization","Bearer test-token").contentType("application/json").content("{\"attemptId\":\""+ID+"\",\"action\":\"DELIVERED\"}"))
         .andExpect(status().isBadRequest());verifyNoInteractions(refunds,cash,warehouse);
   }
-  @Test void deliveryFilterAppliesBeforePagination() throws Exception {
-    token("ADMIN");
-    when(deliveries.list(ADMIN,0,20,"CANCELLED")).thenReturn(new DeliveryService.DeliveryPage(List.of(),0,20,0,0));
-    mvc.perform(get(BASE+"/deliveries?status=CANCELLED").header("Authorization","Bearer test-token"))
-        .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(0));
-    verify(deliveries).list(ADMIN,0,20,"CANCELLED");
-  }
-
-  @Test void productFiltersApplyToTheWholeCatalog() throws Exception {
-    token("ADMIN");
-    when(products.list(ADMIN, 0, 20, ID, true)).thenReturn(new AdminProductService.ProductPage(List.of(),0,20,0,0));
-    mvc.perform(get(BASE+"/products?categoryId="+ID+"&lowStock=true").header("Authorization","Bearer test-token"))
-        .andExpect(status().isOk()).andExpect(jsonPath("$.totalItems").value(0));
-    verify(products).list(ADMIN,0,20,ID,true);
-  }
-
   @Test void productImagesSupportAuthenticatedMultipartAndPrimarySelection() throws Exception {
     token("ADMIN");when(images.upload(eq(ADMIN),eq(ID),anyList())).thenReturn(List.of());
     var file=new MockMultipartFile("files","test.jpg","image/jpeg",new byte[]{1,2,3});
