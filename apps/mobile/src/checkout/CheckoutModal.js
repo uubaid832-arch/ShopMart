@@ -1,3 +1,5 @@
+import SafepayCheckout from "../payments/SafepayCheckout";
+import { sameCart } from "../payments/useSafepay";
 import { useRef, useState } from "react";
 import {
   Alert,
@@ -43,6 +45,8 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   });
 
   const [saving, setSaving] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [safepayOpen, setSafepayOpen] = useState(false);
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState(null);
@@ -119,9 +123,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
         request: {
           ...values,
           idempotencyKey: Crypto.randomUUID(),
-          paymentMethod: "COD",
+          paymentMethod,
           voucherCode: voucher.quote?.code || null,
-          expectedTotal: voucher.quote?.total || null,
+          expectedTotal: voucher.quote?.total || Number(cart.total).toFixed(2),
           items: cart.items.map((item) => ({
             productId: item.id,
             quantity: item.quantity,
@@ -140,6 +144,10 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
     setError("");
 
     try {
+      if (snapshot.current.request.paymentMethod === "DEMO") {
+        setSafepayOpen(true);
+        return;
+      }
       const order = await placeMobileOrder(
         session.accessToken,
         snapshot.current.request,
@@ -180,6 +188,29 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   const summaryDiscount =
     snapshot.current?.discount ?? voucher.quote?.discountAmount ?? "0.00";
 
+  if (safepayOpen)
+    return (
+      <SafepayCheckout
+        session={session}
+        request={snapshot.current.request}
+        onPaid={(order) => {
+          setConfirmation(order);
+          setSafepayOpen(false);
+          setLocked(false);
+          if (sameCart(cart.items, order.items)) cart.clearCart();
+        }}
+        onBack={(unresolved) => {
+          setSafepayOpen(false);
+          setLocked(Boolean(unresolved));
+          if (!unresolved) snapshot.current = null;
+          setError(
+            unresolved
+              ? "Resume Safepay checkout to check the saved payment before changing your order."
+              : "",
+          );
+        }}
+      />
+    );
   return (
     <Modal
       visible
@@ -221,7 +252,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                     Thank you for your order!
                   </Text>
                   <Text style={styles.description}>
-                    Your Cash on Delivery order has been placed.
+                    {confirmation.paymentMethod === "DEMO"
+                      ? "Your Safepay sandbox order has been placed. No real money was charged."
+                      : "Your Cash on Delivery order has been placed."}
                   </Text>
                 </View>
 
@@ -274,8 +307,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
             ) : (
               <>
                 <Text style={styles.description}>
-                  Pay cash when your order arrives. Final prices and stock are
-                  checked before the order is accepted.
+                  Choose Cash on Delivery or test card checkout with Safepay.
+                  Final prices and stock are checked before the order is
+                  accepted.
                 </Text>
                 {session && (
                   <SavedAddresses
@@ -317,6 +351,28 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   </View>
                 ))}
 
+                <View style={styles.summary}>
+                  <Text style={styles.summaryTitle}>Payment method</Text>
+                  {[
+                    { id: "COD", label: "Cash on Delivery" },
+                    { id: "DEMO", label: "Card — Safepay sandbox" },
+                  ].map((method) => (
+                    <Pressable
+                      key={method.id}
+                      accessibilityRole="radio"
+                      accessibilityState={{
+                        checked: paymentMethod === method.id,
+                      }}
+                      disabled={saving || locked}
+                      onPress={() => setPaymentMethod(method.id)}
+                      style={[styles.line, { paddingVertical: 12 }]}
+                    >
+                      <Text style={styles.description}>
+                        {paymentMethod === method.id ? "●" : "○"} {method.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
                 <VoucherField voucher={voucher} disabled={saving || locked} />
                 <View style={styles.summary}>
                   <Text style={styles.summaryTitle}>Order summary</Text>
@@ -361,7 +417,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       ? "Placing order…"
                       : locked
                         ? "Retry confirmation"
-                        : "Place Cash on Delivery order"}
+                        : paymentMethod === "DEMO"
+                          ? "Continue to Safepay sandbox"
+                          : "Place Cash on Delivery order"}
                   </Text>
                 </Pressable>
               </>

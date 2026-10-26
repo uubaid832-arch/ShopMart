@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "../../components/Modal";
 import { placeCodOrder, processMockPayment } from "../../api/orders";
+import SafepayCheckout from "../payments/SafepayCheckout";
+import { sameCart } from "../payments/useSafepay";
 import MockPaymentGateway from "./MockPaymentGateway";
 import { useVoucher } from "./useVoucher";
 import VoucherField from "./VoucherField";
@@ -43,7 +45,7 @@ const fields = [
 ];
 const paymentMethods = [
   { id: "cod", label: ["Cash on Delivery", "وصولی پر نقد ادائیگی"] },
-  { id: "card", label: ["Card — Demo payment", "کارڈ — ڈیمو ادائیگی"] },
+  { id: "card", label: ["Card — Safepay sandbox", "کارڈ — ڈیمو ادائیگی"] },
   {
     id: "jazzcash",
     label: ["JazzCash — Demo payment", "جاز کیش — ڈیمو ادائیگی"],
@@ -140,6 +142,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   const [addressResult, setAddressResult] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [safepayRequest, setSafepayRequest] = useState(null);
   const [gatewayOpen, setGatewayOpen] = useState(false);
   const [submittedTotal, setSubmittedTotal] = useState(null);
 
@@ -370,6 +373,31 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     }
 
     if (paymentMethod !== "cod") {
+      if (voucher.code.trim() && !voucher.quote) {
+        setError("Apply or remove the voucher before paying.");
+        return;
+      }
+      if (paymentMethod === "card")
+        setSafepayRequest(
+          (current) =>
+            current || {
+              idempotencyKey: crypto.randomUUID(),
+              ...Object.fromEntries(
+                Object.entries(details).map(([key, value]) => [
+                  key,
+                  value.trim(),
+                ]),
+              ),
+              paymentMethod: "DEMO",
+              items: cart.items.map((item) => ({
+                productId: item.id,
+                quantity: item.quantity,
+              })),
+              voucherCode: voucher.quote?.code || null,
+              expectedTotal:
+                voucher.quote?.total || Number(cart.total).toFixed(2),
+            },
+        );
       setError("");
       setGatewayOpen(true);
       return;
@@ -500,21 +528,45 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
           </>
         ) : gatewayOpen ? (
           <div className="grid gap-4">
-            <MockPaymentGateway
-              method={paymentMethod}
-              amount={Number(
-                submittedTotal ?? voucher.quote?.total ?? cart.total,
-              )}
-              formatPrice={formatPrice}
-              busy={submitting}
-              locked={locked}
-              onApprove={submitOrder}
-              onCancel={() => {
-                if (inFlight.current || locked) return;
-                setGatewayOpen(false);
-                setError("");
-              }}
-            />
+            {paymentMethod === "card" && safepayRequest ? (
+              <SafepayCheckout
+                session={session}
+                request={safepayRequest}
+                onPaid={(order) => {
+                  setConfirmation({ ...order, details: order.delivery });
+                  setGatewayOpen(false);
+                  setStep(3);
+                  setLocked(false);
+                  if (sameCart(cart.items, order.items)) cart.clearCart();
+                }}
+                onBack={(unresolved) => {
+                  setGatewayOpen(false);
+                  setLocked(Boolean(unresolved));
+                  if (!unresolved) setSafepayRequest(null);
+                  setError(
+                    unresolved
+                      ? "Resume card checkout to check your saved payment before changing this order."
+                      : "",
+                  );
+                }}
+              />
+            ) : (
+              <MockPaymentGateway
+                method={paymentMethod}
+                amount={Number(
+                  submittedTotal ?? voucher.quote?.total ?? cart.total,
+                )}
+                formatPrice={formatPrice}
+                busy={submitting}
+                locked={locked}
+                onApprove={submitOrder}
+                onCancel={() => {
+                  if (inFlight.current || locked) return;
+                  setGatewayOpen(false);
+                  setError("");
+                }}
+              />
+            )}
 
             {error && (
               <p

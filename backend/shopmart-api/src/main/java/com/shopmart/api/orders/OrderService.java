@@ -48,6 +48,16 @@ public class OrderService {
     public OrderReceipt create(
             UUID userId,
             @Valid CreateOrderRequest request) {
+        return createInternal(userId, request, false);
+    }
+
+    @Transactional
+    public OrderReceipt createSafepayVerified(UUID userId, @Valid CreateOrderRequest request) {
+        if (!"DEMO".equals(request.paymentMethod())) throw failure(HttpStatus.BAD_REQUEST, "Sandbox orders must use demo accounting.");
+        return createInternal(userId, request, true);
+    }
+
+    private OrderReceipt createInternal(UUID userId, CreateOrderRequest request, boolean verifiedSafepay) {
         // Serialize this customer's order requests.
         List<Boolean> accounts = jdbc.query(
                 "SELECT enabled FROM public.users WHERE id = ? FOR UPDATE",
@@ -128,6 +138,9 @@ public class OrderService {
 
             return getOrder(userId, (UUID) previous.get("id"));
         }
+
+        if (!verifiedSafepay && Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM public.safepay_sessions WHERE user_id=? AND state IN ('PENDING','REVIEW'))", Boolean.class, userId)))
+            throw failure(HttpStatus.CONFLICT, "You have an unfinished Safepay payment. Open card checkout to resume or check it before placing another order.");
 
         List<OrderLine> lines = new ArrayList<>();
         BigDecimal subtotal = BigDecimal.ZERO;

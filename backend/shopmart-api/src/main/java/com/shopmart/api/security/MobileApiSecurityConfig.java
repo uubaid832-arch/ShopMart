@@ -24,6 +24,9 @@ public class MobileApiSecurityConfig {
                 // Mobile APIs authenticate using bearer tokens, not cookies.
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/checkout/safepay/return").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/checkout/safepay/sessions", "/api/mobile/checkout/safepay/sessions/*/verify", "/api/mobile/checkout/safepay/sessions/*/resume").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/checkout/safepay/sessions/*").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/mobile/orders")
                         .authenticated()
                         .requestMatchers(
