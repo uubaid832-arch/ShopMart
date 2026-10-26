@@ -777,6 +777,7 @@ export default function AdminScreen({
   onSignOut,
   signingOut,
   sessionError,
+  onPreviewStore,
   onUpdateUser,
   onPasswordChanged,
   security,
@@ -1158,6 +1159,7 @@ export default function AdminScreen({
                     selected: module === "deliveries",
                     action: () => setModule("deliveries"),
                   },
+                  { icon: "box", label: "Preview store", selected: false, action: () => onPreviewStore?.() },
                   {
                     icon: "returns",
                     label: "Returns & refunds",
