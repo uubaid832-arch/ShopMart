@@ -35,20 +35,21 @@ public class OrderInvoiceService {
         ByteArrayOutputStream output = new ByteArrayOutputStream()) {
 
       boolean demo = "DEMO".equals(order.paymentMethod());
+      boolean safepay = "SAFEPAY".equals(order.paymentProvider());
 
       boolean paidAndDelivered = !demo
           && "DELIVERED".equals(order.status())
           && "PAID".equals(order.paymentStatus());
 
       document.getDocumentInformation().setTitle(
-          (demo ? "ShopMart test order - " : "ShopMart invoice - ")
+          (demo && !safepay ? "ShopMart test order - " : "ShopMart invoice - ")
               + order.orderNumber());
 
       document.getDocumentInformation().setAuthor("ShopMart");
 
-      try (InvoiceWriter writer = new InvoiceWriter(document, paidAndDelivered, demo)) {
+      try (InvoiceWriter writer = new InvoiceWriter(document, paidAndDelivered, demo, safepay)) {
 
-        if (demo) {
+        if (demo && !safepay) {
           writer.heading("TEST ORDER - NO MONEY CHARGED");
           writer.line(
               "This document records a simulated payment."
@@ -103,13 +104,21 @@ public class OrderInvoiceService {
 
         writer.space(16);
 
-        String paymentMethod = demo
+        String paymentMethod = safepay
+            ? "Safepay (Sandbox)"
+            : demo
             ? "Demo payment"
             : "COD".equals(order.paymentMethod())
                 ? "Cash on Delivery"
                 : readable(order.paymentMethod());
 
-        String paymentStatus = demo
+        String paymentStatus = safepay
+            ? "DEMO_PAID".equals(order.paymentStatus())
+                ? "Paid via Safepay"
+                : "DEMO_VOID".equals(order.paymentStatus())
+                    ? "Cancelled - sandbox"
+                    : readable(order.paymentStatus())
+            : demo
             ? "DEMO_VOID".equals(order.paymentStatus())
                 ? "Voided - no money charged"
                 : "Simulated success - no money charged"
@@ -128,7 +137,9 @@ public class OrderInvoiceService {
 
         writer.space(18);
 
-        if (demo) {
+        if (safepay) {
+          writer.line("Safepay sandbox transaction. No real money was charged.", false, 9);
+        } else if (demo) {
           writer.line(
               "TEST ORDER ONLY - NO REAL PAYMENT",
               true, 10);
@@ -201,6 +212,7 @@ public class OrderInvoiceService {
     private final PDDocument document;
     private final boolean paid;
     private final boolean demo;
+    private final boolean safepay;
 
     private final PDFont regular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
 
@@ -214,11 +226,13 @@ public class OrderInvoiceService {
     private InvoiceWriter(
         PDDocument document,
         boolean paid,
-        boolean demo) throws IOException {
+        boolean demo,
+        boolean safepay) throws IOException {
 
       this.document = document;
       this.paid = paid;
       this.demo = demo;
+      this.safepay = safepay;
       newPage();
     }
 
@@ -263,11 +277,14 @@ public class OrderInvoiceService {
           0.49f, 0.23f, 0.93f);
 
       drawText(
-          demo ? "TEST ORDER RECORD" : "ORDER INVOICE",
+          demo && !safepay ? "TEST ORDER RECORD" : "ORDER INVOICE",
           LEFT, top - 77, bold, 10,
           0.40f, 0.45f, 0.53f);
 
-      if (demo) {
+      if (safepay) {
+        drawRight("SAFEPAY", RIGHT, top - 49, bold, 17, 0.49f, 0.23f, 0.93f);
+        drawRight("SANDBOX", RIGHT, top - 68, bold, 8, 0.49f, 0.23f, 0.93f);
+      } else if (demo) {
         drawRight(
             "TEST ORDER", RIGHT, top - 49, bold, 17,
             0.49f, 0.23f, 0.93f);
@@ -289,7 +306,9 @@ public class OrderInvoiceService {
       rule(43);
 
       drawText(
-          demo
+          safepay
+              ? "ShopMart | Safepay sandbox invoice"
+              : demo
               ? "ShopMart | Test order - no money charged"
               : "ShopMart | Order invoice",
           LEFT, 28, regular, 8,
