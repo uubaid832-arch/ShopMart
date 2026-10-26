@@ -50,5 +50,8 @@ export const placeMobileOrder = (token, values) =>
 export const getMobileOrders = (token, page, signal) =>
   orderRequest(token, `?page=${page}&size=10`, { signal });
 
+export const getMobileOrder = (token, id, signal) =>
+  orderRequest(token, `/${id}`, { signal });
+
 export const getMobileTracking = (token, id, signal) =>
   orderRequest(token, `/${id}/tracking`, { signal });

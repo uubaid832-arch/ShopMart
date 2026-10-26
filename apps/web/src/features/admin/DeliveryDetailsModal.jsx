@@ -81,7 +81,7 @@ export default function DeliveryDetailsModal({ delivery, onSave, onClose }) {
   return (
     <Modal onClose={close} labelledBy="delivery-details-title" size="lg">
       <div className="grid gap-5 p-5 sm:p-6">
-        <CustomerContact token={session.accessToken} item={delivery} />
+        {delivery.status === "DISPATCHED" && delivery.failureReason && <CustomerContact token={session.accessToken} item={delivery} />}
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="m-0 text-xs font-bold tracking-widest text-violet-600">

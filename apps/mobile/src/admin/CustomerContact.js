@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { adminRequest } from "./adminApi";
-import { Button, Card, Field, Form, Page, ui } from "./adminUi";
+import { Button, Card, Choice, Field, Form, Page, ui } from "./adminUi";
 import { customerContactUrl, customerMessage } from "./contactMessages";
 
 export default function CustomerContact({
@@ -13,6 +13,7 @@ export default function CustomerContact({
   onUpdateDetails,
   onInstructionsSent,
 }) {
+  const [refundChoice, setRefundChoice] = useState("ACCOUNT");
   const needsWarehouse = mode === "return" && item.status !== "REJECTED";
   const [warehouse, setWarehouse] = useState("");
   const [addressReady, setAddressReady] = useState(!needsWarehouse);
@@ -70,6 +71,7 @@ export default function CustomerContact({
       returnId: item.id,
       status: item.status,
       warehouse,
+      refundChoice,
       rejectionReason: item.rejectionReason,
     });
   }
@@ -96,10 +98,11 @@ export default function CustomerContact({
     setNotice("");
     try {
       const body = build();
+      if (needsWarehouse) await AsyncStorage.setItem(key, warehouse.trim());
       const url = customerContactUrl(
         channel,
         channel === "email" ? email : phone,
-        `ShopMart ${mode === "return" ? "return instructions" : "delivery verification"} — ${contact.orderNumber}`,
+        `ShopMart ${mode === "refund" ? "refund preference" : mode === "return" ? "return instructions" : "delivery verification"} — ${contact.orderNumber}`,
         body,
       );
       await Linking.openURL(url);
@@ -117,7 +120,7 @@ export default function CustomerContact({
     preview = build();
   return (
     <Page
-      title={mode === "return" ? "Return instructions" : "Contact customer"}
+      title={mode === "refund" ? "Refund follow-up" : mode === "return" ? "Return instructions" : "Contact customer"}
       onClose={onClose}
       onBack={onClose}
       busy={busy}
@@ -184,6 +187,7 @@ export default function CustomerContact({
                 />
               </Card>
             )}
+            {mode === "refund" && <Choice label="Refund follow-up" value={refundChoice} onChange={setRefundChoice} options={[{value:"ACCOUNT",label:"Ask account details / preference"},{value:"VOUCHER",label:"Offer future purchase voucher"}]} />}
             {preview ? (
               <Card title="Message preview">
                 <Text selectable style={ui.body}>

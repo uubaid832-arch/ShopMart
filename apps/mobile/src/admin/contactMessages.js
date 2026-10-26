@@ -19,8 +19,15 @@ export function customerMessage({
   status,
   warehouse,
   rejectionReason,
+  refundChoice = "ACCOUNT",
 }) {
   const hello = `Assalam o Alaikum ${customerName || ""},\n\nThis is ShopMart regarding order ${orderNumber}.`;
+  if (mode === "refund") {
+    const next = refundChoice === "VOUCHER"
+      ? "Would you prefer a ShopMart voucher for a future purchase instead of an account refund? Please reply to confirm your preference. We will confirm the voucher amount, terms and code separately."
+      : "Please confirm whether you prefer an account refund or a ShopMart voucher for a future purchase. For an account refund, reply with the account holder name, bank or wallet name, and IBAN/account number needed to receive it. Never send a card number, PIN, password, CVV or OTP.";
+    return `${hello}\nReturn reference: ${returnId}\nProduct: ${productName}\n\nYour returned item has been accepted after inspection. ${next}\n\nThis message requests your preference only; your refund or voucher is not yet issued. We will confirm completion separately. Thank you, ShopMart.`;
+  }
   if (mode === "return") {
     if (status === "REJECTED")
       return `${hello}\nReturn reference: ${returnId}\nProduct: ${productName}\n\nAfter inspecting the received product, we are unable to accept the return. Reason: ${rejectionReason || "Please contact ShopMart for the inspection details."}\n\nYour product will be shipped back to your delivery address soon. We will share dispatch details when available. Please contact us if your address has changed. Thank you, ShopMart.`;

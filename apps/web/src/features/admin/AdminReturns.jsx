@@ -264,7 +264,8 @@ export default function AdminReturns() {
                   </span>
                 </div>
 
-                <CustomerContact token={token} item={request} mode="return" />
+                {["PENDING", "REJECTED"].includes(request.status) && <CustomerContact token={token} item={request} mode="return" />}
+                {request.status === "APPROVED" && request.refundStatus !== "REFUNDED" && <CustomerContact token={token} item={request} mode="refund" />}
                 <div className="flex flex-wrap gap-3">
                   {request.status === "PENDING" &&
                     (request.instructionsSentAt ? (

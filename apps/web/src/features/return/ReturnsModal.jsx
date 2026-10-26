@@ -349,8 +349,8 @@ export default function ReturnsModal({ accessToken, onClose }) {
               ) : (
                 <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
                   {text(
-                    "No eligible items on this page. Only delivered, paid COD items without an existing return request are eligible.",
-                    "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
+                    "No eligible items on this page. Only delivered, paid COD or verified Safepay items without an existing return request are eligible.",
+                    "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
                   )}
                 </p>
               )}

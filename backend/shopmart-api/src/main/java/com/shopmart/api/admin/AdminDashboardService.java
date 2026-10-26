@@ -134,7 +134,8 @@ public class AdminDashboardService {
                                 ((Number) accountCounts.get("active_riders")).longValue(),
                                 revenue.get("gross").toString(), revenue.get("refunded").toString(),
                                 ((Number) cash.get("pending_count")).longValue(),
-                                cash.get("pending_amount").toString(), codWithRiders);
+                                cash.get("pending_amount").toString(), codWithRiders,
+                                jdbc.queryForObject("SELECT COUNT(*) FROM public.return_requests WHERE status='PENDING'", Long.class));
         }
 
         public record DashboardResponse(
@@ -147,7 +148,17 @@ public class AdminDashboardService {
                         List<LowStockProduct> lowStockProducts,
                         long activeCustomers,
                         long activeRiders, String grossPaidRevenue, String refundedAmount,
-                        long pendingCodHandovers, String pendingCodAmount, String codWithRiders) {
+                        long pendingCodHandovers, String pendingCodAmount, String codWithRiders,
+                        long pendingReturnRequests) {
+                public DashboardResponse(long totalOrders, long pendingOrders, long activeProducts,
+                    String paidRevenue, String currency, List<RecentOrder> recentOrders,
+                    List<LowStockProduct> lowStockProducts, long activeCustomers, long activeRiders,
+                    String grossPaidRevenue, String refundedAmount, long pendingCodHandovers,
+                    String pendingCodAmount, String codWithRiders) {
+                    this(totalOrders,pendingOrders,activeProducts,paidRevenue,currency,recentOrders,
+                        lowStockProducts,activeCustomers,activeRiders,grossPaidRevenue,refundedAmount,
+                        pendingCodHandovers,pendingCodAmount,codWithRiders,0);
+                }
                 public DashboardResponse(long totalOrders, long pendingOrders, long activeProducts,
                         String paidRevenue, String currency, List<RecentOrder> recentOrders,
                         List<LowStockProduct> lowStockProducts, long activeCustomers, long activeRiders) {

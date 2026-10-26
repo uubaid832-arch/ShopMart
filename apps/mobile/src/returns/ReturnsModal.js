@@ -220,7 +220,7 @@ export default function ReturnsModal({ session, onClose }) {
                 {tab === "eligible" && (
                   <Text style={styles.description}>
                     Returns cover the full quantity of the selected purchased
-                    item. Only delivered, paid COD items without an existing
+                    item. Only delivered, paid COD or verified Safepay items without an existing
                     return request are eligible.
                   </Text>
                 )}

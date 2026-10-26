@@ -11,8 +11,9 @@ import {
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getMobileOrders, getMobileTracking } from "../api/orders";
+import { getMobileOrders, getMobileTracking, getMobileOrder } from "../api/orders";
 import CustomerInvoiceButton from "./CustomerInvoiceButton";
+import { canTrackLive } from "./orderRules";
 import RiderLocation from "./RiderLocation";
 
 const readable = (value = "") => value.replaceAll("_", " ").toLowerCase();
@@ -74,7 +75,9 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [selectedSummary, setSelected] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const selected = detail?.id === selectedSummary?.id && detail?.token === token ? detail.order : selectedSummary;
   const [trackingResult, setTrackingResult] = useState(null);
 
   useEffect(() => {
@@ -101,7 +104,16 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
     return () => controller.abort();
   }, [token, page, reload]);
 
-  const selectedId = selected?.id;
+  const selectedId = selectedSummary?.id;
+  useEffect(() => {
+    if (!selectedId) return;
+    const controller = new AbortController();
+    getMobileOrder(token, selectedId, controller.signal).then(order => {
+      if (!controller.signal.aborted) setDetail({token, id:selectedId, order});
+    }).catch(() => { /* Retain the purchased order details if refresh fails. */ });
+    return () => controller.abort();
+  }, [token, selectedId, reload]);
+  const liveTracking = canTrackLive(selected?.status);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -204,7 +216,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
             </Text>
             <Text style={styles.muted}>
               {selected
-                ? "Track your latest delivery updates"
+                ? "Purchase details and tracking history"
                 : "Track purchases and manage returns"}
             </Text>
           </View>
@@ -222,71 +234,39 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
 
         {selected ? (
           <ScrollView contentContainerStyle={styles.content}>
-            {!trackingCurrent ? (
-              <ActivityIndicator color="#7c3aed" style={styles.loader} />
-            ) : trackingResult.error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {trackingResult.error}
-              </Text>
-            ) : (
-              <>
-                <View style={styles.statusCard}>
-                  <View style={styles.statusIcon}>
-                    <Icon name="truck" size={31} />
-                  </View>
-                  <Text style={styles.eyebrow}>CURRENT ORDER STATUS</Text>
-                  <Text style={styles.statusTitle}>
-                    {readable(trackingResult.data.status)}
-                  </Text>
-                  <Text style={styles.muted}>
-                    Updates appear here as your order progresses.
-                  </Text>
-                </View>
-                <CustomerInvoiceButton session={session} orderId={selected.id} />
-                <RiderLocation
-                  key={selected.id}
-                  session={session}
-                  order={selected}
-                />
-                <Text style={styles.sectionTitle}>Delivery timeline</Text>
-                <View style={styles.card}>
-                  {trackingResult.data.events.length === 0 && (
-                    <Text style={styles.muted}>No tracking updates yet.</Text>
-                  )}
-                  {trackingResult.data.events.map((event, index) => (
-                    <View key={event.id} style={styles.event}>
-                      <View style={styles.timeline}>
-                        <View style={styles.eventDot} />
-                        {index < trackingResult.data.events.length - 1 && (
-                          <View style={styles.eventLine} />
-                        )}
-                      </View>
-                      <View style={styles.eventCopy}>
-                        <Text style={styles.name}>{event.message}</Text>
-                        <Text style={styles.muted}>
-                          {new Date(event.createdAt).toLocaleString("en-PK")}
-                        </Text>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-                <Text style={styles.sectionTitle}>Delivery address</Text>
-                <View style={[styles.card, styles.addressCard]}>
-                  <View style={styles.addressIcon}>
-                    <Icon name="pin" />
-                  </View>
-                  <View style={styles.grow}>
-                    <Text style={styles.name}>{selected.delivery.name}</Text>
-                    <Text style={styles.description}>
-                      {selected.delivery.address}, {selected.delivery.city}
-                    </Text>
-                    <Text style={styles.description}>
-                      {selected.delivery.phone}
-                    </Text>
-                  </View>
-                </View>
-              </>
-            )}
+            <View style={styles.statusCard}>
+              <Text style={styles.eyebrow}>ORDER DETAILS</Text>
+              <Text style={styles.statusTitle}>{readable(selected.status)}</Text>
+              <Text style={styles.muted}>{selected.orderNumber} · {new Date(selected.createdAt).toLocaleString("en-PK")}</Text>
+            </View>
+            <Text style={styles.sectionTitle}>Purchased items</Text>
+            <View style={styles.card}>
+              {selected.items.map(item => <View key={item.productId} style={styles.productRow}>
+                <View style={styles.grow}><Text style={styles.productName}>{item.name}</Text><Text style={styles.muted}>{formatPrice(item.price, selected.currency)} × {item.quantity}</Text></View>
+                <Text style={styles.itemPrice}>{formatPrice(Number(item.price) * item.quantity, selected.currency)}</Text>
+              </View>)}
+              {Number(selected.discountAmount) > 0 && <Text style={styles.payment}>Voucher {selected.voucherCode}: -{formatPrice(selected.discountAmount, selected.currency)}</Text>}
+              <Text style={styles.total}>Total: {formatPrice(selected.total, selected.currency)}</Text>
+              <Text style={styles.description}>{selected.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : selected.paymentMethod === "COD" ? "Cash on delivery" : readable(selected.paymentMethod)} · {selected.paymentProvider === "SAFEPAY" && selected.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(selected.paymentStatus)}</Text>
+            </View>
+            <CustomerInvoiceButton session={session} orderId={selected.id} />
+            {liveTracking && <RiderLocation key={selected.id} session={session} order={selected} />}
+            <Text style={styles.sectionTitle}>Tracking history</Text>
+            <View style={styles.card}>
+              {!trackingCurrent ? <ActivityIndicator color="#7c3aed" /> : trackingResult.error ? <Text accessibilityRole="alert" style={styles.error}>{trackingResult.error}</Text> : <>
+                {trackingResult.data.events.length === 0 && <Text style={styles.muted}>No tracking history yet.</Text>}
+                {trackingResult.data.events.map(event => <View key={event.id} style={styles.event}>
+                  <View style={styles.eventCopy}><Text style={styles.name}>{event.message}</Text><Text style={styles.muted}>{new Date(event.createdAt).toLocaleString("en-PK")}</Text></View>
+                </View>)}
+              </>}
+            </View>
+            <Text style={styles.sectionTitle}>Delivery details</Text>
+            <View style={styles.card}>
+              <Text style={styles.name}>{selected.delivery.name}</Text>
+              <Text style={styles.description}>{selected.delivery.address}, {selected.delivery.city}</Text>
+              <Text style={styles.description}>{selected.delivery.phone}</Text>
+              <Text style={styles.description}>{selected.delivery.email}</Text>
+            </View>
           </ScrollView>
         ) : !current ? (
           <ActivityIndicator
@@ -376,13 +356,14 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                       </Text>
                     </View>
                   </View>
+                  {canTrackLive(item.status) && <Pressable accessibilityRole="button" onPress={() => setSelected(item)} style={styles.returnButton}><Icon name="truck" size={18} /><Text style={styles.returnText}>Track live delivery</Text></Pressable>}
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => setSelected(item)}
                     style={styles.trackButton}
                   >
                     <Icon name="truck" size={19} color="#fff" />
-                    <Text style={styles.trackText}>Track order</Text>
+                    <Text style={styles.trackText}>Order details & history</Text>
                   </Pressable>
                 </View>
               )}

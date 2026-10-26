@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useSession } from "../auth/useSession";
 import NotificationBell from "../notifications/NotificationBell";
+import { getAdminDashboard } from "../../api/adminDashboard";
 import AppearanceMenu from "../../components/AppearanceMenu";
 
 const links = [
@@ -40,6 +41,26 @@ export default function AdminLayout() {
   const [signingOut, setSigningOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const [counts, setCounts] = useState(null);
+  useEffect(() => {
+    if (session?.user.role !== "ADMIN") return;
+    const controller = new AbortController();
+    let pending = false;
+    async function refreshCounts() {
+      if (pending || document.hidden) return;
+      pending = true;
+      try {
+        const data = await getAdminDashboard(session.accessToken, controller.signal);
+        if (!controller.signal.aborted) setCounts({token: session.accessToken, orders: data.pendingOrders, returns: data.pendingReturnRequests});
+      } catch { /* Keep last confirmed counts until refresh succeeds. */ }
+      finally { pending = false; }
+    }
+    refreshCounts();
+    const timer = setInterval(refreshCounts, 15000);
+    window.addEventListener("focus", refreshCounts);
+    return () => { controller.abort(); clearInterval(timer); window.removeEventListener("focus", refreshCounts); };
+  }, [session?.accessToken, session?.user.role, location.pathname]);
+  const navCounts = counts?.token === session?.accessToken ? counts : null;
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -214,6 +235,8 @@ export default function AdminLayout() {
               >
                 <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
                 {label}
+                {(to === "/admin/orders" ? navCounts?.orders : to === "/admin/returns" ? navCounts?.returns : 0) > 0 &&
+                  <span aria-label="Pending requests" className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">{to === "/admin/orders" ? navCounts.orders : navCounts.returns}</span>}
               </NavLink>
             ))}
           </nav>

@@ -1,3 +1,4 @@
+import CustomerContact from "./CustomerContact";
 import { useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import {
@@ -108,11 +109,13 @@ function Warehouse({ session, delivery, onClose, onBack, onChanged }) {
     `/orders/${delivery.orderId}`,
     revision,
   );
+  const [contactOpen, setContactOpen] = useState(false);
   const value = state.data;
   const loading = state.loading || riders.loading || order.loading;
   const error = state.error || riders.error || order.error;
   const active = order.data?.status === "DISPATCHED" && !value?.resolvedAt;
   const locked = op.blocked || loading || Boolean(error);
+  if (contactOpen && active && value?.attemptId) return <CustomerContact session={session} item={{id:delivery.orderId}} mode="delivery" onClose={() => setContactOpen(false)} />;
   return (
     <Page
       title="Warehouse return"
@@ -146,6 +149,7 @@ function Warehouse({ session, delivery, onClose, onBack, onChanged }) {
             ) : (
               <>
                 <Card title={readable(value.reason)}>
+                  {active && <Button title="Contact customer · Email / WhatsApp" icon="chat" onPress={() => setContactOpen(true)} />}
                   <Text style={ui.body}>{value.note || "No rider note."}</Text>
                   <Text style={ui.muted}>
                     Reported: {dateLabel(value.createdAt)}

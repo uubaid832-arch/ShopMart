@@ -1161,6 +1161,7 @@ export default function AdminScreen({
                   {
                     icon: "returns",
                     label: "Returns & refunds",
+                    count: data?.pendingReturnRequests,
                     selected: module === "returns",
                     action: () => setModule("returns"),
                   },

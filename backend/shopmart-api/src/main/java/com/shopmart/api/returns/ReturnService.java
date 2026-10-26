@@ -33,8 +33,10 @@ public class ReturnService {
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
           AND o.status = 'DELIVERED'
-          AND o.payment_status = 'PAID'
-          AND o.payment_method = 'COD'
+          AND ((o.payment_method = 'COD' AND o.payment_status IN ('PAID', 'PARTIALLY_REFUNDED'))
+            OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
+                AND EXISTS (SELECT 1 FROM public.safepay_sessions sp
+                            WHERE sp.order_id = o.id AND sp.state = 'PAID')))
           AND NOT EXISTS (
               SELECT 1 FROM public.return_requests r
               WHERE r.order_item_id = i.id
@@ -48,8 +50,10 @@ public class ReturnService {
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
           AND o.status = 'DELIVERED'
-          AND o.payment_status = 'PAID'
-          AND o.payment_method = 'COD'
+          AND ((o.payment_method = 'COD' AND o.payment_status IN ('PAID', 'PARTIALLY_REFUNDED'))
+            OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
+                AND EXISTS (SELECT 1 FROM public.safepay_sessions sp
+                            WHERE sp.order_id = o.id AND sp.state = 'PAID')))
           AND NOT EXISTS (
               SELECT 1 FROM public.return_requests r
               WHERE r.order_item_id = i.id
@@ -134,12 +138,18 @@ public class ReturnService {
 
     var order = orders.get(0);
 
-    if (!"DELIVERED".equals(order.get("status"))
-        || !"PAID".equals(order.get("payment_status"))
-        || !"COD".equals(order.get("payment_method"))) {
+    boolean paidCod = "COD".equals(order.get("payment_method"))
+        && java.util.Set.of("PAID", "PARTIALLY_REFUNDED").contains(order.get("payment_status"));
+    boolean verifiedSafepay = "DEMO".equals(order.get("payment_method"))
+        && "DEMO_PAID".equals(order.get("payment_status"))
+        && Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (SELECT 1 FROM public.safepay_sessions
+                           WHERE order_id = ? AND state = 'PAID')
+            """, Boolean.class, request.orderId()));
+    if (!"DELIVERED".equals(order.get("status")) || !(paidCod || verifiedSafepay)) {
       throw failure(
           HttpStatus.CONFLICT,
-          "Only delivered, paid COD orders are eligible here.");
+          "Only delivered paid COD or verified Safepay orders are eligible for return.");
     }
 
     var items = jdbc.queryForList("""
