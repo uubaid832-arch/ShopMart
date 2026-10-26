@@ -1,3 +1,4 @@
+import AdminCodModal from "./AdminCodModal";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import {
@@ -41,6 +42,7 @@ export default function AdminDashboard() {
   const { session } = useSession();
   const accessToken = session.accessToken;
 
+  const [codOpen, setCodOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [reload, setReload] = useState(0);
 
@@ -187,10 +189,21 @@ export default function AdminDashboard() {
 
         {summary && (
           <p className="mb-0 mt-3 text-xs text-slate-500">
-            Collected payments minus recorded refunds.
+            Collected COD and verified Safepay payments minus recorded refunds. Includes Safepay sandbox transactions for this project demo.
           </p>
         )}
       </section>
+      {codOpen && <AdminCodModal token={accessToken} onClose={() => { setCodOpen(false); setReload(v => v + 1); }} />}
+      {summary && <section className="rounded-2xl border border-solid border-slate-200 bg-white p-5">
+        <h2 className="mt-0 text-lg font-bold">Revenue & COD handovers</h2>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <p>Gross paid <strong className="block">{formatPrice(summary.grossPaidRevenue)}</strong></p>
+          <p>Refunded <strong className="block">{formatPrice(summary.refundedAmount)}</strong></p>
+          <p>COD held by riders <strong className="block">{formatPrice(summary.codWithRiders)}</strong></p>
+        </div>
+        <button className="rounded-xl border-0 bg-violet-600 px-4 py-3 font-semibold text-white" onClick={() => setCodOpen(true)}>Review COD handovers ({summary.pendingCodHandovers ?? 0}) · {formatPrice(summary.pendingCodAmount)}</button>
+        <p className="text-xs text-slate-500">Confirm only after receiving cash. A handover does not add revenue again.</p>
+      </section>}
       <section
         aria-label="Active accounts"
         aria-busy={loading}

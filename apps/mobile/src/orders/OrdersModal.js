@@ -12,6 +12,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMobileOrders, getMobileTracking } from "../api/orders";
+import CustomerInvoiceButton from "./CustomerInvoiceButton";
 import RiderLocation from "./RiderLocation";
 
 const readable = (value = "") => value.replaceAll("_", " ").toLowerCase();
@@ -241,6 +242,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                     Updates appear here as your order progresses.
                   </Text>
                 </View>
+                <CustomerInvoiceButton session={session} orderId={selected.id} />
                 <RiderLocation
                   key={selected.id}
                   session={session}
@@ -331,6 +333,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                     </View>
                   </View>
                   <Status value={item.status} />
+                  <CustomerInvoiceButton session={session} orderId={item.id} />
                   <View style={styles.products}>
                     {item.items.map((product) => (
                       <View key={product.productId} style={styles.productRow}>
@@ -359,7 +362,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                     <View style={styles.grow}>
                       <Text style={styles.totalLabel}>Order total</Text>
                       <Text style={styles.payment}>
-                        {item.paymentMethod === "COD"
+                        {item.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : item.paymentMethod === "COD"
                           ? "Cash on delivery"
                           : readable(item.paymentMethod)}
                       </Text>
@@ -369,7 +372,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                         {formatPrice(item.total, item.currency)}
                       </Text>
                       <Text style={styles.payment}>
-                        {readable(item.paymentStatus)}
+                        {item.paymentProvider === "SAFEPAY" && item.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(item.paymentStatus)}
                       </Text>
                     </View>
                   </View>

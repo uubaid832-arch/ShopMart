@@ -5,6 +5,7 @@ import {
   updateAdminReturnStatus,
   recordCodRefund,
 } from "../../api/adminReturns";
+import CustomerContact from "./CustomerContact";
 import RefundModal from "./RefundModal";
 
 const statusOptions = [
@@ -263,6 +264,7 @@ export default function AdminReturns() {
                   </span>
                 </div>
 
+                <CustomerContact token={token} item={request} mode="return" />
                 <div className="flex flex-wrap gap-3">
                   {request.status === "PENDING" &&
                     (request.instructionsSentAt ? (

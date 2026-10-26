@@ -24,13 +24,17 @@ public class MobileApiSecurityConfig {
                 // Mobile APIs authenticate using bearer tokens, not cookies.
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/checkout/safepay/return").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/checkout/safepay/sessions", "/api/mobile/checkout/safepay/sessions/*/verify", "/api/mobile/checkout/safepay/sessions/*/resume").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/checkout/safepay/sessions/*").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/mobile/orders")
                         .authenticated()
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/mobile/orders",
                                 "/api/mobile/orders/*",
-                                "/api/mobile/orders/*/tracking")
+                                "/api/mobile/orders/*/tracking",
+                                "/api/mobile/orders/*/invoice")
                         .authenticated()
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -123,6 +127,8 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/admin/dashboard",
                                 "/api/mobile/admin/orders",
                                 "/api/mobile/admin/orders/*",
+                                "/api/mobile/admin/orders/*/history",
+                                "/api/mobile/admin/orders/*/invoice",
                                 "/api/mobile/admin/deliveries/riders",
                                 "/api/mobile/admin/deliveries/*/assignment")
                         .hasRole("ADMIN")
@@ -165,6 +171,10 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/admin/products/*/images/*",
                                 "/api/mobile/admin/categories/*")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/vouchers/quote").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/mobile/admin/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/admin/vouchers").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/mobile/admin/vouchers/*").hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

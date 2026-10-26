@@ -33,7 +33,7 @@ public class OrderInvoiceController {
     this.invoices = invoices;
   }
 
-  @GetMapping(value = "/api/orders/{id}/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
+  @GetMapping(value = {"/api/orders/{id}/invoice", "/api/mobile/orders/{id}/invoice"}, produces = MediaType.APPLICATION_PDF_VALUE)
   public ResponseEntity<byte[]> customerInvoice(
       @AuthenticationPrincipal Jwt jwt,
       @PathVariable UUID id) {

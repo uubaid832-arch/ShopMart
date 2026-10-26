@@ -264,7 +264,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   Status: {confirmation.status}
                 </Text>
                 <Text style={styles.description}>
-                  Payment: {confirmation.paymentStatus}
+                  Payment: {confirmation.paymentProvider === "SAFEPAY" && confirmation.paymentStatus === "DEMO_PAID" ? "Paid via Safepay (Sandbox)" : confirmation.paymentStatus}
                 </Text>
 
                 <View style={styles.summary}>
@@ -355,7 +355,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   <Text style={styles.summaryTitle}>Payment method</Text>
                   {[
                     { id: "COD", label: "Cash on Delivery" },
-                    { id: "DEMO", label: "Card — Safepay sandbox" },
+                    { id: "DEMO", label: "Card — Safepay" },
                   ].map((method) => (
                     <Pressable
                       key={method.id}
@@ -418,7 +418,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       : locked
                         ? "Retry confirmation"
                         : paymentMethod === "DEMO"
-                          ? "Continue to Safepay sandbox"
+                          ? "Pay with Safepay"
                           : "Place Cash on Delivery order"}
                   </Text>
                 </Pressable>

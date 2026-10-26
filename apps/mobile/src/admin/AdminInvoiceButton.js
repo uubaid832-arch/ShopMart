@@ -61,8 +61,8 @@ export default function AdminInvoiceButton({ session, orderId, disabled }) {
         Paths.cache,
         `ShopMart-Invoice-${orderId}-${Date.now()}.pdf`,
       );
-      file.create();
-      file.write(bytes);
+      await file.create();
+      await file.write(bytes);
       await Sharing.shareAsync(file.uri, {
         mimeType: "application/pdf",
         UTI: "com.adobe.pdf",
@@ -75,7 +75,7 @@ export default function AdminInvoiceButton({ session, orderId, disabled }) {
       );
     } finally {
       clearTimeout(timer);
-      if (file?.exists) file.delete();
+      // Leave the cached invoice available to the receiving app.
       pending.current = false;
       if (current.active) setBusy(false);
     }

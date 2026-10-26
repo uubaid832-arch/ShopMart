@@ -23,13 +23,26 @@ import {
   readable,
   useAdminResource,
 } from "./adminApi";
-import { AdminModuleMenu, AdminModule } from "./AdminModules";
+import { Warehouse } from "./AdminLogistics";
+import AdminOrderTracking from "./AdminOrderTracking";
+import AdminInvoiceButton from "./AdminInvoiceButton";
+import { AdminModule } from "./AdminModules";
 import NotificationsModal from "../notifications/NotificationsModal";
+import NotificationBell from "../notifications/NotificationBell";
 import ProfileModal from "../account/ProfileModal";
 import ChangePasswordModal from "../account/ChangePasswordModal";
 import BiometricSettingsModal from "../account/BiometricSecurity";
 
 const paths = {
+  ticket: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v2m0 3v2m0 3v2",
+  menu: "M4 6h16M4 12h16M4 18h16",
+  categories: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
+  returns: "m9 10-5-5 5-4M4 5h9a8 8 0 0 1 0 16H6",
+  star: "m12 3 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6",
+  people:
+    "M16 21v-2a6 6 0 0 0-12 0v2M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0m3 5a5 5 0 0 1 4 5v4M17 3a4 4 0 0 1 0 8",
+  receipt: "M5 3h14v19l-3-2-4 2-4-2-3 2V3Zm4 5h6m-6 4h6m-6 4h4",
+  home: "M3 10 12 3l9 7v10h-6v-7H9v7H3V10Z",
   grid: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
   box: "m12 3 9 5v9l-9 5-9-5V8l9-5Zm0 10 9-5M12 13 3 8m9 5v9M7.5 5.5l9 5",
   clock: "M12 8v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0",
@@ -154,10 +167,10 @@ function OrderCard({ order, onPress }) {
           <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
           {order.paymentMethod && (
             <Text style={s.muted}>
-              {order.paymentMethod === "COD"
+              {order.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
                 ? "Cash on delivery"
                 : readable(order.paymentMethod)}{" "}
-              · {readable(order.paymentStatus)}
+              · {order.paymentProvider === "SAFEPAY" && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
             </Text>
           )}
         </View>
@@ -171,6 +184,7 @@ function OrderCard({ order, onPress }) {
 function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
+  const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [notice, setNotice] = useState("");
@@ -183,6 +197,11 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const assignment = useAdminResource(
     session.accessToken,
     assignmentPath,
+    revision,
+  );
+  const warehouse = useAdminResource(
+    session.accessToken,
+    `/deliveries/${encodeURIComponent(orderId)}/warehouse`,
     revision,
   );
   const order = detail.data;
@@ -257,6 +276,25 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
     assignment.data?.delivery.riderId && assignment.data.delivery.riderEnabled;
   const locked =
     busy || uncertain || loading || Boolean(detail.error || assignment.error);
+  if (warehouseDelivery)
+    return (
+      <Warehouse
+        session={session}
+        delivery={warehouseDelivery}
+        onClose={() => {
+          setWarehouseDelivery(null);
+          refresh();
+        }}
+        onBack={() => {
+          setWarehouseDelivery(null);
+          refresh();
+        }}
+        onChanged={() => {
+          onChanged();
+          refresh();
+        }}
+      />
+    );
   return (
     <>
       <View style={s.header}>
@@ -307,14 +345,30 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                 <Text style={s.total}>
                   {money(order.total, order.currency)}
                 </Text>
+                {Number(order.discountAmount) > 0 && (
+                  <Text style={s.muted}>
+                    Voucher {order.voucherCode}: -
+                    {money(order.discountAmount, order.currency)}
+                  </Text>
+                )}
                 <Text style={s.muted}>
-                  {order.paymentMethod === "COD"
+                  {order.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
                     ? "Cash on delivery"
                     : readable(order.paymentMethod)}{" "}
-                  · {readable(order.paymentStatus)}
+                  · {order.paymentProvider === "SAFEPAY" && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
                 </Text>
                 <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
+                <AdminInvoiceButton
+                  session={session}
+                  orderId={orderId}
+                  disabled={busy}
+                />
               </View>
+              <AdminOrderTracking
+                session={session}
+                order={order}
+                revision={revision}
+              />
               <View style={s.card}>
                 <View style={s.inline}>
                   <Icon name="user" />
@@ -374,6 +428,36 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                         ? `Assigned to ${assignment.data.delivery.riderName}${assignment.data.delivery.riderEnabled ? "" : " (account disabled)"}`
                         : "No rider assigned yet."}
                     </Text>
+                    {order.status === "DISPATCHED" &&
+                      (warehouse.loading ? (
+                        <ActivityIndicator color="#7c3aed" />
+                      ) : warehouse.error ? (
+                        <ErrorMessage
+                          message={warehouse.error}
+                          onRetry={refresh}
+                        />
+                      ) : warehouse.data?.attemptId &&
+                        !warehouse.data.resolvedAt ? (
+                        <>
+                          <Text style={s.muted}>
+                            This delivery was unsuccessful. Confirm warehouse
+                            receipt, then select a rider for the next delivery
+                            attempt.
+                          </Text>
+                          <Button
+                            title="Change rider / arrange another delivery"
+                            icon="truck"
+                            secondary
+                            disabled={locked}
+                            onPress={() =>
+                              setWarehouseDelivery({
+                                orderId: order.id,
+                                orderNumber: order.orderNumber,
+                              })
+                            }
+                          />
+                        </>
+                      ) : null)}
                     {order.status === "CONFIRMED" ? (
                       <>
                         <Text style={s.muted}>
@@ -450,7 +534,11 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                       <Text style={s.muted}>
                         {order.status === "PENDING"
                           ? "Confirm the order to assign a rider."
-                          : "Rider changes are managed through the delivery and warehouse workflow after dispatch."}
+                          : ["DELIVERED", "CANCELLED", "RETURNED"].includes(
+                                order.status,
+                              )
+                            ? "This delivery is closed. Its history is shown below."
+                            : "Rider changes are managed through the delivery and warehouse workflow after dispatch."}
                       </Text>
                     )}
                   </>
@@ -697,18 +785,38 @@ export default function AdminScreen({
   const [orders, setOrders] = useState(null);
   const [panel, setPanel] = useState("");
   const [module, setModule] = useState("");
+  const overviewRef = useRef(null);
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const dashboard = useAdminResource(
     session.accessToken,
     "/dashboard",
     revision,
   );
-  const data = dashboard.data;
+  const [snapshot, setSnapshot] = useState(null);
+  useEffect(() => {
+    if (dashboard.data)
+      setSnapshot({ token: session.accessToken, data: dashboard.data });
+  }, [dashboard.data, session.accessToken]);
+  const data =
+    dashboard.data ||
+    (snapshot?.token === session.accessToken ? snapshot.data : null);
   const refresh = () => setRevision((v) => v + 1);
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") setRevision((v) => v + 1);
-    });
-    return () => subscription.remove();
+    let timer;
+    const updateTimer = (state) => {
+      clearInterval(timer);
+      if (state === "active") {
+        setRevision((v) => v + 1);
+        timer = setInterval(() => setRevision((v) => v + 1), 30000);
+      }
+    };
+    updateTimer(AppState.currentState);
+    const subscription = AppState.addEventListener("change", updateTimer);
+    return () => {
+      clearInterval(timer);
+      subscription.remove();
+    };
   }, []);
   function signOut() {
     Alert.alert(
@@ -724,13 +832,17 @@ export default function AdminScreen({
     <SafeAreaView style={s.screen}>
       <StatusBar style="dark" />
       <View style={s.header}>
+        <IconButton
+          icon="menu"
+          label="Open admin sidebar"
+          onPress={() => setSidebarOpen(true)}
+        />
         <View style={s.grow}>
           <Text style={s.eyebrow}>SHOPMART ADMIN</Text>
-          <Text style={s.title}>Store overview</Text>
+          <Text style={s.title}>Dashboard</Text>
         </View>
-        <IconButton
-          icon="bell"
-          label="Admin notifications"
+        <NotificationBell
+          session={session}
           onPress={() => setPanel("notifications")}
         />
         <IconButton
@@ -740,6 +852,8 @@ export default function AdminScreen({
         />
       </View>
       <ScrollView
+        ref={overviewRef}
+        style={{ flex: 1 }}
         contentContainerStyle={s.content}
         refreshControl={
           <RefreshControl
@@ -749,19 +863,14 @@ export default function AdminScreen({
           />
         }
       >
-        <View style={s.hero}>
-          <View style={s.grow}>
-            <Text style={s.heroEyebrow}>YOUR STORE, AT A GLANCE</Text>
-            <Text style={s.heroTitle}>
-              Hi, {session.user.name?.split(" ")[0] || "Admin"}
-            </Text>
-            <Text style={s.heroBody}>Keep every order moving.</Text>
-          </View>
-          <View style={s.heroIcon}>
-            <Icon name="grid" size={32} />
-          </View>
+        <View style={s.dashboardWelcome}>
+          <Text style={s.welcomeName}>
+            Welcome back, {session.user.name?.split(" ")[0] || "Admin"}
+          </Text>
+          <Text style={s.welcomeCaption}>
+            Your store's performance at a glance.
+          </Text>
         </View>
-        <AdminModuleMenu onOpen={setModule} />
         {sessionError ? (
           <Text accessibilityRole="alert" style={s.error}>
             {sessionError}
@@ -778,7 +887,7 @@ export default function AdminScreen({
         </View>
         {dashboard.error ? (
           <ErrorMessage message={dashboard.error} onRetry={refresh} />
-        ) : dashboard.loading ? (
+        ) : dashboard.loading && !data ? (
           <ActivityIndicator size="large" color="#7c3aed" style={s.loader} />
         ) : (
           data && (
@@ -786,15 +895,43 @@ export default function AdminScreen({
               <View style={s.revenue}>
                 <View style={s.inline}>
                   <Icon name="wallet" color="#ded1ff" />
-                  <Text style={s.revenueLabel}>Net paid revenue</Text>
+                  <Text style={s.revenueLabel}>Net revenue</Text>
                 </View>
                 <Text style={s.revenueAmount}>
                   {money(data.paidRevenue, data.currency)}
                 </Text>
                 <Text style={s.revenueCaption}>
-                  All time · after recorded refunds · excludes demo payments
+                  Gross paid: {money(data.grossPaidRevenue, data.currency)}
+                  {"\n"}Refunds recorded: -
+                  {money(data.refundedAmount, data.currency)}
+                  {"\n"}All time · includes verified Safepay payments (sandbox)
                 </Text>
               </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Review pending COD handovers"
+                onPress={() => setModule("cash")}
+                style={s.cashAlert}
+              >
+                <Icon name="wallet" color="#a15a00" />
+                <View style={s.grow}>
+                  <Text style={s.cardTitle}>
+                    {data.pendingCodHandovers || 0} COD handovers awaiting
+                    review
+                  </Text>
+                  <Text style={s.body}>
+                    {money(data.pendingCodAmount, data.currency)} reported by
+                    riders
+                    {"\n"}Total COD awaiting confirmed receipt:{" "}
+                    {money(data.codWithRiders, data.currency)}
+                  </Text>
+                  <Text style={s.muted}>
+                    Open to check and confirm physical cash. Handover does not
+                    add revenue twice.
+                  </Text>
+                </View>
+                <Icon name="arrow" />
+              </Pressable>
               <View style={s.metrics}>
                 {[
                   {
@@ -859,11 +996,6 @@ export default function AdminScreen({
                   </View>
                 </View>
               </View>
-              <Button
-                title="Manage customer orders"
-                icon="box"
-                onPress={() => setOrders({})}
-              />
               <View style={s.sectionHeader}>
                 <Text style={s.sectionTitle}>Latest orders</Text>
                 <Pressable
@@ -876,13 +1008,15 @@ export default function AdminScreen({
                 </Pressable>
               </View>
               {data.recentOrders.length ? (
-                data.recentOrders.map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    onPress={() => setOrders({ initialId: order.id })}
-                  />
-                ))
+                data.recentOrders
+                  .slice(0, 4)
+                  .map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onPress={() => setOrders({ initialId: order.id })}
+                    />
+                  ))
               ) : (
                 <View style={s.card}>
                   <Text style={s.body}>
@@ -892,11 +1026,21 @@ export default function AdminScreen({
               )}
               <View style={s.sectionHeader}>
                 <Text style={s.sectionTitle}>Stock attention</Text>
-                <Text style={s.muted}>5 or fewer left</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setLowStockOnly(true);
+                    setModule("products");
+                  }}
+                  style={s.textButton}
+                >
+                  <Text style={s.link}>View all</Text>
+                  <Icon name="arrow" size={15} />
+                </Pressable>
               </View>
               <View style={s.card}>
                 {data.lowStockProducts.length ? (
-                  data.lowStockProducts.map((product) => (
+                  data.lowStockProducts.slice(0, 4).map((product) => (
                     <View key={product.id} style={s.itemRow}>
                       <View style={s.grow}>
                         <Text style={s.itemName}>{product.name}</Text>
@@ -927,9 +1071,184 @@ export default function AdminScreen({
           )
         )}
       </ScrollView>
+      {sidebarOpen && (
+        <Modal
+          visible
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSidebarOpen(false)}
+        >
+          <SafeAreaView style={s.drawerOverlay}>
+            <View style={s.drawer}>
+              <View style={s.drawerHeader}>
+                <View style={s.grow}>
+                  <Text style={s.drawerBrand}>
+                    Shop<Text style={{ color: "#7c3aed" }}>Mart</Text>
+                  </Text>
+                  <Text style={s.eyebrow}>ADMIN WORKSPACE</Text>
+                </View>
+                <IconButton
+                  icon="close"
+                  label="Close admin sidebar"
+                  onPress={() => setSidebarOpen(false)}
+                />
+              </View>
+              <View style={s.drawerIdentity}>
+                <View style={s.drawerAvatar}>
+                  <Text style={s.drawerInitial}>
+                    {session.user.name?.charAt(0).toUpperCase() || "A"}
+                  </Text>
+                </View>
+                <View style={s.grow}>
+                  <Text style={s.drawerName}>{session.user.name}</Text>
+                  <Text style={s.welcomeCaption}>Administrator</Text>
+                </View>
+              </View>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={s.drawerItems}
+                showsVerticalScrollIndicator={false}
+              >
+                <Text style={s.drawerSection}>WORKSPACE</Text>
+                {[
+                  {
+                    icon: "home",
+                    label: "Dashboard",
+                    selected: !orders && !module && !panel,
+                    action: () =>
+                      overviewRef.current?.scrollTo({ y: 0, animated: true }),
+                  },
+                  {
+                    icon: "receipt",
+                    label: "Orders",
+                    selected: Boolean(orders),
+                    action: () => setOrders({}),
+                    count: data?.pendingOrders,
+                  },
+                  {
+                    icon: "box",
+                    label: "Products",
+                    selected: module === "products",
+                    action: () => {
+                      setLowStockOnly(false);
+                      setModule("products");
+                    },
+                  },
+                  {
+                    icon: "ticket",
+                    label: "Vouchers & discounts",
+                    selected: module === "vouchers",
+                    action: () => setModule("vouchers"),
+                  },
+                  {
+                    icon: "categories",
+                    label: "Categories",
+                    selected: module === "categories",
+                    action: () => setModule("categories"),
+                  },
+                  {
+                    icon: "people",
+                    label: "Users & riders",
+                    selected: module === "people",
+                    action: () => setModule("people"),
+                  },
+                  {
+                    icon: "truck",
+                    label: "Deliveries & warehouse",
+                    selected: module === "deliveries",
+                    action: () => setModule("deliveries"),
+                  },
+                  {
+                    icon: "returns",
+                    label: "Returns & refunds",
+                    selected: module === "returns",
+                    action: () => setModule("returns"),
+                  },
+                  {
+                    icon: "star",
+                    label: "Reviews",
+                    selected: module === "reviews",
+                    action: () => setModule("reviews"),
+                  },
+                  {
+                    icon: "wallet",
+                    label: `COD cash handovers${data?.pendingCodHandovers ? ` (${data.pendingCodHandovers})` : ""}`,
+                    selected: module === "cash",
+                    action: () => setModule("cash"),
+                  },
+                ].map((item) => (
+                  <Pressable
+                    key={item.label}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    accessibilityState={{ selected: item.selected }}
+                    onPress={() => {
+                      setSidebarOpen(false);
+                      item.action();
+                    }}
+                    style={({ pressed }) => [
+                      s.drawerItem,
+                      item.selected && s.drawerItemActive,
+                      pressed && s.dim,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={21}
+                      color={item.selected ? "#7c3aed" : "#8d789f"}
+                    />
+                    <Text
+                      style={[
+                        s.drawerItemText,
+                        item.selected && s.drawerItemTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                    {item.count > 0 && (
+                      <View style={s.drawerCount}>
+                        <Text style={s.drawerCountText}>
+                          {item.count > 99 ? "99+" : item.count}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                ))}
+                <Text style={[s.drawerSection, { marginTop: 22 }]}>
+                  ACCOUNT
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setSidebarOpen(false);
+                    setPanel("account");
+                  }}
+                  style={s.drawerItem}
+                >
+                  <Icon name="user" color="#8d789f" />
+                  <Text style={s.drawerItemText}>My profile & security</Text>
+                  <Icon name="arrow" size={15} color="#b3a1c4" />
+                </Pressable>
+              </ScrollView>
+              <View style={s.drawerFooter}>
+                <Text style={s.welcomeCaption}>
+                  Manage your store with confidence.
+                </Text>
+              </View>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss sidebar"
+              style={s.drawerDismiss}
+              onPress={() => setSidebarOpen(false)}
+            />
+          </SafeAreaView>
+        </Modal>
+      )}
       {module && (
         <AdminModule
           name={module}
+          initialLowStock={lowStockOnly}
           session={session}
           onClose={() => setModule("")}
           onChanged={refresh}
@@ -949,7 +1268,14 @@ export default function AdminScreen({
         />
       )}
       {panel === "notifications" && (
-        <NotificationsModal session={session} onClose={() => setPanel("")} />
+        <NotificationsModal
+          session={session}
+          onClose={() => setPanel("")}
+          onOpenOrder={(id) => {
+            setPanel("");
+            setOrders({ initialId: id });
+          }}
+        />
       )}
       {panel === "profile" && (
         <ProfileModal
@@ -1065,6 +1391,110 @@ export default function AdminScreen({
 }
 
 const s = StyleSheet.create({
+  cashAlert: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: "#fff4df",
+    borderColor: "#f3d296",
+    borderWidth: 1,
+  },
+  dashboardWelcome: { paddingTop: 5, paddingBottom: 2 },
+  welcomeName: { color: "#493451", fontSize: 16, fontWeight: "700" },
+  welcomeCaption: {
+    color: "#9a86a8",
+    fontSize: 10,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  drawerOverlay: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "rgba(25, 17, 42, 0.42)",
+  },
+  drawer: {
+    width: "84%",
+    maxWidth: 330,
+    backgroundColor: "#fcfaff",
+    borderTopRightRadius: 25,
+    borderBottomRightRadius: 25,
+    overflow: "hidden",
+  },
+  drawerDismiss: { flex: 1 },
+  drawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
+  },
+  drawerBrand: {
+    fontSize: 28,
+    color: "#33223f",
+    fontWeight: "900",
+    letterSpacing: -1,
+  },
+  drawerIdentity: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 15,
+    marginHorizontal: 16,
+    backgroundColor: "#efe7fa",
+    borderRadius: 18,
+    marginBottom: 18,
+  },
+  drawerAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#dfcef4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  drawerInitial: { fontSize: 20, color: "#7c3aed", fontWeight: "800" },
+  drawerName: { fontSize: 13, color: "#50355f", fontWeight: "800" },
+  drawerItems: { paddingHorizontal: 13, paddingBottom: 18 },
+  drawerSection: {
+    fontSize: 8,
+    color: "#ac96ba",
+    fontWeight: "800",
+    letterSpacing: 1.4,
+    marginLeft: 14,
+    marginBottom: 9,
+  },
+  drawerItem: {
+    minHeight: 49,
+    paddingVertical: 12,
+    paddingHorizontal: 13,
+    borderRadius: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 4,
+  },
+  drawerItemActive: { backgroundColor: "#eee3fc" },
+  drawerItemText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#7c628e",
+  },
+  drawerItemTextActive: { color: "#7c3aed", fontWeight: "800" },
+  drawerCount: {
+    minWidth: 23,
+    height: 23,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    backgroundColor: "#7c3aed",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  drawerCountText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+  drawerFooter: { padding: 17, borderTopWidth: 1, borderTopColor: "#ede5f4" },
   screen: { flex: 1, backgroundColor: "#faf9fd" },
   grow: { flex: 1, minWidth: 0 },
   header: {

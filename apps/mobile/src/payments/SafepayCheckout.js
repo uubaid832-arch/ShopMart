@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -14,6 +14,15 @@ import { useSafepay } from "./useSafepay";
 export default function SafepayCheckout({ session, request, onPaid, onBack }) {
   const pay = useSafepay(session, onPaid);
   const [show, setShow] = useState(false);
+  const started = useRef(false);
+  useEffect(() => {
+    if (!pay.ready || started.current) return;
+    started.current = true;
+    (async () => {
+      const value = pay.data ? await pay.resume() : await pay.start(request);
+      if (value?.state === "PENDING") setShow(true);
+    })();
+  }, [pay.ready]);
   const [webError, setWebError] = useState("");
   function navigation(event) {
     try {
@@ -69,7 +78,7 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
     >
       <SafeAreaView style={s.screen}>
         <View style={s.header}>
-          <Text style={s.title}>Safepay sandbox</Text>
+          <Text style={s.title}>Safepay</Text>
           {button(
             show ? "Back" : "Close",
             () => {
@@ -116,8 +125,8 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
               <ActivityIndicator color="#7c3aed" />
             ) : !pay.data ? (
               button(
-                pay.busy ? "Preparing checkout…" : "Prepare Safepay checkout",
-                () => pay.start(request),
+                pay.busy ? "Preparing checkout…" : "Pay with Safepay",
+                async () => { const value = await pay.start(request); if (value?.state === "PENDING") setShow(true); },
                 pay.busy,
               )
             ) : (
@@ -134,7 +143,7 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
                 </Text>
                 {pay.data.state === "PENDING" &&
                   button(
-                    "Open Safepay secure checkout",
+                    "Continue to Safepay",
                     async () => {
                       setWebError("");
                       const value = await pay.resume();

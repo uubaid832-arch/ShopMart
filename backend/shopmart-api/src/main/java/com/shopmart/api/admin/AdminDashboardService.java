@@ -40,10 +40,10 @@ public class AdminDashboardService {
                                                        ) AS pending_orders,
                                                        COALESCE(SUM(
                                                            CASE
-                                WHEN o.payment_method <> 'DEMO'
-                                    AND o.payment_status IN (
-                                        'PAID', 'PARTIALLY_REFUNDED', 'REFUNDED'
-                                    )
+                                WHEN ((o.payment_method <> 'DEMO' AND o.payment_status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED'))
+ OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
+     AND o.status <> 'CANCELLED'
+     AND EXISTS (SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=o.id AND sp.state='PAID')))
                                                                THEN o.total - COALESCE((
                                                                    SELECT SUM(r.refund_amount)
                                                                    FROM public.return_requests r
@@ -71,8 +71,10 @@ public class AdminDashboardService {
                         COALESCE(SUM((SELECT COALESCE(SUM(r.refund_amount),0)
                             FROM public.return_requests r JOIN public.order_items i ON i.id=r.order_item_id
                             WHERE i.order_id=o.id AND r.refund_status='REFUNDED')),0) AS refunded
-                    FROM public.orders o WHERE o.currency='PKR' AND o.payment_method<>'DEMO'
-                        AND o.payment_status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED')
+                    FROM public.orders o WHERE o.currency='PKR' AND ((o.payment_method <> 'DEMO' AND o.payment_status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED'))
+ OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
+     AND o.status <> 'CANCELLED'
+     AND EXISTS (SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=o.id AND sp.state='PAID')))
                     """);
 
                 long activeProducts = jdbc.queryForObject("""

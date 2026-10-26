@@ -190,6 +190,7 @@ export function useSafepay(session, onPaid) {
         });
       if (epoch !== generation.current) return;
       setModel({ key, id, data: value, error: "", busy: false });
+      return value;
     } catch (error) {
       if (epoch !== generation.current) return;
       // A definite validation rejection happens before a hosted checkout is exposed.

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "../../components/Modal";
+import CustomerContact from "./CustomerContact";
 import AssignRiderModal from "./AssignRiderModal";
 import DeliveryLocationMap from "../tracking/DeliveryLocationMap";
 import { useSession } from "../auth/useSession";
@@ -294,6 +295,7 @@ export default function AdminManageOrder({ id, onClose }) {
   const isCod =
     order.paymentMethod === "Cash on Delivery" || order.paymentMethod === "COD";
   const isDemo = order.paymentMethod === "DEMO";
+  const isSafepay = order.paymentProvider === "SAFEPAY";
   const supportsDelivery = isCod || isDemo;
 
   const canAssign = supportsDelivery && status === "CONFIRMED";
@@ -470,7 +472,7 @@ export default function AdminManageOrder({ id, onClose }) {
 
               <div className="my-4 rounded-xl bg-violet-50 p-4">
                 <p className="m-0 text-xs text-slate-500">
-                  {isDemo
+                  {isSafepay ? "Safepay (Sandbox)" : isDemo
                     ? "Demo payment — no money charged"
                     : order.paymentMethod}
                 </p>
@@ -478,7 +480,7 @@ export default function AdminManageOrder({ id, onClose }) {
                   {formatPrice(order.total)}
                 </p>
                 <span className="inline-block rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
-                  {isDemo
+                  {isSafepay ? (status === "CANCELLED" ? "Safepay payment voided" : "Paid via Safepay") : isDemo
                     ? status === "CANCELLED"
                       ? "Demo payment voided"
                       : "Test payment successful"
@@ -545,6 +547,7 @@ export default function AdminManageOrder({ id, onClose }) {
           <section className={card}>
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="min-w-0">
+                <CustomerContact token={token} item={order} />
                 <h3 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">
                   Customer & delivery
                 </h3>
@@ -617,6 +620,7 @@ export default function AdminManageOrder({ id, onClose }) {
             warehouse?.attemptId &&
             !warehouse.resolvedAt && (
               <section className="rounded-2xl border border-solid border-amber-200 bg-amber-50 p-4 sm:p-5">
+                <CustomerContact token={token} item={order} mode="delivery" />
                 <h3 className="m-0 text-base font-bold text-amber-900">
                   Warehouse return
                 </h3>
