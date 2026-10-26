@@ -45,7 +45,7 @@ const fields = [
 ];
 const paymentMethods = [
   { id: "cod", label: ["Cash on Delivery", "وصولی پر نقد ادائیگی"] },
-  { id: "card", label: ["Card — Safepay sandbox", "کارڈ — ڈیمو ادائیگی"] },
+  { id: "card", label: ["Card — Safepay", "کارڈ — سیف پے"] },
   {
     id: "jazzcash",
     label: ["JazzCash — Demo payment", "جاز کیش — ڈیمو ادائیگی"],
@@ -143,6 +143,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [safepayRequest, setSafepayRequest] = useState(null);
+  const [safepayWindow, setSafepayWindow] = useState(null);
   const [gatewayOpen, setGatewayOpen] = useState(false);
   const [submittedTotal, setSubmittedTotal] = useState(null);
 
@@ -377,7 +378,18 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         setError("Apply or remove the voucher before paying.");
         return;
       }
-      if (paymentMethod === "card")
+      if (paymentMethod === "card") {
+        const popup = window.open(
+          "about:blank",
+          "_blank",
+          "popup,width=520,height=760",
+        );
+        if (popup) {
+          popup.opener = null;
+          popup.document.title = "Safepay";
+          popup.document.body.textContent = "Connecting securely to Safepay…";
+        }
+        setSafepayWindow(popup);
         setSafepayRequest(
           (current) =>
             current || {
@@ -398,6 +410,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                 voucher.quote?.total || Number(cart.total).toFixed(2),
             },
         );
+      }
       setError("");
       setGatewayOpen(true);
       return;
@@ -423,7 +436,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     PAID: text("Paid", "ادا شدہ"),
     PARTIALLY_REFUNDED: text("Partially refunded", "جزوی رقم واپس"),
     REFUNDED: text("Refunded", "رقم واپس"),
-    DEMO_PAID: "Demo payment — no money charged",
+    DEMO_PAID: "Demo payment",
     DEMO_VOID: "Demo payment voided",
   };
 
@@ -479,12 +492,14 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
               role="status"
               className="rounded-xl bg-emerald-50 p-4 text-emerald-800"
             >
-              {confirmation.paymentMethod === "DEMO"
-                ? "Your demo-payment order has been placed. No money was charged."
-                : text(
-                    "Your Cash on Delivery order has been placed.",
-                    "آپ کا وصولی پر نقد ادائیگی والا آرڈر درج ہو گیا ہے۔",
-                  )}
+              {confirmation.paymentProvider === "SAFEPAY"
+                ? "Paid via Safepay. Your order has been placed. (Sandbox)"
+                : confirmation.paymentMethod === "DEMO"
+                  ? "Your demo-payment order has been placed. No money was charged."
+                  : text(
+                      "Your Cash on Delivery order has been placed.",
+                      "آپ کا وصولی پر نقد ادائیگی والا آرڈر درج ہو گیا ہے۔",
+                    )}
             </p>
 
             <p className="break-all text-sm font-semibold">
@@ -494,7 +509,10 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
             <p className="text-sm text-slate-600">
               {text("Status:", "حیثیت:")} {displayStatus(confirmation.status)} ·{" "}
               {text("Payment:", "ادائیگی:")}{" "}
-              {displayStatus(confirmation.paymentStatus)}
+              {confirmation.paymentProvider === "SAFEPAY" &&
+              confirmation.paymentStatus === "DEMO_PAID"
+                ? "Paid via Safepay · Sandbox"
+                : displayStatus(confirmation.paymentStatus)}
             </p>
 
             <section className="break-words rounded-xl border border-solid border-slate-200 p-4">
@@ -532,6 +550,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
               <SafepayCheckout
                 session={session}
                 request={safepayRequest}
+                checkoutWindow={safepayWindow}
                 onPaid={(order) => {
                   setConfirmation({ ...order, details: order.delivery });
                   setGatewayOpen(false);
@@ -581,7 +600,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
           <form onSubmit={handleSubmit}>
             <p className="mt-0 text-sm text-slate-500">
               {text(
-                "Choose COD or a demo payment. Final prices and stock are checked by the server.",
+                "Choose cash on delivery or pay securely by card with Safepay.",
                 "وصولی پر نقد ادائیگی · حتمی قیمتوں اور اسٹاک کی جانچ سرور کرتا ہے۔",
               )}
             </p>
@@ -765,7 +784,9 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                         ? text("Retry confirmation", "دوبارہ تصدیق کریں")
                         : paymentMethod === "cod"
                           ? text("Place COD order", "COD آرڈر درج کریں")
-                          : "Open demo gateway"}
+                          : paymentMethod === "card"
+                            ? "Pay with Safepay →"
+                            : "Open demo gateway"}
                 </button>
               </div>
             </fieldset>

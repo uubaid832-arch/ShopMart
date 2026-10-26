@@ -270,6 +270,7 @@ public class OrderService {
         var orders = jdbc.queryForList("""
                 SELECT id, order_number, status, payment_method,
                        payment_status, total, currency, created_at, subtotal, discount_amount, voucher_code,
+                       CASE WHEN EXISTS (SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=orders.id AND sp.state='PAID') THEN 'SAFEPAY' END AS payment_provider,
                        recipient_name, email, phone, address_line, city
                 FROM public.orders
                 WHERE id = ? AND user_id = ?
@@ -312,7 +313,7 @@ public class OrderService {
                         (String) order.get("phone"),
                         (String) order.get("address_line"),
                         (String) order.get("city")),
-                order.get("subtotal").toString(), order.get("discount_amount").toString(), (String)order.get("voucher_code"));
+                order.get("subtotal").toString(), order.get("discount_amount").toString(), (String)order.get("voucher_code"), (String)order.get("payment_provider"));
     }
 
     @Transactional(readOnly = true)
@@ -351,6 +352,7 @@ public class OrderService {
                 FROM (
                     SELECT id, order_number, status, payment_method,
                            payment_status, total, currency, created_at, subtotal, discount_amount, voucher_code,
+                       CASE WHEN EXISTS (SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=orders.id AND sp.state='PAID') THEN 'SAFEPAY' END AS payment_provider,
                            recipient_name, email, phone, address_line, city
                     FROM public.orders
                     WHERE user_id = ?
@@ -383,7 +385,7 @@ public class OrderService {
                                         rs.getString("phone"),
                                         rs.getString("address_line"),
                                         rs.getString("city")),
-                                rs.getBigDecimal("subtotal").toPlainString(), rs.getBigDecimal("discount_amount").toPlainString(), rs.getString("voucher_code"));
+                                rs.getBigDecimal("subtotal").toPlainString(), rs.getBigDecimal("discount_amount").toPlainString(), rs.getString("voucher_code"), rs.getString("payment_provider"));
 
                         results.put(orderId, receipt);
                     }

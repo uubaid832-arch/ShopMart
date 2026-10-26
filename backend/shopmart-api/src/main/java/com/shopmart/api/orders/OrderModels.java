@@ -54,7 +54,11 @@ public final class OrderModels {
             DeliveryDetails delivery,
             String subtotal,
             String discountAmount,
-            String voucherCode) {
+            String voucherCode,
+            String paymentProvider) {
+        public OrderReceipt(UUID id,String orderNumber,String status,String paymentMethod,String paymentStatus,String total,String currency,Instant createdAt,List<OrderLine> items,DeliveryDetails delivery,String subtotal,String discountAmount,String voucherCode) {
+            this(id,orderNumber,status,paymentMethod,paymentStatus,total,currency,createdAt,items,delivery,subtotal,discountAmount,voucherCode,null);
+        }
         public OrderReceipt(UUID id,String orderNumber,String status,String paymentMethod,String paymentStatus,String total,String currency,Instant createdAt,List<OrderLine> items,DeliveryDetails delivery) {
             this(id,orderNumber,status,paymentMethod,paymentStatus,total,currency,createdAt,items,delivery,total,"0.00",null);
         }

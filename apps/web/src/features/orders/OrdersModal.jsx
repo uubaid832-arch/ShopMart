@@ -259,13 +259,19 @@ export default function OrdersModal({
                       </h4>
 
                       <p className="mb-2 mt-2 text-sm font-semibold text-slate-800">
-                        {normalize(order.paymentMethod) === "CASH_ON_DELIVERY"
-                          ? displayLabel("COD")
-                          : displayLabel(order.paymentMethod)}
+                        {order.paymentProvider === "SAFEPAY"
+                          ? "Safepay · Sandbox"
+                          : normalize(order.paymentMethod) ===
+                              "CASH_ON_DELIVERY"
+                            ? displayLabel("COD")
+                            : displayLabel(order.paymentMethod)}
                       </p>
 
                       <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium capitalize text-slate-600">
-                        {displayLabel(order.paymentStatus)}
+                        {order.paymentProvider === "SAFEPAY" &&
+                        normalize(order.paymentStatus) === "DEMO_PAID"
+                          ? "Paid via Safepay"
+                          : displayLabel(order.paymentStatus)}
                       </span>
                     </section>
                   </div>
