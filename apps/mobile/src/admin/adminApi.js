@@ -1,3 +1,4 @@
+import { fetch as expoFetch } from "expo/fetch";
 import { useEffect, useState } from "react";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
@@ -15,7 +16,8 @@ export async function adminRequest(
   else signal?.addEventListener("abort", abort);
   const timeout = setTimeout(abort, formData ? 90000 : 30000);
   try {
-    const response = await fetch(`${baseUrl}/api/mobile/admin${path}`, {
+    const send = formData ? expoFetch : fetch;
+    const response = await send(`${baseUrl}/api/mobile/admin${path}`, {
       method,
       credentials: "omit",
       signal: controller.signal,

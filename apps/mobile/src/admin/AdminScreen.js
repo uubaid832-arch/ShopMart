@@ -23,6 +23,8 @@ import {
   readable,
   useAdminResource,
 } from "./adminApi";
+import { Warehouse } from "./AdminLogistics";
+import AdminOrderTracking from "./AdminOrderTracking";
 import AdminInvoiceButton from "./AdminInvoiceButton";
 import { AdminModule } from "./AdminModules";
 import NotificationsModal from "../notifications/NotificationsModal";
@@ -182,6 +184,7 @@ function OrderCard({ order, onPress }) {
 function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
+  const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [notice, setNotice] = useState("");
@@ -196,9 +199,9 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
     assignmentPath,
     revision,
   );
-  const history = useAdminResource(
+  const warehouse = useAdminResource(
     session.accessToken,
-    `${orderPath}/history`,
+    `/deliveries/${encodeURIComponent(orderId)}/warehouse`,
     revision,
   );
   const order = detail.data;
@@ -273,6 +276,25 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
     assignment.data?.delivery.riderId && assignment.data.delivery.riderEnabled;
   const locked =
     busy || uncertain || loading || Boolean(detail.error || assignment.error);
+  if (warehouseDelivery)
+    return (
+      <Warehouse
+        session={session}
+        delivery={warehouseDelivery}
+        onClose={() => {
+          setWarehouseDelivery(null);
+          refresh();
+        }}
+        onBack={() => {
+          setWarehouseDelivery(null);
+          refresh();
+        }}
+        onChanged={() => {
+          onChanged();
+          refresh();
+        }}
+      />
+    );
   return (
     <>
       <View style={s.header}>
@@ -342,6 +364,11 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                   disabled={busy}
                 />
               </View>
+              <AdminOrderTracking
+                session={session}
+                order={order}
+                revision={revision}
+              />
               <View style={s.card}>
                 <View style={s.inline}>
                   <Icon name="user" />
@@ -401,6 +428,36 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                         ? `Assigned to ${assignment.data.delivery.riderName}${assignment.data.delivery.riderEnabled ? "" : " (account disabled)"}`
                         : "No rider assigned yet."}
                     </Text>
+                    {order.status === "DISPATCHED" &&
+                      (warehouse.loading ? (
+                        <ActivityIndicator color="#7c3aed" />
+                      ) : warehouse.error ? (
+                        <ErrorMessage
+                          message={warehouse.error}
+                          onRetry={refresh}
+                        />
+                      ) : warehouse.data?.attemptId &&
+                        !warehouse.data.resolvedAt ? (
+                        <>
+                          <Text style={s.muted}>
+                            This delivery was unsuccessful. Confirm warehouse
+                            receipt, then select a rider for the next delivery
+                            attempt.
+                          </Text>
+                          <Button
+                            title="Change rider / arrange another delivery"
+                            icon="truck"
+                            secondary
+                            disabled={locked}
+                            onPress={() =>
+                              setWarehouseDelivery({
+                                orderId: order.id,
+                                orderNumber: order.orderNumber,
+                              })
+                            }
+                          />
+                        </>
+                      ) : null)}
                     {order.status === "CONFIRMED" ? (
                       <>
                         <Text style={s.muted}>
@@ -522,28 +579,6 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                   />
                 </View>
               )}
-              <View style={s.card}>
-                <Text style={s.cardTitle}>Order history</Text>
-                {history.loading ? (
-                  <ActivityIndicator color="#7c3aed" />
-                ) : history.error ? (
-                  <ErrorMessage message={history.error} onRetry={refresh} />
-                ) : history.data?.length ? (
-                  history.data.map((event, index) => (
-                    <View key={`${event.createdAt}-${index}`} style={s.itemRow}>
-                      <View style={s.grow}>
-                        <Status value={event.status} />
-                        <Text style={s.muted}>
-                          {event.actorName || "ShopMart"}
-                        </Text>
-                      </View>
-                      <Text style={s.muted}>{dateLabel(event.createdAt)}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={s.muted}>No history recorded.</Text>
-                )}
-              </View>
               {order.status === "DISPATCHED" && (
                 <View style={s.info}>
                   <Icon name="truck" />
@@ -1233,7 +1268,14 @@ export default function AdminScreen({
         />
       )}
       {panel === "notifications" && (
-        <NotificationsModal session={session} onClose={() => setPanel("")} />
+        <NotificationsModal
+          session={session}
+          onClose={() => setPanel("")}
+          onOpenOrder={(id) => {
+            setPanel("");
+            setOrders({ initialId: id });
+          }}
+        />
       )}
       {panel === "profile" && (
         <ProfileModal

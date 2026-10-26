@@ -116,6 +116,7 @@ export default function VouchersModule({ session, onClose, onChanged }) {
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [filter, setFilter] = useState("ALL");
   const refresh = () => setRevision((v) => v + 1);
   const op = useMutation(() => {
     refresh();
@@ -217,10 +218,35 @@ export default function VouchersModule({ session, onClose, onChanged }) {
         />
       ) : (
         <>
-          <View style={ui.toolbar}>
-            <Notice op={op} />
-          </View>
           <PagedList
+            filter={(item) =>
+              filter === "ALL" ||
+              (filter === "DISABLED"
+                ? !item.enabled
+                : filter === "ACTIVE"
+                  ? item.enabled &&
+                    new Date(item.expiresAt) > new Date() &&
+                    item.used < item.usageLimit
+                  : new Date(item.expiresAt) <= new Date() ||
+                    item.used >= item.usageLimit)
+            }
+            toolbar={
+              <View style={ui.toolbar}>
+                <Notice op={op} />
+                <Choice
+                  compact
+                  label="Voucher status"
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { value: "ALL", label: "All vouchers" },
+                    { value: "ACTIVE", label: "Active" },
+                    { value: "DISABLED", label: "Disabled" },
+                    { value: "EXPIRED", label: "Expired / used up" },
+                  ]}
+                />
+              </View>
+            }
             result={result}
             page={page}
             onPage={setPage}

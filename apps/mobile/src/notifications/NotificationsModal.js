@@ -36,7 +36,7 @@ async function request(token, path, method = "GET", signal) {
   return response.status === 204 ? null : response.json();
 }
 
-export default function NotificationsModal({ session, onClose }) {
+export default function NotificationsModal({ session, onClose, onOpenOrder }) {
   const token = session.accessToken;
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
@@ -182,6 +182,17 @@ export default function NotificationsModal({ session, onClose }) {
                     {new Date(item.createdAt).toLocaleString("en-PK")}
                   </Text>
 
+                  {item.orderId && onOpenOrder && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Open this order"
+                      disabled={busy}
+                      onPress={() => onOpenOrder(item.orderId)}
+                      style={styles.readButton}
+                    >
+                      <Text style={styles.link}>Open order →</Text>
+                    </Pressable>
+                  )}
                   {!item.readAt && (
                     <Pressable
                       accessibilityRole="button"

@@ -1,3 +1,4 @@
+import ProductCatalogPage from "./ProductCatalogPage";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Switch, Text, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -7,11 +8,9 @@ import {
   adminRequest,
   imageUrl,
   loadCategories,
-  money,
   useAdminResource,
 } from "./adminApi";
 import {
-  Badge,
   Button,
   Card,
   check,
@@ -191,11 +190,7 @@ function Photos({ session, product, onClose, onBack, onChanged }) {
           "Use a photo smaller than 5 MB after compression.",
         );
         const form = new FormData();
-        form.append("files", {
-          uri: photo.uri,
-          name: "product.jpg",
-          type: "image/jpeg",
-        });
+        form.append("files", file);
         return await adminRequest(
           session.accessToken,
           `/products/${product.id}/images`,
@@ -336,25 +331,69 @@ export function ProductsModule({
         session={session}
         product={photos}
         onClose={onClose}
-        onBack={() => setPhotos(null)}
+        onBack={() => {
+          setPhotos(null);
+          refresh();
+        }}
         onChanged={onChanged}
+      />
+    );
+  if (!editor)
+    return (
+      <ProductCatalogPage
+        result={result}
+        categories={categories}
+        category={category}
+        onCategory={(value) => {
+          setCategory(value);
+          setPage(0);
+        }}
+        lowStock={lowStock}
+        onStock={(value) => {
+          setLowStock(value);
+          setPage(0);
+        }}
+        page={page}
+        onPage={setPage}
+        search={search}
+        onSearch={setSearch}
+        revision={revision}
+        op={op}
+        onClose={onClose}
+        onRefresh={() => {
+          op.reset();
+          refresh();
+        }}
+        onAdd={() => {
+          op.reset();
+          setEditor("NEW");
+        }}
+        onEdit={(product) => {
+          op.reset();
+          setEditor(product);
+        }}
+        onPhotos={setPhotos}
+        onDelete={(product) =>
+          confirm(
+            "Delete product?",
+            "Orders may prevent deletion. You can hide the product by turning off catalog visibility instead.",
+            () =>
+              op.run(
+                () =>
+                  adminRequest(
+                    session.accessToken,
+                    `/products/${product.id}?version=${product.version}`,
+                    { method: "DELETE" },
+                  ),
+                "Product deleted.",
+              ),
+            true,
+          )
+        }
       />
     );
   return (
     <Page
-      primaryAction={
-        !editor
-          ? {
-              title: "Add product",
-              icon: "plus",
-              disabled: op.blocked,
-              onPress: () => {
-                op.reset();
-                setEditor("NEW");
-              },
-            }
-          : undefined
-      }
       title={
         editor
           ? editor === "NEW"
@@ -414,98 +453,7 @@ export function ProductsModule({
             )
           }
         />
-      ) : (
-        <>
-          <View style={ui.toolbar}>
-            <Notice op={op} />
-            <Choice
-              label="Product category"
-              value={category}
-              options={[
-                { value: "", label: "All categories" },
-                ...(categories.data || []).map((c) => ({
-                  value: c.id,
-                  label: c.name,
-                })),
-              ]}
-              onChange={(value) => {
-                setCategory(value);
-                setPage(0);
-              }}
-            />
-            <Choice
-              label="Stock"
-              value={lowStock ? "LOW" : "ALL"}
-              options={[
-                { value: "ALL", label: "All stock levels" },
-                { value: "LOW", label: "Low stock (5 or fewer)" },
-              ]}
-              onChange={(value) => {
-                setLowStock(value === "LOW");
-                setPage(0);
-              }}
-            />
-          </View>
-          <PagedList
-            result={result}
-            page={page}
-            onPage={setPage}
-            search={search}
-            onSearch={setSearch}
-            renderItem={(product) => (
-              <Card title={product.name} subtitle={product.category}>
-                <View style={ui.between}>
-                  <Text style={ui.amount}>{money(product.price)}</Text>
-                  <Badge value={product.active ? "Active" : "Hidden"} />
-                </View>
-                <Text style={ui.body}>Stock: {product.stock}</Text>
-                <View style={ui.row}>
-                  <Button
-                    title="Edit"
-                    icon="edit"
-                    secondary
-                    disabled={op.blocked}
-                    onPress={() => {
-                      op.reset();
-                      setEditor(product);
-                    }}
-                  />
-                  <Button
-                    title="Photos"
-                    icon="image"
-                    secondary
-                    disabled={op.blocked}
-                    onPress={() => setPhotos(product)}
-                  />
-                  <Button
-                    title="Delete"
-                    icon="trash"
-                    danger
-                    disabled={op.blocked}
-                    onPress={() =>
-                      confirm(
-                        "Delete product?",
-                        "Orders may prevent deletion. You can hide the product by turning off catalog visibility instead.",
-                        () =>
-                          op.run(
-                            () =>
-                              adminRequest(
-                                session.accessToken,
-                                `/products/${product.id}?version=${product.version}`,
-                                { method: "DELETE" },
-                              ),
-                            "Product deleted.",
-                          ),
-                        true,
-                      )
-                    }
-                  />
-                </View>
-              </Card>
-            )}
-          />
-        </>
-      )}
+      ) : null}
     </Page>
   );
 }
@@ -591,10 +539,12 @@ export function CategoriesModule({ session, onClose, onChanged }) {
         </Form>
       ) : (
         <>
-          <View style={ui.toolbar}>
-            <Notice op={op} />
-          </View>
           <PagedList
+            toolbar={
+              <View style={ui.toolbar}>
+                <Notice op={op} />
+              </View>
+            }
             result={result}
             page={0}
             onPage={() => {}}
