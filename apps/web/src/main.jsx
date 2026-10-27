@@ -12,6 +12,7 @@ import AdminDeliveries from "./features/admin/AdminDeliveries";
 import AdminReviews from "./features/admin/AdminReviews";
 import AdminReturns from "./features/admin/AdminReturns";
 import RiderLayout from "./features/rider/RiderLayout";
+import RiderCash from "./features/rider/RiderCash";
 import RiderDeliveries from "./features/rider/RiderDeliveries";
 import SessionProvider from "./features/auth/SessionProvider";
 import LanguageProvider from "./features/language/LanguageProvider";
@@ -38,6 +39,7 @@ createRoot(document.getElementById("root")).render(
             </Route>
             <Route path="/rider" element={<RiderLayout />}>
               <Route index element={<RiderDeliveries />} />
+              <Route path="cash" element={<RiderCash />} />
             </Route>
 
             <Route

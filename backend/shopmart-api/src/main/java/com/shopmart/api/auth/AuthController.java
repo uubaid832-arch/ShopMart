@@ -18,25 +18,40 @@ public class AuthController {
 
   private final AuthService authService;
   private final EmailOtpService otp;
+  private final CustomerSignupService signup;
   private final UserAccountRepository users;
   private final RefreshCookieService cookies;
 
   public AuthController(
       AuthService authService,
       EmailOtpService otp,
+      CustomerSignupService signup,
       UserAccountRepository users,
       RefreshCookieService cookies) {
     this.authService = authService;
     this.otp = otp;
+    this.signup = signup;
     this.users = users;
     this.cookies = cookies;
   }
 
   @PostMapping("/register")
-  public ResponseEntity<AuthService.UserResponse> register(
-      @Valid @RequestBody AuthService.RegisterRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(authService.register(request));
+  public ResponseEntity<EmailOtpService.ChallengeResponse> register(
+      @Valid @RequestBody AuthService.RegisterRequest request, HttpServletRequest http) {
+    return ResponseEntity.status(HttpStatus.ACCEPTED).cacheControl(CacheControl.noStore())
+        .body(signup.start(request,"WEB",http.getRemoteAddr()));
+  }
+  @PostMapping("/register/verify")
+  public ResponseEntity<AuthService.UserResponse> verifyRegistration(
+      @Valid @RequestBody EmailOtpService.VerifyRequest request,HttpServletRequest http) {
+    return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore())
+        .body(signup.verify(request,"WEB",http.getRemoteAddr()));
+  }
+  @PostMapping("/register/resend")
+  public ResponseEntity<EmailOtpService.ChallengeResponse> resendRegistration(
+      @Valid @RequestBody EmailOtpService.ChallengeRequest request,HttpServletRequest http) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(signup.resend(request,"WEB",http.getRemoteAddr()));
   }
 
   @PostMapping("/login")

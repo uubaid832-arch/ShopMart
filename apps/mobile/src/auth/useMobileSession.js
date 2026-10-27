@@ -55,7 +55,7 @@ async function request(path, values) {
 
   if (!response.ok) {
     const messages = {
-      400: path.startsWith("login/")
+      400: (path.startsWith("login/") || path.startsWith("register/"))
         ? "Invalid or expired code. Try again or start a new sign-in."
         : "Check your details. Passwords must contain 8–72 characters.",
       401:
@@ -313,3 +313,6 @@ export function useMobileSession() {
     clearLocalSession,
   };
 }
+
+export const verifyMobileRegistration = values => request("register/verify", values);
+export const resendMobileRegistration = challengeId => request("register/resend", {challengeId});

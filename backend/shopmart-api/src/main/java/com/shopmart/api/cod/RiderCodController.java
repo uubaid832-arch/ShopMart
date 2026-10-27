@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/mobile/rider")
+@RequestMapping({"/api/mobile/rider", "/api/rider"})
 public class RiderCodController {
   private final RiderCodService service;
   public RiderCodController(RiderCodService service) { this.service=service; }

@@ -20,11 +20,15 @@ public class OtpMailService {
   }
 
   public void send(String email, String code, boolean reset) {
+    sendCode(email, code, reset ? "password reset" : "sign-in");
+  }
+  public void sendSignup(String email, String code) { sendCode(email, code, "account creation"); }
+  private void sendCode(String email, String code, String purpose) {
     SimpleMailMessage message = new SimpleMailMessage();
     message.setFrom(from);
     message.setTo(email);
-    message.setSubject(reset ? "ShopMart password reset code" : "ShopMart sign-in verification code");
-    message.setText("Your ShopMart " + (reset ? "password reset" : "sign-in") + " code is:\n\n"
+    message.setSubject("ShopMart " + purpose + " verification code");
+    message.setText("Your ShopMart " + purpose + " code is:\n\n"
         + code + "\n\nThis code expires in 5 minutes and can be used only once."
         + "\nDo not share it with anyone. If you did not request it, ignore this email.");
     try {

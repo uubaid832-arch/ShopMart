@@ -140,3 +140,6 @@ export function logoutAccount() {
 export function updateProfile(accessToken, values) {
   return withSessionLock(() => sendAuthRequest("me", values, accessToken));
 }
+
+export const verifyRegistration = (challengeId, code) => sendAuthRequest("register/verify", {challengeId, code});
+export const resendRegistration = challengeId => sendAuthRequest("register/resend", {challengeId});

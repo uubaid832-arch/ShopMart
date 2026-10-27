@@ -17,23 +17,37 @@ public class MobileAuthController {
 
   private final AuthService auth;
   private final EmailOtpService otp;
+  private final CustomerSignupService signup;
   private final RefreshSessionService sessions;
 
   public MobileAuthController(
       AuthService auth,
       EmailOtpService otp,
+      CustomerSignupService signup,
       RefreshSessionService sessions) {
     this.auth = auth;
     this.otp = otp;
+    this.signup = signup;
     this.sessions = sessions;
   }
 
   @PostMapping("/register")
-  public ResponseEntity<AuthService.UserResponse> register(
-      @Valid @RequestBody AuthService.RegisterRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .cacheControl(CacheControl.noStore())
-        .body(auth.register(request));
+  public ResponseEntity<EmailOtpService.ChallengeResponse> register(
+      @Valid @RequestBody AuthService.RegisterRequest request, HttpServletRequest http) {
+    return ResponseEntity.status(HttpStatus.ACCEPTED).cacheControl(CacheControl.noStore())
+        .body(signup.start(request,"MOBILE",http.getRemoteAddr()));
+  }
+  @PostMapping("/register/verify")
+  public ResponseEntity<AuthService.UserResponse> verifyRegistration(
+      @Valid @RequestBody EmailOtpService.VerifyRequest request,HttpServletRequest http) {
+    return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore())
+        .body(signup.verify(request,"MOBILE",http.getRemoteAddr()));
+  }
+  @PostMapping("/register/resend")
+  public ResponseEntity<EmailOtpService.ChallengeResponse> resendRegistration(
+      @Valid @RequestBody EmailOtpService.ChallengeRequest request,HttpServletRequest http) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(signup.resend(request,"MOBILE",http.getRemoteAddr()));
   }
 
   @PostMapping("/login")

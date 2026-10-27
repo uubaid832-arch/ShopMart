@@ -58,8 +58,8 @@ async function riderRequest(
   return response.status === 204 ? null : response.json();
 }
 
-export const getRiderDeliveries = (token, page, signal) =>
-  riderRequest(token, `?page=${page}&size=20`, { signal });
+export const getRiderDeliveries = (token, page, signal, section = "ALL") =>
+  riderRequest(token, `?page=${page}&size=20&section=${encodeURIComponent(section)}`, { signal });
 
 export const completeRiderDelivery = (token, id) =>
   riderRequest(token, `/${id}/complete`, { method: "PATCH" });

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Package, MapPin, Phone, RefreshCw } from "lucide-react";
 import Modal from "../../components/Modal";
 import WarehouseControls from "../delivery/WarehouseControls";
 import { useSession } from "../auth/useSession";
@@ -9,14 +10,7 @@ import {
 } from "../../api/riderDeliveries";
 import RiderLocationSharing from "../delivery/RiderLocationSharing";
 
-const statuses = [
-  ["ALL", "All"],
-  ["CONFIRMED", "Assigned"],
-  ["DISPATCHED", "Dispatched"],
-  ["DELIVERED", "Delivered"],
-  ["CANCELLED", "Cancelled"],
-  ["RETURNED", "Returned"],
-];
+const statuses = [["ASSIGNED", "Assigned"], ["DELIVERED", "Delivered"], ["CANCELLED", "Cancelled"], ["ALL", "All deliveries"]];
 const reasons = [
   ["CUSTOMER_REFUSED", "Customer refused the order"],
   ["CUSTOMER_UNAVAILABLE", "Customer unavailable"],
@@ -30,7 +24,7 @@ const buttonStyle =
 const inputStyle =
   "box-border w-full rounded-xl border border-solid border-slate-200 bg-white p-3 font-[inherit]";
 const statusLabel = (value) =>
-  statuses.find(([id]) => id === value)?.[1] ?? value;
+  ({CONFIRMED:"Assigned",DISPATCHED:"Out for delivery",RETURNED:"Returned"})[value] ?? statuses.find(([id]) => id === value)?.[1] ?? value;
 const reasonLabel = (value) =>
   reasons.find(([id]) => id === value)?.[1] ?? value;
 const formatPrice = (amount, currency = "PKR") =>
@@ -183,7 +177,7 @@ function FailedDeliveryForm({ delivery, onSave, onClose }) {
 export default function RiderDeliveries() {
   const { session } = useSession();
   const token = session?.accessToken;
-  const [status, setStatus] = useState("ALL");
+  const [status, setStatus] = useState("ASSIGNED");
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
@@ -196,28 +190,26 @@ export default function RiderDeliveries() {
   useEffect(() => {
     if (!token) return;
     const controller = new AbortController();
-    getRiderDeliveries(token, page, controller.signal)
+    getRiderDeliveries(token, page, controller.signal, status)
       .then((data) => {
         if (!controller.signal.aborted)
-          setResult({ token, page, reload, data, error: "" });
+          setResult({ token, page, reload, status, data, error: "" });
       })
       .catch((error) => {
         if (!controller.signal.aborted)
-          setResult({ token, page, reload, data: null, error: error.message });
+          setResult({ token, page, reload, status, data: null, error: error.message });
       });
     return () => controller.abort();
-  }, [token, page, reload]);
+  }, [token, page, reload, status]);
 
   const current =
     result?.token === token &&
     result?.page === page &&
-    result?.reload === reload;
+    result?.reload === reload && result?.status === status;
   const loading = !current;
   const data = current ? result.data : null;
   const error = current ? result.error : "";
-  const filtered = (data?.items ?? []).filter(
-    (delivery) => status === "ALL" || delivery.status === status,
-  );
+  const filtered = data?.items ?? [];
   async function complete(delivery) {
     if (inFlight.current) return;
 
@@ -325,23 +317,12 @@ export default function RiderDeliveries() {
           onClick={() => setReload((value) => value + 1)}
           className={buttonStyle}
         >
-          Refresh
+          <RefreshCw size={15} className="mr-2 inline"/>Refresh
         </button>
       </header>
-      <label className="grid max-w-xs gap-2 text-sm font-semibold">
-        Filter this page
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className={inputStyle}
-        >
-          {statuses.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <nav aria-label="Delivery sections" className="flex flex-wrap gap-2 rounded-2xl border border-solid border-slate-200 bg-white p-2">
+        {statuses.map(([value,label]) => <button key={value} type="button" aria-pressed={status === value} disabled={Boolean(savingId)} onClick={() => {setStatus(value);setPage(0);}} className={`rounded-xl border-0 px-5 py-3 text-sm font-semibold transition ${status === value ? "bg-violet-600 text-white shadow-sm" : "bg-transparent text-slate-600 hover:bg-violet-50"}`}>{label}</button>)}
+      </nav>
       {feedback && (
         <p
           role="status"
@@ -372,7 +353,7 @@ export default function RiderDeliveries() {
             No matching deliveries on this page.
           </p>
         ) : (
-          <ul className="m-0 grid list-none gap-4 p-0">
+          <ul className="m-0 grid list-none gap-4 p-0 xl:grid-cols-2">
             {filtered.map((delivery) => {
               const canUpdate =
                 delivery.status === "DISPATCHED" &&
@@ -383,29 +364,29 @@ export default function RiderDeliveries() {
               return (
                 <li
                   key={delivery.id}
-                  className="rounded-2xl border border-solid border-slate-200 bg-white p-5"
+                  className="rounded-2xl border border-solid border-slate-200 bg-white p-5 shadow-sm"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 className="m-0 text-lg font-bold">
+                      <h2 className="m-0 flex items-center gap-2 text-base font-bold"><Package size={18} className="shrink-0 text-violet-500"/>
                         {delivery.customerName}
                       </h2>
                       <p className="mb-0 mt-1 break-all text-xs text-slate-400">
                         {delivery.orderNumber}
                       </p>
                     </div>
-                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                    <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${delivery.status === "DELIVERED" ? "bg-emerald-50 text-emerald-700" : delivery.status === "CANCELLED" ? "bg-rose-50 text-rose-700" : "bg-violet-50 text-violet-700"}`}>
                       {statusLabel(delivery.status)}
                     </span>
                   </div>
                   <p className="mb-1 mt-4 break-words text-sm leading-6 text-slate-600">
-                    {delivery.address}
+                    <MapPin size={16} className="mr-2 inline text-slate-400"/>{delivery.address}
                   </p>
                   <a
                     href={`tel:${delivery.phone}`}
                     className="text-sm font-semibold text-violet-700"
                   >
-                    {delivery.phone}
+                    <Phone size={15} className="mr-2 inline"/>{delivery.phone}
                   </a>
                   <div className="mt-4 rounded-xl bg-slate-50 p-4">
                     <p className="m-0 text-xs text-slate-500">

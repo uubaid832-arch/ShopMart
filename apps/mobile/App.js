@@ -29,6 +29,7 @@ import ProfileModal from "./src/account/ProfileModal";
 import AccountModal from "./src/account/AccountModal";
 import ChangePasswordModal from "./src/account/ChangePasswordModal";
 import RiderScreen from "./src/rider/RiderScreen";
+import { canPreviewStore } from "./src/auth/registrationRules";
 import AdminScreen from "./src/admin/AdminScreen";
 import BiometricSettingsModal, {
   BiometricLockScreen,
@@ -129,6 +130,8 @@ function ShopMart() {
   const [cartOpen, setCartOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [result, setResult] = useState(null);
+  const [previewAdminId, setPreviewAdminId] = useState(null);
+  const isStorePreview = canPreviewStore(auth.session?.user.role, auth.session?.user.id, previewAdminId);
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -209,11 +212,12 @@ function ShopMart() {
       />
     );
   }
-  if (auth.session?.user.role === "ADMIN") {
+  if (auth.session?.user.role === "ADMIN" && !isStorePreview) {
     return (
       <AdminScreen
         key={auth.session.user.id}
         session={auth.session}
+        onPreviewStore={() => setPreviewAdminId(auth.session.user.id)}
         onSignOut={auth.signOut}
         signingOut={auth.signingOut}
         sessionError={auth.error}
@@ -354,6 +358,7 @@ function ShopMart() {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
+      {isStorePreview && <View style={{backgroundColor:"#ede9fe",padding:12,flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><Text style={{color:"#6d28d9",fontWeight:"700"}}>Store preview · Admin</Text><Pressable accessibilityRole="button" onPress={() => {setPreviewAdminId(null);setCartOpen(false);setAccountOpen(false);}}><Text style={{color:"#6d28d9",fontWeight:"800"}}>Back to Admin →</Text></Pressable></View>}
       <View style={styles.header}>
         <Text style={styles.brand}>
           Shop<Text style={styles.violet}>Mart</Text>
@@ -697,6 +702,7 @@ function ShopMart() {
       {cartOpen && (
         <CartFlow
           cart={cart}
+          previewMode={isStorePreview}
           auth={auth}
           onClose={() => setCartOpen(false)}
           onPlaced={() => setReload((value) => value + 1)}
@@ -713,6 +719,7 @@ function ShopMart() {
             setProfileOpen(true);
           }}
           onSignOut={() => {
+            setPreviewAdminId(null);
             auth.signOut();
           }}
           onChangePassword={() => {

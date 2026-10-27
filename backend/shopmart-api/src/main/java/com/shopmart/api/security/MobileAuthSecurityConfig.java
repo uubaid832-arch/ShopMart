@@ -25,7 +25,7 @@ public class MobileAuthSecurityConfig {
         .authorizeHttpRequests(authorize -> authorize
             .requestMatchers(
                 HttpMethod.POST,
-                "/api/mobile/auth/register",
+                "/api/mobile/auth/register", "/api/mobile/auth/register/verify", "/api/mobile/auth/register/resend",
                 "/api/mobile/auth/login",
                 "/api/mobile/auth/login/verify",
                 "/api/mobile/auth/login/resend",

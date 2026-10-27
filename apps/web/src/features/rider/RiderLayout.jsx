@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router";
-import { Bike, Truck, LogOut, ArrowUpRight } from "lucide-react";
+import { Bike, Truck, Wallet, LogOut, ArrowUpRight } from "lucide-react";
 import { useSession } from "../auth/useSession";
 import NotificationBell from "../notifications/NotificationBell";
 import AppearanceMenu from "../../components/AppearanceMenu";
@@ -171,9 +171,7 @@ export default function RiderLayout() {
               My deliveries
             </NavLink>
 
-            <span className="hidden text-xs text-slate-400 sm:block">
-              Assignments · Delivery confirmation · COD collection
-            </span>
+            <NavLink to="/rider/cash" className={({isActive}) => `flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${isActive ? "bg-violet-600 text-white" : "text-slate-500 hover:bg-violet-50"}`}><Wallet size={18}/>COD cash handovers</NavLink>
           </nav>
         </div>
       </header>

@@ -3,6 +3,8 @@ import Modal from "../../components/Modal";
 import {
   loginAccount,
   registerAccount,
+  verifyRegistration,
+  resendRegistration,
   verifyLoginCode,
   resendLoginCode,
   requestPasswordReset,
@@ -40,7 +42,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     return () => window.clearInterval(timer);
   }, [challenge]);
 
-  const verifying = step === "login-code" || step === "reset";
+  const verifying = step === "login-code" || step === "register-code" || step === "reset";
   const expired = Boolean(challenge && Date.parse(challenge.expiresAt) <= now);
   const wait = challenge
     ? Math.max(0, Math.ceil((Date.parse(challenge.resendAt) - now) / 1000))
@@ -120,8 +122,15 @@ export default function AuthModal({ onClose, onAuthenticated }) {
 
     await perform(async () => {
       if (step === "register") {
-        await registerAccount({ name: String(data.get("name")).trim(), email: enteredEmail, password });
+        const result = await registerAccount({ name: String(data.get("name")).trim(), email: enteredEmail, password });
         setEmail(enteredEmail);
+        acceptChallenge(result);
+        setStep("register-code");
+        setNotice(text("Check your email to verify and create your account.", "اکاؤنٹ بنانے کے لیے ای میل کا کوڈ درج کریں۔"));
+      } else if (step === "register-code") {
+        await verifyRegistration(challenge.challengeId, code);
+        if (!mounted.current) return;
+        setChallenge(null);
         setStep("login");
         setNotice(text("Account created. Sign in using your email and password.", "اکاؤنٹ بن گیا۔ ای میل اور پاس ورڈ سے سائن اِن کریں۔"));
       } else if (step === "login") {
@@ -159,7 +168,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   async function resend() {
     if (busy || wait > 0 || expired || !challenge) return;
     await perform(async () => {
-      const result = step === "login-code"
+      const result = step === "register-code" ? await resendRegistration(challenge.challengeId) : step === "login-code"
         ? await resendLoginCode(challenge.challengeId)
         : await resendPasswordReset(challenge.challengeId);
       if (!mounted.current) return;
@@ -168,7 +177,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     });
   }
 
-  const title = step === "register"
+  const title = step === "register-code" ? text("Verify your email", "ای میل کی تصدیق کریں") : step === "register"
     ? text("Create an account", "اکاؤنٹ بنائیں")
     : step === "forgot"
       ? text("Forgot password?", "پاس ورڈ بھول گئے؟")
@@ -255,7 +264,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
             <button type="submit" disabled={expired}
               className="rounded-xl border-0 bg-violet-600 p-3 font-semibold text-white enabled:hover:bg-violet-700 disabled:opacity-50">
               {busy ? text("Please wait…", "انتظار کریں…")
-                : step === "register" ? text("Create account", "اکاؤنٹ بنائیں")
+                : step === "register-code" ? text("Verify & create account", "تصدیق کرکے اکاؤنٹ بنائیں") : step === "register" ? text("Send verification code", "تصدیقی کوڈ بھیجیں")
                   : step === "forgot" ? text("Send reset code", "کوڈ بھیجیں")
                     : step === "reset" ? text("Reset password", "پاس ورڈ تبدیل کریں")
                       : step === "login-code" ? text("Verify and sign in", "تصدیق کرکے سائن اِن کریں")
@@ -273,7 +282,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
               {wait > 0 ? text(`Resend in ${wait}s`, `${wait} سیکنڈ بعد دوبارہ بھیجیں`)
                 : text("Resend code", "کوڈ دوبارہ بھیجیں")}
             </button>
-            <button type="button" disabled={busy} onClick={() => move(step === "reset" ? "forgot" : "login")} className={linkClass}>
+            <button type="button" disabled={busy} onClick={() => move(step === "register-code" ? "register" : step === "reset" ? "forgot" : "login")} className={linkClass}>
               {text("Start again", "دوبارہ شروع کریں")}
             </button>
           </div>

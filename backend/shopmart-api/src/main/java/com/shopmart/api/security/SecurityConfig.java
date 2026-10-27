@@ -74,7 +74,7 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
-                                                                "/api/auth/register",
+                                                                "/api/auth/register", "/api/auth/register/verify", "/api/auth/register/resend",
                                                                 "/api/auth/login",
                                                                 "/api/auth/login/verify",
                                                                 "/api/auth/login/resend",
@@ -303,6 +303,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/vouchers").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/vouchers").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/admin/vouchers/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/rider/dashboard", "/api/rider/cod/collections", "/api/rider/cod/handovers", "/api/rider/cod/handovers/*").hasRole("RIDER")
+                        .requestMatchers(HttpMethod.POST, "/api/rider/cod/handovers").hasRole("RIDER")
                         .anyRequest().denyAll())
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

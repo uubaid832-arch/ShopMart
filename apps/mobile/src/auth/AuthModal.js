@@ -11,7 +11,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { registerMobileAccount, resendMobileSignIn } from "./useMobileSession";
+import { registerMobileAccount, resendMobileSignIn, verifyMobileRegistration, resendMobileRegistration } from "./useMobileSession";
+import { isRegistrationChallenge } from "./registrationRules";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
 export default function AuthModal({ onSignIn, onVerify, onClose }) {
@@ -82,7 +83,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
         );
         return;
       }
-      if (typeof onVerify !== "function") {
+      if (!registering && typeof onVerify !== "function") {
         setError("Connect onVerify={auth.verifySignIn} in App.js first.");
         return;
       }
@@ -108,25 +109,32 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
     setError("");
     setNotice("");
     try {
-      if (challenge) {
+      if (challenge && registering) {
+        await verifyMobileRegistration({challengeId: challenge.challengeId, code:values.code});
+        setChallenge(null); setRegistering(false);
+        setValues(current => ({...current,code:"",password:"",confirmation:""}));
+        setNotice("Email verified. Account created. You can now sign in.");
+      } else if (challenge) {
         await onVerify({
           challengeId: challenge.challengeId,
           code: values.code,
         });
         onClose();
       } else if (registering) {
-        await registerMobileAccount({
+        const result = await registerMobileAccount({
           name: values.name.trim(),
           email,
           password: values.password,
         });
-        setRegistering(false);
+        if (!isRegistrationChallenge(result)) throw new Error("Email verification is unavailable. Check that the latest backend is deployed.");
+        setChallenge(result);
+        setNow(Date.now());
         setValues((current) => ({
           ...current,
           password: "",
           confirmation: "",
         }));
-        setNotice("Account created. You can now sign in.");
+        setNotice("Check your email. Your account will be created after code verification.");
       } else {
         const result = await onSignIn({ email, password: values.password });
         if (result?.requiresOtp) {
@@ -160,7 +168,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
     setError("");
     setNotice("");
     try {
-      const result = await resendMobileSignIn(challenge.challengeId);
+      const result = registering ? await resendMobileRegistration(challenge.challengeId) : await resendMobileSignIn(challenge.challengeId);
       setChallenge(result);
       setNow(Date.now());
       setValues((current) => ({ ...current, code: "" }));
@@ -226,14 +234,14 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
             </View>
             <Text style={styles.title}>
               {challenge
-                ? "Verify your sign-in"
+                ? (registering ? "Verify your email" : "Verify your sign-in")
                 : registering
                   ? "Create your account"
                   : "Welcome back"}
             </Text>
             <Text style={styles.description}>
               {challenge
-                ? `Enter the code sent to ${values.email.trim()}. Rider and admin sign-in requires verification.`
+                ? `Enter the code sent to ${values.email.trim()}. ${registering ? "Verify your email to create your account." : "Rider and admin sign-in requires verification."}`
                 : registering
                   ? "Join ShopMart to manage your orders."
                   : "Sign in using your existing ShopMart account."}
@@ -304,9 +312,9 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                 {saving
                   ? "Please wait..."
                   : challenge
-                    ? "Verify & sign in"
+                    ? (registering ? "Verify & create account" : "Verify & sign in")
                     : registering
-                      ? "Create account"
+                      ? "Send verification code"
                       : "Sign in"}
               </Text>
             </Pressable>
