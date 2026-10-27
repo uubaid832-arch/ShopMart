@@ -10,7 +10,12 @@ import {
 } from "../../api/riderDeliveries";
 import RiderLocationSharing from "../delivery/RiderLocationSharing";
 
-const statuses = [["ASSIGNED", "Assigned"], ["DELIVERED", "Delivered"], ["CANCELLED", "Cancelled"], ["ALL", "All deliveries"]];
+const statuses = [
+  ["ASSIGNED", "Assigned"],
+  ["DELIVERED", "Delivered"],
+  ["CANCELLED", "Cancelled"],
+  ["ALL", "All deliveries"],
+];
 const reasons = [
   ["CUSTOMER_REFUSED", "Customer refused the order"],
   ["CUSTOMER_UNAVAILABLE", "Customer unavailable"],
@@ -24,7 +29,13 @@ const buttonStyle =
 const inputStyle =
   "box-border w-full rounded-xl border border-solid border-slate-200 bg-white p-3 font-[inherit]";
 const statusLabel = (value) =>
-  ({CONFIRMED:"Assigned",DISPATCHED:"Out for delivery",RETURNED:"Returned"})[value] ?? statuses.find(([id]) => id === value)?.[1] ?? value;
+  ({
+    CONFIRMED: "Assigned",
+    DISPATCHED: "Out for delivery",
+    RETURNED: "Returned",
+  })[value] ??
+  statuses.find(([id]) => id === value)?.[1] ??
+  value;
 const reasonLabel = (value) =>
   reasons.find(([id]) => id === value)?.[1] ?? value;
 const formatPrice = (amount, currency = "PKR") =>
@@ -197,7 +208,14 @@ export default function RiderDeliveries() {
       })
       .catch((error) => {
         if (!controller.signal.aborted)
-          setResult({ token, page, reload, status, data: null, error: error.message });
+          setResult({
+            token,
+            page,
+            reload,
+            status,
+            data: null,
+            error: error.message,
+          });
       });
     return () => controller.abort();
   }, [token, page, reload, status]);
@@ -205,7 +223,8 @@ export default function RiderDeliveries() {
   const current =
     result?.token === token &&
     result?.page === page &&
-    result?.reload === reload && result?.status === status;
+    result?.reload === reload &&
+    result?.status === status;
   const loading = !current;
   const data = current ? result.data : null;
   const error = current ? result.error : "";
@@ -213,10 +232,10 @@ export default function RiderDeliveries() {
   async function complete(delivery) {
     if (inFlight.current) return;
 
-    const isDemo = delivery.paymentMethod === "DEMO";
+    const safepay = delivery.paymentMethod === "PAID";
 
-    const message = isDemo
-      ? "Confirm this order was delivered? This is a demo payment. Do not collect cash."
+    const message = safepay
+      ? "Confirm this order was delivered? This is a paid order."
       : `Confirm delivery and collection of ${formatPrice(
           delivery.total,
           delivery.currency,
@@ -233,7 +252,7 @@ export default function RiderDeliveries() {
       await completeRiderDelivery(token, delivery.id);
 
       setFeedback(
-        isDemo
+        safepay
           ? "Delivery completed. No cash payment was recorded."
           : "Delivery completed and cash payment recorded.",
       );
@@ -278,7 +297,7 @@ export default function RiderDeliveries() {
           >
             {savingId === delivery.id
               ? "Updating…"
-              : delivery.paymentMethod === "DEMO"
+              : delivery.paymentMethod === "PAID"
                 ? "Confirm delivered"
                 : "Delivered & cash collected"}
           </button>
@@ -317,11 +336,29 @@ export default function RiderDeliveries() {
           onClick={() => setReload((value) => value + 1)}
           className={buttonStyle}
         >
-          <RefreshCw size={15} className="mr-2 inline"/>Refresh
+          <RefreshCw size={15} className="mr-2 inline" />
+          Refresh
         </button>
       </header>
-      <nav aria-label="Delivery sections" className="flex flex-wrap gap-2 rounded-2xl border border-solid border-slate-200 bg-white p-2">
-        {statuses.map(([value,label]) => <button key={value} type="button" aria-pressed={status === value} disabled={Boolean(savingId)} onClick={() => {setStatus(value);setPage(0);}} className={`rounded-xl border-0 px-5 py-3 text-sm font-semibold transition ${status === value ? "bg-violet-600 text-white shadow-sm" : "bg-transparent text-slate-600 hover:bg-violet-50"}`}>{label}</button>)}
+      <nav
+        aria-label="Delivery sections"
+        className="flex flex-wrap gap-2 rounded-2xl border border-solid border-slate-200 bg-white p-2"
+      >
+        {statuses.map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={status === value}
+            disabled={Boolean(savingId)}
+            onClick={() => {
+              setStatus(value);
+              setPage(0);
+            }}
+            className={`rounded-xl border-0 px-5 py-3 text-sm font-semibold transition ${status === value ? "bg-violet-600 text-white shadow-sm" : "bg-transparent text-slate-600 hover:bg-violet-50"}`}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
       {feedback && (
         <p
@@ -359,8 +396,8 @@ export default function RiderDeliveries() {
                 delivery.status === "DISPATCHED" &&
                 ((delivery.paymentMethod === "COD" &&
                   delivery.paymentStatus === "UNPAID") ||
-                  (delivery.paymentMethod === "DEMO" &&
-                    delivery.paymentStatus === "DEMO_PAID"));
+                  (delivery.paymentMethod === "PAID" &&
+                    delivery.paymentStatus === "PAID"));
               return (
                 <li
                   key={delivery.id}
@@ -368,32 +405,40 @@ export default function RiderDeliveries() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 className="m-0 flex items-center gap-2 text-base font-bold"><Package size={18} className="shrink-0 text-violet-500"/>
+                      <h2 className="m-0 flex items-center gap-2 text-base font-bold">
+                        <Package
+                          size={18}
+                          className="shrink-0 text-violet-500"
+                        />
                         {delivery.customerName}
                       </h2>
                       <p className="mb-0 mt-1 break-all text-xs text-slate-400">
                         {delivery.orderNumber}
                       </p>
                     </div>
-                    <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${delivery.status === "DELIVERED" ? "bg-emerald-50 text-emerald-700" : delivery.status === "CANCELLED" ? "bg-rose-50 text-rose-700" : "bg-violet-50 text-violet-700"}`}>
+                    <span
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${delivery.status === "DELIVERED" ? "bg-emerald-50 text-emerald-700" : delivery.status === "CANCELLED" ? "bg-rose-50 text-rose-700" : "bg-violet-50 text-violet-700"}`}
+                    >
                       {statusLabel(delivery.status)}
                     </span>
                   </div>
                   <p className="mb-1 mt-4 break-words text-sm leading-6 text-slate-600">
-                    <MapPin size={16} className="mr-2 inline text-slate-400"/>{delivery.address}
+                    <MapPin size={16} className="mr-2 inline text-slate-400" />
+                    {delivery.address}
                   </p>
                   <a
                     href={`tel:${delivery.phone}`}
                     className="text-sm font-semibold text-violet-700"
                   >
-                    <Phone size={15} className="mr-2 inline"/>{delivery.phone}
+                    <Phone size={15} className="mr-2 inline" />
+                    {delivery.phone}
                   </a>
                   <div className="mt-4 rounded-xl bg-slate-50 p-4">
                     <p className="m-0 text-xs text-slate-500">
-                      {delivery.paymentMethod === "DEMO"
+                      {delivery.paymentMethod === "PAID"
                         ? delivery.status === "CANCELLED"
-                          ? "Demo payment voided — no cash collection"
-                          : "Demo payment — do not collect cash"
+                          ? "Safepay payment voided — no cash collection"
+                          : "Safepay paid — do not collect cash"
                         : `Cash on delivery · ${delivery.paymentStatus}`}
                     </p>
                     <p className="mb-0 mt-1 text-xl font-bold">
