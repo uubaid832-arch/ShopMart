@@ -438,7 +438,7 @@ export default function RiderDeliveries() {
                       {delivery.paymentMethod === "DEMO"
                         ? delivery.status === "CANCELLED"
                           ? "Demo payment voided — no cash collection"
-                          : "Demo payment — do not collect cash"
+                          : "Paid Order — do not collect cash"
                         : `Cash on delivery · ${delivery.paymentStatus}`}
                     </p>
                     <p className="mb-0 mt-1 text-xl font-bold">
