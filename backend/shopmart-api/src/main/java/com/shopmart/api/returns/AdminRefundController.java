@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping({"/api/admin/returns", "/api/mobile/admin/returns"})
+@RequestMapping({ "/api/admin/returns", "/api/mobile/admin/returns" })
 public class AdminRefundController {
 
   private final AdminRefundService refunds;

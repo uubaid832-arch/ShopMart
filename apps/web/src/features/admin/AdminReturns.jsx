@@ -332,8 +332,7 @@ export default function AdminReturns() {
 
                 {request.status === "APPROVED" &&
                   request.refundStatus === "NOT_INITIATED" &&
-                  request.paymentMethod === "COD" &&
-                  request.paymentMethod === "Demo" && (
+                  request.paymentMethod === "COD" && (
                     <button
                       type="button"
                       disabled={Boolean(savingId)}
