@@ -264,8 +264,17 @@ export default function AdminReturns() {
                   </span>
                 </div>
 
-                {["PENDING", "REJECTED"].includes(request.status) && <CustomerContact token={token} item={request} mode="return" />}
-                {request.status === "APPROVED" && request.refundStatus !== "REFUNDED" && <CustomerContact token={token} item={request} mode="refund" />}
+                {["PENDING", "REJECTED"].includes(request.status) && (
+                  <CustomerContact token={token} item={request} mode="return" />
+                )}
+                {request.status === "APPROVED" &&
+                  request.refundStatus !== "REFUNDED" && (
+                    <CustomerContact
+                      token={token}
+                      item={request}
+                      mode="refund"
+                    />
+                  )}
                 <div className="flex flex-wrap gap-3">
                   {request.status === "PENDING" &&
                     (request.instructionsSentAt ? (
@@ -323,7 +332,8 @@ export default function AdminReturns() {
 
                 {request.status === "APPROVED" &&
                   request.refundStatus === "NOT_INITIATED" &&
-                  request.paymentMethod === "COD" && (
+                  request.paymentMethod === "COD" &&
+                  request.paymentMethod === "Demo" && (
                     <button
                       type="button"
                       disabled={Boolean(savingId)}
