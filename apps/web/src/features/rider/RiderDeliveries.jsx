@@ -232,10 +232,10 @@ export default function RiderDeliveries() {
   async function complete(delivery) {
     if (inFlight.current) return;
 
-    const safepay = delivery.paymentMethod === "PAID";
+    const isDemo = delivery.paymentMethod === "DEMO";
 
-    const message = safepay
-      ? "Confirm this order was delivered? This is a paid order."
+    const message = isDemo
+      ? "Confirm this order was delivered? This is a demo payment. Do not collect cash."
       : `Confirm delivery and collection of ${formatPrice(
           delivery.total,
           delivery.currency,
@@ -252,7 +252,7 @@ export default function RiderDeliveries() {
       await completeRiderDelivery(token, delivery.id);
 
       setFeedback(
-        safepay
+        isDemo
           ? "Delivery completed. No cash payment was recorded."
           : "Delivery completed and cash payment recorded.",
       );
@@ -297,7 +297,7 @@ export default function RiderDeliveries() {
           >
             {savingId === delivery.id
               ? "Updating…"
-              : delivery.paymentMethod === "PAID"
+              : delivery.paymentMethod === "DEMO"
                 ? "Confirm delivered"
                 : "Delivered & cash collected"}
           </button>
@@ -396,8 +396,8 @@ export default function RiderDeliveries() {
                 delivery.status === "DISPATCHED" &&
                 ((delivery.paymentMethod === "COD" &&
                   delivery.paymentStatus === "UNPAID") ||
-                  (delivery.paymentMethod === "PAID" &&
-                    delivery.paymentStatus === "PAID"));
+                  (delivery.paymentMethod === "DEMO" &&
+                    delivery.paymentStatus === "DEMO_PAID"));
               return (
                 <li
                   key={delivery.id}
@@ -435,10 +435,10 @@ export default function RiderDeliveries() {
                   </a>
                   <div className="mt-4 rounded-xl bg-slate-50 p-4">
                     <p className="m-0 text-xs text-slate-500">
-                      {delivery.paymentMethod === "PAID"
+                      {delivery.paymentMethod === "DEMO"
                         ? delivery.status === "CANCELLED"
-                          ? "Safepay payment voided — no cash collection"
-                          : "Safepay paid — do not collect cash"
+                          ? "Demo payment voided — no cash collection"
+                          : "Demo payment — do not collect cash"
                         : `Cash on delivery · ${delivery.paymentStatus}`}
                     </p>
                     <p className="mb-0 mt-1 text-xl font-bold">
