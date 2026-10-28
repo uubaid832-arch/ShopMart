@@ -53,8 +53,10 @@ public class SecurityConfig {
 
                 http
                                 .csrf(csrf -> csrf
-                                                .csrfTokenRepository(csrfRepository))
+                                                .csrfTokenRepository(csrfRepository)
+                                                .ignoringRequestMatchers("/api/webhooks/safepay/refunds"))
                                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/safepay/refunds").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/checkout/safepay/return").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/checkout/safepay/sessions", "/api/checkout/safepay/sessions/*/verify", "/api/checkout/safepay/sessions/*/resume").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/checkout/safepay/sessions/*").authenticated()
