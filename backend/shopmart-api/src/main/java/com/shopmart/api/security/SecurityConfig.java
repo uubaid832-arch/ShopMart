@@ -168,7 +168,8 @@ public class SecurityConfig {
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
-                                                                "/api/admin/returns/*/refund")
+                                                                "/api/admin/returns/*/refund",
+                                "/api/admin/returns/*/safepay-refund")
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.GET, "/api/notifications")
                                                 .authenticated()

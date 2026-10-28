@@ -42,7 +42,9 @@ public class AdminReturnService {
 
     List<ReturnSummary> items = jdbc.query("""
         SELECT r.*, i.order_id, i.product_name, i.quantity,
-               o.order_number, o.recipient_name, o.payment_method
+               o.order_number, o.recipient_name, o.payment_method,
+               CASE WHEN EXISTS(SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=o.id AND sp.state='PAID') THEN 'SAFEPAY' END AS payment_provider,
+               (SELECT a.state FROM public.safepay_refund_attempts a WHERE a.return_id=r.id) AS refund_attempt_state
         FROM public.return_requests r
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
@@ -63,7 +65,7 @@ public class AdminReturnService {
             rs.getString("payment_method"),
             rs.getTimestamp("created_at").toInstant(),
             rs.getTimestamp("instructions_sent_at") == null ? null : rs.getTimestamp("instructions_sent_at").toInstant(),
-            rs.getString("rejection_reason")),
+            rs.getString("rejection_reason"), rs.getString("payment_provider"), rs.getString("refund_attempt_state")),
         size, (long) page * size);
 
     return new ReturnService.Page<>(
@@ -190,7 +192,12 @@ public class AdminReturnService {
       String refundAmount,
       String refundStatus,
       String paymentMethod,
-      Instant createdAt, Instant instructionsSentAt, String rejectionReason) {
+      Instant createdAt, Instant instructionsSentAt, String rejectionReason, String paymentProvider, String refundAttemptState) {
+    public ReturnSummary(UUID id, UUID orderId, String orderNumber, String customerName, String productName,
+        int quantity, String reason, String status, String refundAmount, String refundStatus, String paymentMethod,
+        Instant createdAt, Instant instructionsSentAt, String rejectionReason) {
+      this(id,orderId,orderNumber,customerName,productName,quantity,reason,status,refundAmount,refundStatus,paymentMethod,createdAt,instructionsSentAt,rejectionReason,null,null);
+    }
     public ReturnSummary(UUID id, UUID orderId, String orderNumber, String customerName, String productName,
         int quantity, String reason, String status, String refundAmount, String refundStatus, String paymentMethod, Instant createdAt) {
       this(id,orderId,orderNumber,customerName,productName,quantity,reason,status,refundAmount,refundStatus,paymentMethod,createdAt,null,null);

@@ -367,7 +367,19 @@ export function ReturnsModule({ session, onClose, onChanged }) {
                       }}
                     />
                   )}
-                {item.paymentMethod === "DEMO" && (
+                {item.status === "APPROVED" && item.paymentProvider === "SAFEPAY" && item.refundStatus !== "REFUNDED" && (
+                  item.refundAttemptState ? <Text style={ui.muted}>Refund pending verification. Do not refund again; contact support.</Text> :
+                  <Button title="Refund via Safepay (sandbox)" icon="wallet" disabled={op.blocked}
+                    onPress={() => confirm("Refund via Safepay?", `Refund ${money(item.refundAmount)} in sandbox?`,
+                      () => op.run(async () => {
+                        try {
+                          const result = await adminRequest(session.accessToken, `/returns/${item.id}/safepay-refund`, { method: "POST" });
+                          if (result.state !== "CONFIRMED") throw new Error(result.message);
+                        } finally { refresh(); }
+                      }, "Safepay sandbox refund confirmed.")
+                    )} />
+                )}
+                {item.paymentMethod === "DEMO" && item.paymentProvider !== "SAFEPAY" && (
                   <Text style={ui.muted}>
                     Demo payments do not support a real cash refund here.
                   </Text>

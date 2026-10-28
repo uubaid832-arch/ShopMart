@@ -4,6 +4,7 @@ import {
   getAdminReturns,
   updateAdminReturnStatus,
   recordCodRefund,
+  refundSafepay,
 } from "../../api/adminReturns";
 import CustomerContact from "./CustomerContact";
 import RefundModal from "./RefundModal";
@@ -91,6 +92,18 @@ export default function AdminReturns() {
 
     return matchesSearch && (status === "ALL" || request.status === status);
   });
+
+  async function initiateSafepay(request) {
+    if (inFlight.current || !window.confirm(`Refund ${formatPrice(request.refundAmount)} through Safepay sandbox?`)) return;
+    inFlight.current = true;
+    setSavingId(request.id); setActionError(""); setFeedback("");
+    try {
+      const result = await refundSafepay(token, request.id);
+      if (result.state === "CONFIRMED") setFeedback(result.message);
+      else setActionError(result.message);
+    } catch (error) { setActionError(error.message); }
+    finally { inFlight.current = false; setSavingId(null); setReload(v => v + 1); }
+  }
 
   async function changeStatus(request, next) {
     if (inFlight.current) return;
@@ -342,6 +355,12 @@ export default function AdminReturns() {
                       Record COD refund
                     </button>
                   )}
+                {request.status === "APPROVED" && request.paymentProvider === "SAFEPAY" && request.refundStatus !== "REFUNDED" && (
+                  request.refundAttemptState ? <p role="status">Refund pending verification. Do not refund again; contact support for reconciliation.</p> :
+                  <button type="button" className={buttonStyle} disabled={Boolean(savingId)} onClick={() => initiateSafepay(request)}>
+                    Refund via Safepay (sandbox)
+                  </button>
+                )}
                 <time
                   dateTime={request.createdAt}
                   className="mt-4 block text-xs text-slate-400"

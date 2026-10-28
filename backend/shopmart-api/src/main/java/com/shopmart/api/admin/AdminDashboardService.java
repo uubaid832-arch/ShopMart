@@ -41,7 +41,7 @@ public class AdminDashboardService {
                                                        COALESCE(SUM(
                                                            CASE
                                 WHEN ((o.payment_method <> 'DEMO' AND o.payment_status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED'))
- OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
+ OR (o.payment_method = 'DEMO' AND o.payment_status IN ('DEMO_PAID','PARTIALLY_REFUNDED','REFUNDED')
      AND o.status <> 'CANCELLED'
      AND EXISTS (SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=o.id AND sp.state='PAID')))
                                                                THEN o.total - COALESCE((
@@ -72,7 +72,7 @@ public class AdminDashboardService {
                             FROM public.return_requests r JOIN public.order_items i ON i.id=r.order_item_id
                             WHERE i.order_id=o.id AND r.refund_status='REFUNDED')),0) AS refunded
                     FROM public.orders o WHERE o.currency='PKR' AND ((o.payment_method <> 'DEMO' AND o.payment_status IN ('PAID','PARTIALLY_REFUNDED','REFUNDED'))
- OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
+ OR (o.payment_method = 'DEMO' AND o.payment_status IN ('DEMO_PAID','PARTIALLY_REFUNDED','REFUNDED')
      AND o.status <> 'CANCELLED'
      AND EXISTS (SELECT 1 FROM public.safepay_sessions sp WHERE sp.order_id=o.id AND sp.state='PAID')))
                     """);

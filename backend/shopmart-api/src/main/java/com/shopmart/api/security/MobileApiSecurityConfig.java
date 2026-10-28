@@ -151,7 +151,8 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/admin/categories",
                                 "/api/mobile/admin/users/riders",
                                 "/api/mobile/admin/deliveries/*/resolution",
-                                "/api/mobile/admin/returns/*/refund")
+                                "/api/mobile/admin/returns/*/refund",
+                                "/api/mobile/admin/returns/*/safepay-refund")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT,
                                 "/api/mobile/admin/products/*",
