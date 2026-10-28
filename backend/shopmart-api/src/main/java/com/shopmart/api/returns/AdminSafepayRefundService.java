@@ -5,14 +5,14 @@ import java.util.*;
 import com.shopmart.api.payments.SafepayClient;
 import com.shopmart.api.payments.SafepayRefundClient;
 import org.springframework.http.HttpStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class AdminSafepayRefundService {
@@ -34,16 +34,13 @@ public class AdminSafepayRefundService {
     Attempt a=Objects.requireNonNull(tx.execute(s -> reserve(admin,id)));
     if(a.existing()) return result(a.state());
     // Reservation has committed BEFORE any provider call. Never retry this external mutation.
-    String stage = "verify_original_payment";
     try {
       String before=payments.state(a.tracker(),a.merchant(),a.captured());
       String expected=a.cumulative().compareTo(BigDecimal.valueOf(a.amount(),2))==0
           ? "TRACKER_ENDED" : "TRACKER_PARTIAL_REFUND";
       if(!expected.equals(before)) throw new IllegalStateException("Provider payment needs review");
-      stage = "submit_sandbox_refund";
       String provider=refunds.refund(a.tracker(),a.merchant(),a.captured(),a.amount(),
           a.cumulative().compareTo(BigDecimal.valueOf(a.captured(),2))==0);
-      stage = "persist_provider_confirmation";
       tx.executeWithoutResult(s -> {
         jdbc.queryForMap("SELECT id FROM public.orders WHERE id=? FOR UPDATE",a.order());
         jdbc.update("""
@@ -59,10 +56,9 @@ public class AdminSafepayRefundService {
       });
       return result("CONFIRMED");
     } catch (RuntimeException uncertain) {
-      // Only a stage and Java exception type are logged; never a key, token, tracker or provider body.
-      log.warn("Safepay refund unresolved: returnId={}, stage={}, exceptionType={}",
-          id, stage, uncertain.getClass().getSimpleName());
       // Also covers local commit failure AFTER a successful remote refund. Do not leak provider bodies.
+      log.warn("Safepay refund outcome was not verified; leaving the attempt in REVIEW ({}).",
+          uncertain.getClass().getSimpleName());
       tx.executeWithoutResult(s -> jdbc.update("""
           UPDATE public.safepay_refund_attempts SET state='REVIEW',updated_at=CURRENT_TIMESTAMP
           WHERE return_id=? AND state='PROCESSING'
