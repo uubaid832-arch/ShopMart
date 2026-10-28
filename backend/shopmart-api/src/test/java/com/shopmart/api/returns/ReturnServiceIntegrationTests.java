@@ -10,6 +10,7 @@ import com.shopmart.api.delivery.RiderDeliveryService;
 import com.shopmart.api.orders.OrderModels.CreateOrderRequest;
 import com.shopmart.api.orders.OrderModels.ItemRequest;
 import com.shopmart.api.orders.OrderService;
+import com.shopmart.api.cod.RiderCodService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class ReturnServiceIntegrationTests {
 
     @Autowired
     private RiderDeliveryService riderDeliveries;
+
+    @Autowired
+    private RiderCodService riderCod;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -173,6 +177,7 @@ class ReturnServiceIntegrationTests {
         UUID requestId = returns.create(customer, request());
 
         receiveReturn(requestId);
+        confirmCodHandover();
 
         assertEquals("RETURNED", orders.getOrder(customer, order).status());
         assertEquals("PAID", orders.getOrder(customer, order).paymentStatus());
@@ -202,6 +207,39 @@ class ReturnServiceIntegrationTests {
 
         assertEquals(refund.reference(), reference);
         assertEquals(3, stock());
+    }
+
+    @Test
+    void codRefundIsBlockedWhileCashIsStillHeldByRider() {
+        deliverOrder();
+        UUID requestId = returns.create(customer, request());
+        receiveReturn(requestId);
+
+        assertStatus(HttpStatus.CONFLICT,
+                () -> refunds.record(admin, requestId,
+                        new AdminRefundService.RefundRequest("TEST-RECEIPT")));
+
+        assertEquals("NOT_INITIATED", jdbc.queryForObject(
+                "SELECT refund_status FROM public.return_requests WHERE id = ?",
+                String.class, requestId));
+        assertEquals("PAID", orders.getOrder(customer, order).paymentStatus());
+    }
+
+    @Test
+    void codRefundIsBlockedWhileHandoverAwaitsAdminReview() {
+        deliverOrder();
+        UUID requestId = returns.create(customer, request());
+        receiveReturn(requestId);
+        reportCodHandover();
+
+        assertStatus(HttpStatus.CONFLICT,
+                () -> refunds.record(admin, requestId,
+                        new AdminRefundService.RefundRequest("TEST-RECEIPT")));
+
+        assertEquals("NOT_INITIATED", jdbc.queryForObject(
+                "SELECT refund_status FROM public.return_requests WHERE id = ?",
+                String.class, requestId));
+        assertEquals("PAID", orders.getOrder(customer, order).paymentStatus());
     }
 
     @Test
@@ -294,6 +332,22 @@ class ReturnServiceIntegrationTests {
                 admin,
                 requestId,
                 new AdminReturnService.StatusRequest("RECEIVED"));
+    }
+
+    private UUID reportCodHandover() {
+        UUID collectionId = jdbc.queryForObject("""
+                SELECT id FROM public.rider_cod_collections WHERE order_id = ?
+                """, UUID.class, order);
+        UUID handoverId = UUID.randomUUID();
+        riderCod.report(rider, new RiderCodService.ReportRequest(
+                handoverId, List.of(collectionId), "Return test COD handover"));
+        return handoverId;
+    }
+
+    private void confirmCodHandover() {
+        UUID handoverId = reportCodHandover();
+        riderCod.decide(admin, handoverId,
+                new RiderCodService.DecisionRequest("CONFIRMED", "Cash counted"));
     }
 
     private int stock() {
