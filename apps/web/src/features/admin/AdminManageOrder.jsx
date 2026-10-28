@@ -290,12 +290,13 @@ export default function AdminManageOrder({ id, onClose }) {
       />
     );
   }
-
   const status = String(order.status).toUpperCase();
   const isCod =
     order.paymentMethod === "Cash on Delivery" || order.paymentMethod === "COD";
-  const isDemo = order.paymentMethod === "DEMO";
   const isSafepay = order.paymentProvider === "SAFEPAY";
+
+  // The admin API displays DEMO payments as "Safepay (Sandbox)".
+  const isDemo = order.paymentMethod === "DEMO" || isSafepay;
   const supportsDelivery = isCod || isDemo;
 
   const canAssign = supportsDelivery && status === "CONFIRMED";
@@ -472,19 +473,25 @@ export default function AdminManageOrder({ id, onClose }) {
 
               <div className="my-4 rounded-xl bg-violet-50 p-4">
                 <p className="m-0 text-xs text-slate-500">
-                  {isSafepay ? "Safepay (Sandbox)" : isDemo
-                    ? "Demo payment — no money charged"
-                    : order.paymentMethod}
+                  {isSafepay
+                    ? "Safepay (Sandbox)"
+                    : isDemo
+                      ? "Demo payment — no money charged"
+                      : order.paymentMethod}
                 </p>
                 <p className="mb-2 mt-2 break-words text-2xl font-extrabold text-violet-700">
                   {formatPrice(order.total)}
                 </p>
                 <span className="inline-block rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
-                  {isSafepay ? (status === "CANCELLED" ? "Safepay payment voided" : "Paid via Safepay") : isDemo
+                  {isSafepay
                     ? status === "CANCELLED"
-                      ? "Demo payment voided"
-                      : "Test payment successful"
-                    : order.paymentStatus}{" "}
+                      ? "Safepay payment voided"
+                      : "Paid via Safepay"
+                    : isDemo
+                      ? status === "CANCELLED"
+                        ? "Demo payment voided"
+                        : "Test payment successful"
+                      : order.paymentStatus}{" "}
                 </span>
               </div>
 
@@ -547,7 +554,11 @@ export default function AdminManageOrder({ id, onClose }) {
           <section className={card}>
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="min-w-0">
-                {status === "DISPATCHED" && warehouse?.attemptId && !warehouse.resolvedAt && <CustomerContact token={token} item={order} />}
+                {status === "DISPATCHED" &&
+                  warehouse?.attemptId &&
+                  !warehouse.resolvedAt && (
+                    <CustomerContact token={token} item={order} />
+                  )}
                 <h3 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">
                   Customer & delivery
                 </h3>
@@ -620,7 +631,6 @@ export default function AdminManageOrder({ id, onClose }) {
             warehouse?.attemptId &&
             !warehouse.resolvedAt && (
               <section className="rounded-2xl border border-solid border-amber-200 bg-amber-50 p-4 sm:p-5">
-
                 <h3 className="m-0 text-base font-bold text-amber-900">
                   Warehouse return
                 </h3>
