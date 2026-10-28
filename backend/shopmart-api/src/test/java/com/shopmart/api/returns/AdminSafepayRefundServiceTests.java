@@ -66,6 +66,13 @@ class AdminSafepayRefundServiceTests {
     verify(jdbc,never()).update(contains("UPDATE public.return_requests"),any(),any(),any());
     verify(jdbc).update(contains("SET state='REVIEW'"),eq(id));
   }
+  @Test void providerReadFailureLeavesReviewWithoutSendingRefund(){
+    when(payments.state(anyString(),anyString(),anyLong())).thenThrow(new RuntimeException("read timeout"));
+    assertEquals("REVIEW",service.refund(admin,id).state());
+    verify(provider,never()).refund(anyString(),anyString(),anyLong(),anyLong(),anyBoolean());
+    verify(jdbc,never()).update(contains("UPDATE public.return_requests"),any(),any(),any());
+    verify(jdbc).update(contains("SET state='REVIEW'"),eq(id));
+  }
   @Test void mismatchedProviderStateDoesNotSendRefund(){when(payments.state(anyString(),anyString(),anyLong())).thenReturn("TRACKER_REFUNDED");assertEquals("REVIEW",service.refund(admin,id).state());verify(provider,never()).refund(anyString(),anyString(),anyLong(),anyLong(),anyBoolean());}
   @Test void databaseFailureAfterProviderSuccessLeavesReservationForReview(){
     when(jdbc.update(contains("UPDATE public.return_requests"),eq(admin),anyString(),eq(id))).thenThrow(new RuntimeException("database unavailable"));
