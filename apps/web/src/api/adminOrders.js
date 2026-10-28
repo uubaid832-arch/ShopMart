@@ -6,15 +6,22 @@ const readable = (value = "") =>
     .join(" ");
 
 function normalizeOrder(order) {
+  const isSafepay = order.paymentProvider === "SAFEPAY";
   return {
     ...order,
     customerName: order.delivery.name,
     deliveryAddress: [order.delivery.address, order.delivery.city].join(", "),
     total: Number(order.total),
     status: readable(order.status),
-    paymentMethod:
-      order.paymentMethod === "COD" ? "Cash on Delivery" : order.paymentMethod,
-    paymentStatus: readable(order.paymentStatus),
+    paymentMethod: isSafepay
+      ? "Safepay (Sandbox)"
+      : order.paymentMethod === "COD"
+        ? "Cash on Delivery"
+        : order.paymentMethod,
+    paymentStatus:
+      isSafepay && order.paymentStatus === "DEMO_PAID"
+        ? "Paid via Safepay"
+        : readable(order.paymentStatus),
     items: order.items.map((item) => ({
       ...item,
       id: item.productId,

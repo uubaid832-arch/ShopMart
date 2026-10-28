@@ -159,7 +159,7 @@ export default function AdminOrderDetails({ order, onClose }) {
             )}
             <span
               className={`mt-3 inline-block rounded-lg px-2 py-1 text-xs font-semibold ${
-                order.paymentStatus === "Paid"
+                ["Paid", "Paid via Safepay"].includes(order.paymentStatus)
                   ? "bg-emerald-50 text-emerald-700"
                   : "bg-amber-50 text-amber-700"
               }`}
