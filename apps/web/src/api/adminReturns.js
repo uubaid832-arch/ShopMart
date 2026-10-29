@@ -32,17 +32,6 @@ async function adminReturnRequest(
   });
 
   if (!response.ok) {
-    const problem = await response.json().catch(() => null);
-    const serverMessage =
-      typeof problem?.detail === "string"
-        ? problem.detail
-        : typeof problem?.message === "string"
-          ? problem.message
-          : "";
-    if (serverMessage.trim()) {
-      throw new Error(serverMessage);
-    }
-
     const messages = {
       400: "Select a valid return status.",
       401: "Please sign in again.",
