@@ -17,7 +17,7 @@ const statusTranslations = {
   RETURNED: ["Returned", "واپس ہو گیا"],
 };
 
-export default function TrackingModal({ accessToken, onClose }) {
+export default function TrackingModal({ accessToken, onClose, initialOrderId = null }) {
   const { language, direction } = useLanguage();
   const urdu = language === "ur";
   const text = (en, ur) => (urdu ? ur : en);
@@ -49,7 +49,7 @@ export default function TrackingModal({ accessToken, onClose }) {
   }
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || initialOrderId) return;
 
     const controller = new AbortController();
 
@@ -78,17 +78,24 @@ export default function TrackingModal({ accessToken, onClose }) {
       });
 
     return () => controller.abort();
-  }, [accessToken, page, reload]);
+  }, [accessToken, page, reload, initialOrderId]);
 
-  const ordersCurrent =
+  const ordersCurrent = Boolean(initialOrderId) || (
     ordersResult?.token === accessToken &&
     ordersResult?.page === page &&
-    ordersResult?.reload === reload;
+    ordersResult?.reload === reload
+  );
 
-  const data = ordersCurrent ? ordersResult.data : null;
-  const orders = data?.items ?? [];
-  const order = orders.find((item) => item.id === selectedId) ?? orders[0];
-  const orderId = order?.id;
+  const data = ordersCurrent ? ordersResult?.data : null;
+  const orders = initialOrderId
+    ? []
+    : (data?.items ?? []).filter((item) =>
+        ["PENDING", "CONFIRMED", "DISPATCHED"].includes(item.status),
+      );
+  const order = initialOrderId
+    ? null
+    : orders.find((item) => item.id === selectedId) ?? orders[0];
+  const orderId = initialOrderId ?? order?.id;
 
   useEffect(() => {
     if (!accessToken || !orderId) return;
@@ -134,14 +141,14 @@ export default function TrackingModal({ accessToken, onClose }) {
         "Please sign in to track your orders.",
         "اپنے آرڈرز کی صورتحال دیکھنے کے لیے سائن اِن کریں۔",
       )
-    : ordersCurrent && ordersResult.error
+    : !initialOrderId && ordersCurrent && ordersResult?.error
       ? text(
           ordersResult.error,
           "آرڈرز لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں یا دوبارہ سائن اِن کریں۔",
         )
       : "";
 
-  const loading = Boolean(accessToken) && !ordersCurrent;
+  const loading = Boolean(accessToken) && !initialOrderId && !ordersCurrent;
 
   return (
     <Modal
@@ -209,7 +216,7 @@ export default function TrackingModal({ accessToken, onClose }) {
           >
             {error}
           </p>
-        ) : orders.length === 0 ? (
+        ) : orders.length === 0 && !initialOrderId ? (
           <div className="py-8 text-center">
             <h3 className="m-0 text-lg font-bold">
               {text("No orders to track", "دیکھنے کے لیے کوئی آرڈر موجود نہیں")}
@@ -223,7 +230,7 @@ export default function TrackingModal({ accessToken, onClose }) {
           </div>
         ) : (
           <>
-            <label className="grid gap-2 text-sm font-semibold">
+            {!initialOrderId && <label className="grid gap-2 text-sm font-semibold">
               {text("Select an order", "آرڈر منتخب کریں")}
               <select
                 value={orderId}
@@ -247,9 +254,9 @@ export default function TrackingModal({ accessToken, onClose }) {
                   );
                 })}
               </select>
-            </label>
+            </label>}
 
-            {data.totalPages > 1 && (
+            {!initialOrderId && data?.totalPages > 1 && (
               <nav
                 aria-label={text("Order pages", "آرڈرز کے صفحات")}
                 className="mt-3 flex items-center justify-between gap-3"
@@ -359,11 +366,11 @@ export default function TrackingModal({ accessToken, onClose }) {
                   )}
                 </section>
 
-                <DeliveryLocationMap
+                {tracking.status === "DISPATCHED" && <DeliveryLocationMap
                   key={orderId}
                   token={accessToken}
                   orderId={orderId}
-                />
+                />}
               </>
             )}
           </>

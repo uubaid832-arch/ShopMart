@@ -28,7 +28,7 @@ export default function CustomerContact({ token, item, mode = "delivery" }) {
     return () => controller.abort();
   }, [token, orderId, expanded]);
   let preview = "";
-  if (model && (!needsWarehouse || warehouse.trim().length >= 10)) preview = customerMessage({ mode, orderNumber: model.orderNumber, customerName: model.delivery?.name, productName: item.productName, returnId: item.id, status: item.status, warehouse, refundChoice, rejectionReason: item.rejectionReason });
+  if (model && (!needsWarehouse || warehouse.trim().length >= 10)) preview = customerMessage({ mode, orderNumber: model.orderNumber, customerName: model.delivery?.name, productName: item.productName, returnId: item.returnNumber || item.id, status: item.status, warehouse, refundChoice, rejectionReason: item.rejectionReason });
   function compose(channel) {
     try {
       if (!preview) throw new Error("Enter the full warehouse address first.");

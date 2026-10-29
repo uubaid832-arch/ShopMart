@@ -71,6 +71,7 @@ class OrderServiceIntegrationTests {
 
     assertEquals(first.id(), repeated.id());
     assertEquals("1999.98", first.total());
+    assertTrue(first.orderNumber().matches("SM-[0-9]{8,}"));
     assertEquals("PENDING", first.status());
     assertEquals("UNPAID", first.paymentStatus());
     assertEquals(1, remainingStock());

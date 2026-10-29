@@ -117,12 +117,15 @@ class ReturnServiceIntegrationTests {
 
         assertEquals(1L, history.totalItems());
         assertEquals(requestId, saved.id());
+        assertTrue(saved.returnNumber().matches("RT-[0-9]{8,}"));
         assertEquals("PENDING", saved.status());
         assertEquals("NOT_INITIATED", saved.refundStatus());
         assertEquals(
                 0,
                 new BigDecimal("2000.00")
                         .compareTo(new BigDecimal(saved.refundAmount())));
+        assertEquals(1L, returns.list(customer, 0, 20, order).totalItems());
+        assertEquals(0L, returns.list(customer, 0, 20, UUID.randomUUID()).totalItems());
 
         assertEquals(0L, returns.eligible(customer, 0, 20).totalItems());
 

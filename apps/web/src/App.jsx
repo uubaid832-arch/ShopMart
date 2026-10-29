@@ -394,7 +394,9 @@ function Storefront({ products }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isReturnsOpen, setIsReturnsOpen] = useState(false);
+  const [returnOrderId, setReturnOrderId] = useState(null);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+  const [trackingOrderId, setTrackingOrderId] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
@@ -637,8 +639,8 @@ function Storefront({ products }) {
           if (!session) setIsAuthOpen(true);
           else setIsOrdersOpen(true);
         }}
-        onTracking={() => setIsTrackingOpen(true)}
-        onReturns={() => setIsReturnsOpen(true)}
+        onTracking={() => { setTrackingOrderId(null); setIsTrackingOpen(true); }}
+        onReturns={() => { setReturnOrderId(null); setIsReturnsOpen(true); }}
         onWishlist={() => setIsWishlistOpen(true)}
         onCart={() => setIsCartOpen(true)}
         onProfile={() => setIsProfileOpen(true)}
@@ -1063,9 +1065,10 @@ function Storefront({ products }) {
 
       {isReturnsOpen && (
         <ReturnsModal
-          key={session?.user.id ?? "guest"}
+          key={`${session?.user.id ?? "guest"}-${returnOrderId ?? "all"}`}
           accessToken={session?.accessToken}
-          onClose={() => setIsReturnsOpen(false)}
+          orderId={returnOrderId}
+          onClose={() => { setIsReturnsOpen(false); setReturnOrderId(null); }}
         />
       )}
 
@@ -1082,9 +1085,10 @@ function Storefront({ products }) {
 
       {isTrackingOpen && (
         <TrackingModal
-          key={session?.user.id ?? "guest"}
+          key={`${session?.user.id ?? "guest"}-${trackingOrderId ?? "all"}`}
           accessToken={session?.accessToken}
-          onClose={() => setIsTrackingOpen(false)}
+          initialOrderId={trackingOrderId}
+          onClose={() => { setIsTrackingOpen(false); setTrackingOrderId(null); }}
         />
       )}
 
@@ -1109,6 +1113,8 @@ function Storefront({ products }) {
           accessToken={session.accessToken}
           formatPrice={formatPrice}
           onClose={() => setIsOrdersOpen(false)}
+          onTrackOrder={(id) => { setIsOrdersOpen(false); setTrackingOrderId(id); setIsTrackingOpen(true); }}
+          onReturnOrder={(id) => { setIsOrdersOpen(false); setReturnOrderId(id); setIsReturnsOpen(true); }}
         />
       )}
 

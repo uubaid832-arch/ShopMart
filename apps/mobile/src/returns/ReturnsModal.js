@@ -49,7 +49,7 @@ async function request(token, path, values, signal) {
   return response.json();
 }
 
-export default function ReturnsModal({ session, onClose }) {
+export default function ReturnsModal({ session, onClose, orderId = null }) {
   const token = session.accessToken;
   const [tab, setTab] = useState("eligible");
   const [page, setPage] = useState(0);
@@ -65,8 +65,9 @@ export default function ReturnsModal({ session, onClose }) {
   useEffect(() => {
     const controller = new AbortController();
     const path = tab === "eligible" ? "/eligible" : "";
+    const orderFilter = orderId ? `&orderId=${encodeURIComponent(orderId)}` : "";
 
-    request(token, `${path}?page=${page}&size=10`, undefined, controller.signal)
+    request(token, `${path}?page=${page}&size=10${orderFilter}`, undefined, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) {
           setResult({ token, tab, page, reload, data, error: "" });
@@ -86,7 +87,7 @@ export default function ReturnsModal({ session, onClose }) {
       });
 
     return () => controller.abort();
-  }, [token, tab, page, reload]);
+  }, [token, tab, page, reload, orderId]);
 
   const current =
     result?.token === token &&
@@ -228,7 +229,9 @@ export default function ReturnsModal({ session, onClose }) {
                 {data.items.length === 0 && (
                   <Text style={styles.description}>
                     {tab === "eligible"
-                      ? "No eligible products on this page."
+                      ? orderId
+                        ? "This order has no eligible items, or a return request already exists for each item."
+                        : "No eligible products on this page."
                       : "No return requests on this page."}
                   </Text>
                 )}
@@ -265,6 +268,7 @@ export default function ReturnsModal({ session, onClose }) {
                   ) : (
                     <View key={item.id} style={styles.card}>
                       <Text style={styles.name}>{item.productName}</Text>
+                      {item.returnNumber ? <Text style={styles.muted}>Return reference: {item.returnNumber}</Text> : null}
                       <Text style={styles.status}>{label(item.status)}</Text>
                       <Text style={styles.muted}>{item.orderNumber}</Text>
                       <Text style={styles.muted}>

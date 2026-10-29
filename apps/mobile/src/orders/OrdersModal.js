@@ -356,15 +356,36 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                       </Text>
                     </View>
                   </View>
-                  {canTrackLive(item.status) && <Pressable accessibilityRole="button" onPress={() => setSelected(item)} style={styles.returnButton}><Icon name="truck" size={18} /><Text style={styles.returnText}>Track live delivery</Text></Pressable>}
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => setSelected(item)}
-                    style={styles.trackButton}
-                  >
-                    <Icon name="truck" size={19} color="#fff" />
-                    <Text style={styles.trackText}>Order details & history</Text>
-                  </Pressable>
+                  {["PENDING", "CONFIRMED", "DISPATCHED"].includes(item.status) && (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setSelected(item)}
+                      style={styles.trackButton}
+                    >
+                      <Icon name="truck" size={19} color="#fff" />
+                      <Text style={styles.trackText}>Track order</Text>
+                    </Pressable>
+                  )}
+                  {["DELIVERED", "RETURNED", "CANCELLED"].includes(item.status) && (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => setSelected(item)}
+                      style={styles.trackButton}
+                    >
+                      <Icon name="truck" size={19} color="#fff" />
+                      <Text style={styles.trackText}>Track order history</Text>
+                    </Pressable>
+                  )}
+                  {item.status === "DELIVERED" && onOpenReturns && (
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => onOpenReturns(item.id)}
+                      style={styles.returnButton}
+                    >
+                      <Icon name="return" size={17} />
+                      <Text style={styles.returnText}>Request a return</Text>
+                    </Pressable>
+                  )}
                 </View>
               )}
             />

@@ -188,7 +188,9 @@ public class OrderService {
         if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(pricing.discount()))!=0)
             throw new VoucherService.Rejected("Prices changed. Remove and apply the voucher again to confirm the new total.");
         UUID orderId = UUID.randomUUID();
-        String orderNumber = "SM-" + orderId;
+        Long publicNumber = jdbc.queryForObject(
+                "SELECT nextval('public.order_public_number_seq')", Long.class);
+        String orderNumber = "SM-" + String.format(Locale.ROOT, "%08d", publicNumber);
 
         // Prices and stock are checked by the server.
         // Demo payments represent no actual money collected.

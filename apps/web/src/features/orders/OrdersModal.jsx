@@ -35,6 +35,8 @@ export default function OrdersModal({
   error = "",
   formatPrice,
   onClose,
+  onTrackOrder,
+  onReturnOrder,
   footer,
 }) {
   const { language, direction } = useLanguage();
@@ -222,6 +224,39 @@ export default function OrdersModal({
                 </div>
                 <div className="px-5 pb-4">
                   <InvoiceDownload orderId={order.id} />
+                </div>
+                <div className="flex flex-wrap gap-2 px-5 pb-4">
+                  {["PENDING", "CONFIRMED", "DISPATCHED"].includes(
+                    normalize(order.status),
+                  ) && onTrackOrder && (
+                    <button
+                      type="button"
+                      onClick={() => onTrackOrder(order.id)}
+                      className="rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700"
+                    >
+                      {text("Track order", "آرڈر ٹریک کریں")}
+                    </button>
+                  )}
+                  {["DELIVERED", "RETURNED", "CANCELLED"].includes(
+                    normalize(order.status),
+                  ) && onTrackOrder && (
+                    <button
+                      type="button"
+                      onClick={() => onTrackOrder(order.id)}
+                      className="rounded-xl border-0 bg-violet-100 px-4 py-3 text-sm font-semibold text-violet-700 hover:bg-violet-200"
+                    >
+                      {text("Track order history", "آرڈر کی تاریخ دیکھیں")}
+                    </button>
+                  )}
+                  {normalize(order.status) === "DELIVERED" && onReturnOrder && (
+                    <button
+                      type="button"
+                      onClick={() => onReturnOrder(order.id)}
+                      className="rounded-xl border-0 bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                    >
+                      {text("Request a return", "واپسی کی درخواست دیں")}
+                    </button>
+                  )}
                 </div>
                 <details className="group border-0 border-t border-solid border-slate-100">
                   <summary className="flex cursor-pointer list-none items-center justify-between bg-slate-50 px-5 py-3 text-sm font-semibold text-violet-700 [&::-webkit-details-marker]:hidden">

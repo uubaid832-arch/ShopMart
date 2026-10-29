@@ -68,7 +68,7 @@ export default function CustomerContact({
       orderNumber: contact.orderNumber,
       customerName: contact.delivery?.name,
       productName: item.productName,
-      returnId: item.id,
+      returnId: item.returnNumber || item.id,
       status: item.status,
       warehouse,
       refundChoice,

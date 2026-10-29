@@ -74,6 +74,41 @@ export default function AdminReturns() {
     return () => controller.abort();
   }, [token, page, reload]);
 
+  // Safepay refund confirmation arrives asynchronously through its webhook.
+  // Refresh this list while visible so the admin sees the committed status
+  // without needing to leave and reopen the page.
+  useEffect(() => {
+    let active = true;
+    let checking = false;
+
+    async function refreshStatuses() {
+      if (checking || document.visibilityState === "hidden") return;
+      checking = true;
+      try {
+        const data = await getAdminReturns(token, page);
+        if (active) {
+          setResult((current) =>
+            current?.token === token && current?.page === page
+              ? { ...current, data, error: "" }
+              : current,
+          );
+        }
+      } catch {
+        // Preserve the last loaded results during temporary network errors.
+      } finally {
+        checking = false;
+      }
+    }
+
+    const timer = window.setInterval(refreshStatuses, 15000);
+    window.addEventListener("focus", refreshStatuses);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshStatuses);
+    };
+  }, [token, page]);
+
   const current =
     result?.token === token &&
     result?.page === page &&
@@ -260,7 +295,8 @@ export default function AdminReturns() {
                 </div>
 
                 <p className="break-all text-xs text-slate-400">
-                  {request.orderNumber}
+                  Order {request.orderNumber}
+                  {request.returnNumber && ` · Return ${request.returnNumber}`}
                 </p>
 
                 <p className="whitespace-pre-wrap break-words rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">

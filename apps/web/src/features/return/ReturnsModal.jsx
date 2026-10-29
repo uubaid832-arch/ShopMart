@@ -61,7 +61,7 @@ function Pagination({ page, totalPages, onChange, disabled }) {
   );
 }
 
-export default function ReturnsModal({ accessToken, onClose }) {
+export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
   const { language, direction } = useLanguage();
   const urdu = language === "ur";
   const text = (en, ur) => (urdu ? ur : en);
@@ -91,8 +91,8 @@ export default function ReturnsModal({ accessToken, onClose }) {
     const controller = new AbortController();
 
     Promise.all([
-      getEligibleReturns(accessToken, eligiblePage, controller.signal),
-      getReturnRequests(accessToken, historyPage, controller.signal),
+      getEligibleReturns(accessToken, eligiblePage, controller.signal, orderId),
+      getReturnRequests(accessToken, historyPage, controller.signal, orderId),
     ])
       .then(([eligible, history]) => {
         if (!controller.signal.aborted) {
@@ -122,7 +122,7 @@ export default function ReturnsModal({ accessToken, onClose }) {
       });
 
     return () => controller.abort();
-  }, [accessToken, eligiblePage, historyPage, reload]);
+  }, [accessToken, eligiblePage, historyPage, reload, orderId]);
 
   const current =
     result?.token === accessToken &&
@@ -349,8 +349,12 @@ export default function ReturnsModal({ accessToken, onClose }) {
               ) : (
                 <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
                   {text(
-                    "No eligible items on this page. Only delivered, paid COD or verified Safepay items without an existing return request are eligible.",
-                    "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
+                    orderId
+                      ? "This order has no eligible items, or a return request already exists for each item."
+                      : "No eligible items on this page. Only delivered, paid COD or verified Safepay items without an existing return request are eligible.",
+                    orderId
+                      ? "اس آرڈر میں واپسی کے لیے کوئی اہل آئٹم نہیں، یا ہر آئٹم کے لیے درخواست پہلے سے موجود ہے۔"
+                      : "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
                   )}
                 </p>
               )}
@@ -392,6 +396,12 @@ export default function ReturnsModal({ accessToken, onClose }) {
                           {displayStatus(request.status)}
                         </span>
                       </div>
+
+                      {request.returnNumber && (
+                        <p className="m-0 mt-2 text-xs text-slate-500">
+                          {text("Return reference", "واپسی نمبر")}: <bdi>{request.returnNumber}</bdi>
+                        </p>
+                      )}
 
                       <p
                         dir="auto"

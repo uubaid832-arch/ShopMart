@@ -3,6 +3,8 @@ package com.shopmart.api.returns;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Locale;
 import java.util.UUID;
 
 import jakarta.validation.constraints.*;
@@ -24,8 +26,18 @@ public class ReturnService {
 
   @Transactional(readOnly = true)
   public Page<EligibleItem> eligible(UUID userId, int page, int size) {
+    return eligible(userId, page, size, null);
+  }
+
+  @Transactional(readOnly = true)
+  public Page<EligibleItem> eligible(UUID userId, int page, int size, UUID orderId) {
     requireUser(userId);
     validatePage(page, size);
+
+    String orderFilter = orderId == null ? "" : " AND o.id = ?";
+    List<Object> countArgs = new ArrayList<>();
+    countArgs.add(userId);
+    if (orderId != null) countArgs.add(orderId);
 
     long total = jdbc.queryForObject("""
         SELECT COUNT(*)
@@ -41,7 +53,11 @@ public class ReturnService {
               SELECT 1 FROM public.return_requests r
               WHERE r.order_item_id = i.id
           )
-        """, Long.class, userId);
+        """ + orderFilter, Long.class, countArgs.toArray());
+
+    List<Object> itemArgs = new ArrayList<>(countArgs);
+    itemArgs.add(size);
+    itemArgs.add((long) page * size);
 
     List<EligibleItem> items = jdbc.query("""
         SELECT i.id, i.order_id, i.product_name, i.quantity,
@@ -58,6 +74,7 @@ public class ReturnService {
               SELECT 1 FROM public.return_requests r
               WHERE r.order_item_id = i.id
           )
+        """ + orderFilter + """
         ORDER BY o.created_at DESC, i.id
         LIMIT ? OFFSET ?
         """,
@@ -68,7 +85,7 @@ public class ReturnService {
             rs.getString("product_name"),
             rs.getInt("quantity"),
             rs.getTimestamp("created_at").toInstant()),
-        userId, size, (long) page * size);
+        itemArgs.toArray());
 
     return new Page<>(
         items, page, size, total, totalPages(total, size));
@@ -76,8 +93,18 @@ public class ReturnService {
 
   @Transactional(readOnly = true)
   public Page<ReturnResponse> list(UUID userId, int page, int size) {
+    return list(userId, page, size, null);
+  }
+
+  @Transactional(readOnly = true)
+  public Page<ReturnResponse> list(UUID userId, int page, int size, UUID orderId) {
     requireUser(userId);
     validatePage(page, size);
+
+    String orderFilter = orderId == null ? "" : " AND o.id = ?";
+    List<Object> countArgs = new ArrayList<>();
+    countArgs.add(userId);
+    if (orderId != null) countArgs.add(orderId);
 
     long total = jdbc.queryForObject("""
         SELECT COUNT(*)
@@ -85,7 +112,11 @@ public class ReturnService {
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
-        """, Long.class, userId);
+        """ + orderFilter, Long.class, countArgs.toArray());
+
+    List<Object> itemArgs = new ArrayList<>(countArgs);
+    itemArgs.add(size);
+    itemArgs.add((long) page * size);
 
     List<ReturnResponse> items = jdbc.query("""
         SELECT r.*, i.order_id, i.product_name, i.quantity,
@@ -94,11 +125,13 @@ public class ReturnService {
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
+        """ + orderFilter + """
         ORDER BY r.created_at DESC, r.id DESC
         LIMIT ? OFFSET ?
         """,
         (rs, row) -> new ReturnResponse(
             rs.getObject("id", UUID.class),
+            rs.getString("return_number"),
             rs.getObject("order_id", UUID.class),
             rs.getObject("order_item_id", UUID.class),
             rs.getString("order_number"),
@@ -109,7 +142,7 @@ public class ReturnService {
             rs.getBigDecimal("refund_amount").toPlainString(),
             rs.getString("refund_status"),
             rs.getTimestamp("created_at").toInstant(), rs.getString("rejection_reason")),
-        userId, size, (long) page * size);
+        itemArgs.toArray());
 
     return new Page<>(
         items, page, size, total, totalPages(total, size));
@@ -183,13 +216,16 @@ public class ReturnService {
         .subtract((BigDecimal)item.get("discount_amount"));
 
     UUID id = UUID.randomUUID();
+    Long publicNumber = jdbc.queryForObject(
+        "SELECT nextval('public.return_public_number_seq')", Long.class);
+    String returnNumber = "RT-" + String.format(Locale.ROOT, "%08d", publicNumber);
 
     jdbc.update("""
         INSERT INTO public.return_requests (
-            id, order_item_id, reason, refund_amount
+            id, return_number, order_item_id, reason, refund_amount
         )
-        VALUES (?, ?, ?, ?)
-        """, id, request.orderItemId(), reason, amount);
+        VALUES (?, ?, ?, ?, ?)
+        """, id, returnNumber, request.orderItemId(), reason, amount);
 
     return id;
   }
@@ -239,6 +275,7 @@ public class ReturnService {
 
   public record ReturnResponse(
       UUID id,
+      String returnNumber,
       UUID orderId,
       UUID orderItemId,
       String orderNumber,
@@ -251,7 +288,7 @@ public class ReturnService {
       Instant createdAt, String rejectionReason) {
     public ReturnResponse(UUID id, UUID orderId, UUID orderItemId, String orderNumber, String productName,
         int quantity, String reason, String status, String refundAmount, String refundStatus, Instant createdAt) {
-      this(id,orderId,orderItemId,orderNumber,productName,quantity,reason,status,refundAmount,refundStatus,createdAt,null);
+      this(id,null,orderId,orderItemId,orderNumber,productName,quantity,reason,status,refundAmount,refundStatus,createdAt,null);
     }
   }
 
