@@ -1169,8 +1169,8 @@ function Storefront({ products }) {
 
       <ChatWidget
         products={catalog}
-        onSendMessage={({ language, messages }) =>
-          sendAssistantMessage(language, messages)
+        onSendMessage={({ language: chatLanguage, messages }) =>
+          sendAssistantMessage(chatLanguage, messages)
         }
       />
     </>

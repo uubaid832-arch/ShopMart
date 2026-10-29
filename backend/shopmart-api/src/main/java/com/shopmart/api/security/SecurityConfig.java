@@ -54,9 +54,12 @@ public class SecurityConfig {
                 http
                                 .csrf(csrf -> csrf
                                                 .csrfTokenRepository(csrfRepository)
-                                                .ignoringRequestMatchers("/api/webhooks/safepay/refunds"))
+                                                .ignoringRequestMatchers(
+                                                                "/api/webhooks/safepay/refunds",
+                                                                "/api/assistant/chat"))
                                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/webhooks/safepay/refunds").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/assistant/chat").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/checkout/safepay/return").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/checkout/safepay/sessions", "/api/checkout/safepay/sessions/*/verify", "/api/checkout/safepay/sessions/*/resume").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/checkout/safepay/sessions/*").authenticated()
@@ -73,8 +76,6 @@ public class SecurityConfig {
                                                                 "/api/products",
                                                                 "/api/products/*",
                                                                 "/api/auth/csrf")
-                                                .permitAll()
-                                                .requestMatchers(HttpMethod.POST, "/api/assistant/chat")
                                                 .permitAll()
                                                 .requestMatchers(
                                                                 HttpMethod.POST,

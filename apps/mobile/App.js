@@ -140,7 +140,6 @@ function ShopMart() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [wishlistOnly, setWishlistOnly] = useState(false);
   const [returnsOpen, setReturnsOpen] = useState(false);
-  const [returnOrderId, setReturnOrderId] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const wishlist = useMobileWishlist(auth.session?.user.id, !auth.restoring);
@@ -634,9 +633,8 @@ function ShopMart() {
           key={auth.session.user.id}
           session={auth.session}
           onClose={() => setOrdersOpen(false)}
-          onOpenReturns={(orderId = null) => {
+          onOpenReturns={() => {
             setOrdersOpen(false);
-            setReturnOrderId(orderId);
             setReturnsOpen(true);
           }}
         />
@@ -650,10 +648,9 @@ function ShopMart() {
       )}
       {returnsOpen && auth.session && (
         <ReturnsModal
-          key={`${auth.session.user.id}-${returnOrderId ?? "all"}`}
+          key={auth.session.user.id}
           session={auth.session}
-          orderId={returnOrderId}
-          onClose={() => { setReturnsOpen(false); setReturnOrderId(null); }}
+          onClose={() => setReturnsOpen(false)}
         />
       )}
       {profileOpen && auth.session && (
@@ -687,12 +684,7 @@ function ShopMart() {
       )}
       {chatOpen && (
         <ChatModal
-          products={result?.items || []}
           onClose={() => setChatOpen(false)}
-          onViewProduct={(product) => {
-            setChatOpen(false);
-            setSelectedProduct(product);
-          }}
         />
       )}
       {authOpen && (

@@ -20,13 +20,10 @@ const suggestions = [
   "Forgot password",
 ];
 
-const ignored = new Set([
-  "show", "available", "catalog", "product", "products", "price", "prices",
-  "stock", "the", "and", "with", "for", "about", "what", "which", "please",
-]);
-
-export default function ChatModal({ products = [], onViewProduct, onClose }) {
+export default function ChatModal({ onClose }) {
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const [messages, setMessages] = useState([
     {
       id: 0,
@@ -35,66 +32,38 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
   ]);
   const nextId = useRef(1);
   const scroll = useRef(null);
-  const sending = useRef(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
 
   async function send(value = input) {
     const question = value.trim().slice(0, 500);
-    if (!question || sending.current) return;
+    if (!question || sending) return;
 
-    sending.current = true;
-    setBusy(true);
-    setError("");
     setInput("");
-
-    const words = question
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
-      .split(/\s+/)
-      .filter((word) => word && word.length > 1 && !ignored.has(word));
-
-    const matches = words.length
-      ? products.filter((product) => {
-          const searchable =
-            `${product.name} ${product.category}`.toLowerCase();
-          return words.every((word) => searchable.includes(word));
-        })
-      : [];
-
-    let found = [];
-
-    if (matches.length) {
-      found = matches.slice(0, 6);
-    } else if (
-      /\b(show|available|catalog|all)\b/i.test(question)
-    ) {
-      found = products.filter((product) => product.stock > 0).slice(0, 6);
-    }
-
     const userId = nextId.current++;
     setMessages((current) =>
-      [...current, { id: userId, text: question, mine: true }].slice(-60),
+      [...current, { id: userId, text: question, mine: true }].slice(-40),
     );
-
-    const history = [
-      ...messages.slice(-10).map((message) => ({
-        role: message.mine ? "user" : "assistant",
-        content: message.text,
-      })),
-      { role: "user", content: question },
-    ];
+    setSending(true);
+    setError("");
 
     try {
-      const reply = await sendAssistantMessage("en", history);
+      const history = [
+        ...messages
+          .filter((message) => message.mine || message.assistant)
+          .map((message) => ({
+            role: message.mine ? "user" : "assistant",
+            content: message.text,
+          })),
+        { role: "user", content: question },
+      ].slice(-20);
+      const text = await sendAssistantMessage(history, "en");
+      const replyId = nextId.current++;
       setMessages((current) =>
-        [...current, { id: nextId.current++, text: reply, products: found }].slice(-60),
+        [...current, { id: replyId, text, assistant: true }].slice(-40),
       );
     } catch (failure) {
-      setError(failure.message || "The assistant is temporarily unavailable.");
+      setError(failure.message || "Could not get a reply. Please try again.");
     } finally {
-      sending.current = false;
-      setBusy(false);
+      setSending(false);
     }
   }
 
@@ -108,7 +77,7 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
           <View style={styles.header}>
             <View style={styles.grow}>
               <Text style={styles.title}>ShopMart assistant</Text>
-              <Text style={styles.caption}>AI product finder & shopping help</Text>
+              <Text style={styles.caption}>Product finder & shopping help</Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -129,8 +98,8 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
             }
           >
             <Text style={styles.notice}>
-              AI-powered shopping support. Messages are processed by our AI
-              provider. Do not enter passwords, verification codes, or payment
+              AI-powered shopping help. Messages are sent to the ShopMart server
+              and Gemini. Do not enter passwords, verification codes, or payment
               details.
             </Text>
 
@@ -143,35 +112,10 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
                   {message.text}
                 </Text>
 
-                {message.products?.map((product) => (
-                  <Pressable
-                    key={product.id}
-                    accessibilityRole="button"
-                    onPress={() => onViewProduct(product)}
-                    style={styles.product}
-                  >
-                    <Text style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.price}>
-                      PKR {Number(product.price).toLocaleString("en-PK")}
-                    </Text>
-                    <Text style={styles.caption}>
-                      {product.stock > 0 ? "In stock" : "Out of stock"}
-                      {" · "}View details
-                    </Text>
-                  </Pressable>
-                ))}
               </View>
             ))}
-            {busy ? (
-              <Text accessibilityRole="text" style={styles.caption}>
-                Preparing a reply…
-              </Text>
-            ) : null}
-            {error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {error}
-              </Text>
-            ) : null}
+            {sending && <Text style={styles.caption}>Preparing a reply…</Text>}
+            {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
           </ScrollView>
 
           <ScrollView
@@ -186,6 +130,7 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
                 key={text}
                 accessibilityRole="button"
                 onPress={() => send(text)}
+                disabled={sending}
                 style={styles.suggestion}
               >
                 <Text style={styles.link}>{text}</Text>
@@ -203,13 +148,14 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
               maxLength={500}
               returnKeyType="send"
               onSubmitEditing={() => send()}
+              editable={!sending}
               style={styles.input}
             />
             <Pressable
               accessibilityRole="button"
-              disabled={!input.trim() || busy}
+              disabled={!input.trim() || sending}
               onPress={() => send()}
-              style={[styles.send, (!input.trim() || busy) && styles.disabled]}
+              style={[styles.send, !input.trim() && styles.disabled]}
             >
               <Text style={styles.white}>Send</Text>
             </Pressable>
@@ -232,11 +178,11 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 21, fontWeight: "800", color: "#25304a" },
   caption: { color: "#9299ab", fontSize: 11, marginTop: 5 },
-  error: { color: "#b42318", fontSize: 12, lineHeight: 18, marginTop: 8 },
   close: { padding: 13, borderRadius: 12, backgroundColor: "#f3effd" },
   link: { color: "#7c3aed", fontSize: 11, fontWeight: "700" },
   messages: { padding: 18 },
   notice: { color: "#9a92aa", fontSize: 11, lineHeight: 19, marginBottom: 20 },
+  error: { color: "#b42318", fontSize: 12, lineHeight: 18, marginBottom: 12 },
   bubble: {
     maxWidth: "92%",
     alignSelf: "flex-start",
