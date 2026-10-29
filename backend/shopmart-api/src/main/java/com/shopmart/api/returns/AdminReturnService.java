@@ -53,7 +53,6 @@ public class AdminReturnService {
         """,
         (rs, row) -> new ReturnSummary(
             rs.getObject("id", UUID.class),
-            rs.getString("return_number"),
             rs.getObject("order_id", UUID.class),
             rs.getString("order_number"),
             rs.getString("recipient_name"),
@@ -183,7 +182,6 @@ public class AdminReturnService {
 
   public record ReturnSummary(
       UUID id,
-      String returnNumber,
       UUID orderId,
       String orderNumber,
       String customerName,
@@ -198,11 +196,11 @@ public class AdminReturnService {
     public ReturnSummary(UUID id, UUID orderId, String orderNumber, String customerName, String productName,
         int quantity, String reason, String status, String refundAmount, String refundStatus, String paymentMethod,
         Instant createdAt, Instant instructionsSentAt, String rejectionReason) {
-      this(id,null,orderId,orderNumber,customerName,productName,quantity,reason,status,refundAmount,refundStatus,paymentMethod,createdAt,instructionsSentAt,rejectionReason,null,null);
+      this(id,orderId,orderNumber,customerName,productName,quantity,reason,status,refundAmount,refundStatus,paymentMethod,createdAt,instructionsSentAt,rejectionReason,null,null);
     }
     public ReturnSummary(UUID id, UUID orderId, String orderNumber, String customerName, String productName,
         int quantity, String reason, String status, String refundAmount, String refundStatus, String paymentMethod, Instant createdAt) {
-      this(id,null,orderId,orderNumber,customerName,productName,quantity,reason,status,refundAmount,refundStatus,paymentMethod,createdAt,null,null,null,null);
+      this(id,orderId,orderNumber,customerName,productName,quantity,reason,status,refundAmount,refundStatus,paymentMethod,createdAt,null,null,null,null);
     }
   }
 }

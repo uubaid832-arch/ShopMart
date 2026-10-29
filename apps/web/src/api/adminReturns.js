@@ -96,7 +96,7 @@ export async function recordCodRefund(token, id, reference) {
       401: "Please sign in again.",
       403: "Access denied. Check your administrator sign-in.",
       404: "Return request not found.",
-      409: "The refund cannot be recorded in its current state. Refresh the request.",
+      409: "The COD is still held by rider.",
     };
 
     throw new Error(
@@ -107,13 +107,25 @@ export async function recordCodRefund(token, id, reference) {
 }
 
 export async function refundSafepay(token, id) {
-  const csrfResponse = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
-  if (!csrfResponse.ok) throw new Error("Could not prepare the secure request.");
+  const csrfResponse = await fetch("/api/auth/csrf", {
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  if (!csrfResponse.ok)
+    throw new Error("Could not prepare the secure request.");
   const csrf = await csrfResponse.json();
   const response = await fetch(`/api/admin/returns/${id}/safepay-refund`, {
-    method: "POST", credentials: "same-origin", cache: "no-store",
-    headers: { Authorization: `Bearer ${token}`, [csrf.headerName]: csrf.token },
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      [csrf.headerName]: csrf.token,
+    },
   });
-  if (!response.ok) throw new Error("Refund not confirmed. Refresh the list. Check approval, payment eligibility and sandbox configuration; an unresolved refund must be reconciled before retrying.");
+  if (!response.ok)
+    throw new Error(
+      "Refund not confirmed. Refresh the list. Check approval, payment eligibility and sandbox configuration; an unresolved refund must be reconciled before retrying.",
+    );
   return response.json();
 }

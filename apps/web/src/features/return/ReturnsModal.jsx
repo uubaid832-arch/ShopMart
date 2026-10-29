@@ -397,12 +397,6 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
                         </span>
                       </div>
 
-                      {request.returnNumber && (
-                        <p className="m-0 mt-2 text-xs text-slate-500">
-                          {text("Return reference", "واپسی نمبر")}: <bdi>{request.returnNumber}</bdi>
-                        </p>
-                      )}
-
                       <p
                         dir="auto"
                         className="whitespace-pre-wrap break-words text-sm text-slate-600"

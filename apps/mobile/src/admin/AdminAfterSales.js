@@ -284,9 +284,6 @@ export function ReturnsModule({ session, onClose, onChanged }) {
                 <Text style={ui.body}>
                   Quantity: {item.quantity} · {item.paymentMethod}
                 </Text>
-                {item.returnNumber ? (
-                  <Text style={ui.muted}>Return {item.returnNumber}</Text>
-                ) : null}
                 <Text style={ui.body}>Reason: {item.reason}</Text>
                 <Text style={ui.amount}>{money(item.refundAmount)}</Text>
                 <Text style={ui.muted}>{dateLabel(item.createdAt)}</Text>

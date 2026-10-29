@@ -117,7 +117,6 @@ class ReturnServiceIntegrationTests {
 
         assertEquals(1L, history.totalItems());
         assertEquals(requestId, saved.id());
-        assertTrue(saved.returnNumber().matches("RT-[0-9]{8,}"));
         assertEquals("PENDING", saved.status());
         assertEquals("NOT_INITIATED", saved.refundStatus());
         assertEquals(

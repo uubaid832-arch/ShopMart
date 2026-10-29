@@ -296,7 +296,6 @@ export default function AdminReturns() {
 
                 <p className="break-all text-xs text-slate-400">
                   Order {request.orderNumber}
-                  {request.returnNumber && ` · Return ${request.returnNumber}`}
                 </p>
 
                 <p className="whitespace-pre-wrap break-words rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">

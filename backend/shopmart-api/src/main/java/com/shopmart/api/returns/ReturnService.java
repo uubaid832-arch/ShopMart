@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Locale;
 import java.util.UUID;
 
 import jakarta.validation.constraints.*;
@@ -131,7 +130,6 @@ public class ReturnService {
         """,
         (rs, row) -> new ReturnResponse(
             rs.getObject("id", UUID.class),
-            rs.getString("return_number"),
             rs.getObject("order_id", UUID.class),
             rs.getObject("order_item_id", UUID.class),
             rs.getString("order_number"),
@@ -216,16 +214,12 @@ public class ReturnService {
         .subtract((BigDecimal)item.get("discount_amount"));
 
     UUID id = UUID.randomUUID();
-    Long publicNumber = jdbc.queryForObject(
-        "SELECT nextval('public.return_public_number_seq')", Long.class);
-    String returnNumber = "RT-" + String.format(Locale.ROOT, "%08d", publicNumber);
-
     jdbc.update("""
         INSERT INTO public.return_requests (
-            id, return_number, order_item_id, reason, refund_amount
+            id, order_item_id, reason, refund_amount
         )
-        VALUES (?, ?, ?, ?, ?)
-        """, id, returnNumber, request.orderItemId(), reason, amount);
+        VALUES (?, ?, ?, ?)
+        """, id, request.orderItemId(), reason, amount);
 
     return id;
   }
@@ -275,7 +269,6 @@ public class ReturnService {
 
   public record ReturnResponse(
       UUID id,
-      String returnNumber,
       UUID orderId,
       UUID orderItemId,
       String orderNumber,
@@ -288,7 +281,7 @@ public class ReturnService {
       Instant createdAt, String rejectionReason) {
     public ReturnResponse(UUID id, UUID orderId, UUID orderItemId, String orderNumber, String productName,
         int quantity, String reason, String status, String refundAmount, String refundStatus, Instant createdAt) {
-      this(id,null,orderId,orderItemId,orderNumber,productName,quantity,reason,status,refundAmount,refundStatus,createdAt,null);
+      this(id,orderId,orderItemId,orderNumber,productName,quantity,reason,status,refundAmount,refundStatus,createdAt,null);
     }
   }
 

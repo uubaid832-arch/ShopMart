@@ -268,7 +268,6 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                   ) : (
                     <View key={item.id} style={styles.card}>
                       <Text style={styles.name}>{item.productName}</Text>
-                      {item.returnNumber ? <Text style={styles.muted}>Return reference: {item.returnNumber}</Text> : null}
                       <Text style={styles.status}>{label(item.status)}</Text>
                       <Text style={styles.muted}>{item.orderNumber}</Text>
                       <Text style={styles.muted}>
