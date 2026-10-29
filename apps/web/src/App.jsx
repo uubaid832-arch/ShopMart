@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getProducts } from "./api/products";
+import { sendAssistantMessage } from "./api/assistant";
 import "./App.css";
 
 import { useCart } from "./features/cart/useCart";
@@ -394,9 +395,7 @@ function Storefront({ products }) {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isOrdersOpen, setIsOrdersOpen] = useState(false);
   const [isReturnsOpen, setIsReturnsOpen] = useState(false);
-  const [returnOrderId, setReturnOrderId] = useState(null);
   const [isTrackingOpen, setIsTrackingOpen] = useState(false);
-  const [trackingOrderId, setTrackingOrderId] = useState(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
@@ -639,8 +638,8 @@ function Storefront({ products }) {
           if (!session) setIsAuthOpen(true);
           else setIsOrdersOpen(true);
         }}
-        onTracking={() => { setTrackingOrderId(null); setIsTrackingOpen(true); }}
-        onReturns={() => { setReturnOrderId(null); setIsReturnsOpen(true); }}
+        onTracking={() => setIsTrackingOpen(true)}
+        onReturns={() => setIsReturnsOpen(true)}
         onWishlist={() => setIsWishlistOpen(true)}
         onCart={() => setIsCartOpen(true)}
         onProfile={() => setIsProfileOpen(true)}
@@ -1065,10 +1064,9 @@ function Storefront({ products }) {
 
       {isReturnsOpen && (
         <ReturnsModal
-          key={`${session?.user.id ?? "guest"}-${returnOrderId ?? "all"}`}
+          key={session?.user.id ?? "guest"}
           accessToken={session?.accessToken}
-          orderId={returnOrderId}
-          onClose={() => { setIsReturnsOpen(false); setReturnOrderId(null); }}
+          onClose={() => setIsReturnsOpen(false)}
         />
       )}
 
@@ -1085,10 +1083,9 @@ function Storefront({ products }) {
 
       {isTrackingOpen && (
         <TrackingModal
-          key={`${session?.user.id ?? "guest"}-${trackingOrderId ?? "all"}`}
+          key={session?.user.id ?? "guest"}
           accessToken={session?.accessToken}
-          initialOrderId={trackingOrderId}
-          onClose={() => { setIsTrackingOpen(false); setTrackingOrderId(null); }}
+          onClose={() => setIsTrackingOpen(false)}
         />
       )}
 
@@ -1113,8 +1110,6 @@ function Storefront({ products }) {
           accessToken={session.accessToken}
           formatPrice={formatPrice}
           onClose={() => setIsOrdersOpen(false)}
-          onTrackOrder={(id) => { setIsOrdersOpen(false); setTrackingOrderId(id); setIsTrackingOpen(true); }}
-          onReturnOrder={(id) => { setIsOrdersOpen(false); setReturnOrderId(id); setIsReturnsOpen(true); }}
         />
       )}
 
@@ -1172,7 +1167,12 @@ function Storefront({ products }) {
         </div>
       </footer>
 
-      <ChatWidget products={catalog} />
+      <ChatWidget
+        products={catalog}
+        onSendMessage={({ language, messages }) =>
+          sendAssistantMessage(language, messages)
+        }
+      />
     </>
   );
 }

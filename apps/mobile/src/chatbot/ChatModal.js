@@ -11,53 +11,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const help = [
-  [
-    /\b(track|tracking|rider|delivery|shipping)\b/i,
-    "Open Orders, select Track order, and view the delivery timeline. The rider map appears when the assigned rider shares a fresh location for a dispatched order. Google Maps directions are also available there.",
-  ],
-  [
-    /\b(return|returns|refund|refunds|damaged|defective)\b/i,
-    "Open Orders → Returns & refunds. Select an eligible purchased item, enter a reason, and submit. Follow progress under Your requests. A request does not automatically approve a return or issue a refund.",
-  ],
-  [
-    /\b(password|forgot|reset)\b/i,
-    "For a forgotten password, open Sign in → Forgot password and verify the code sent to your email. To change a known password, open Account → Change password.",
-  ],
-  [
-    /\b(fingerprint|biometric|unlock)\b/i,
-    "Open Account → Fingerprint & security to enable biometric unlock. This protects an existing session on your phone; it does not replace password sign-in or required OTP verification.",
-  ],
-  [
-    /\b(payment|pay|cod|cash|card|jazzcash|easypaisa)\b/i,
-    "Mobile checkout currently supports Cash on Delivery. Pay when your order arrives.",
-  ],
-  [
-    /\b(address|addresses)\b/i,
-    "At checkout, choose a saved address or tap Enter address manually. A manually entered address is used for that order and is not added to your address book.",
-  ],
-  [
-    /\b(cart|checkout|buy|purchase)\b/i,
-    "Add products to your cart using Add to cart. Review quantities, proceed to checkout, enter delivery details, and place your Cash on Delivery order.",
-  ],
-  [
-    /\b(wishlist|favorite|favourite|saved)\b/i,
-    "Tap a product's heart to save it, then open Wishlist. Saved products stay on this phone and are separated by account.",
-  ],
-  [
-    /\b(review|reviews|rating|ratings)\b/i,
-    "Open a product's details and scroll to Ratings & reviews. Eligible customers can submit a review after a verified delivered purchase.",
-  ],
-  [
-    /\b(profile|phone|name|account|login|register|sign in)\b/i,
-    "Open Account to sign in or create an account. Once signed in, choose Edit profile to update your name and phone number.",
-  ],
-  [
-    /\b(cancel|cancellation)\b/i,
-    "Contact the store administrator about cancelling an order. Availability depends on its current stage. This assistant cannot cancel orders.",
-  ],
-];
+import { sendAssistantMessage } from "./assistantApi";
 
 const suggestions = [
   "Show available products",
@@ -67,37 +21,8 @@ const suggestions = [
 ];
 
 const ignored = new Set([
-  "show",
-  "me",
-  "a",
-  "an",
-  "the",
-  "some",
-  "please",
-  "find",
-  "want",
-  "need",
-  "products",
-  "product",
-  "available",
-  "stock",
-  "price",
-  "prices",
-  "how",
-  "much",
-  "is",
-  "are",
-  "do",
-  "you",
-  "have",
-  "in",
-  "of",
-  "for",
-  "and",
-  "what",
-  "which",
-  "tell",
-  "about",
+  "show", "available", "catalog", "product", "products", "price", "prices",
+  "stock", "the", "and", "with", "for", "about", "what", "which", "please",
 ]);
 
 export default function ChatModal({ products = [], onViewProduct, onClose }) {
@@ -110,18 +35,24 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
   ]);
   const nextId = useRef(1);
   const scroll = useRef(null);
+  const sending = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  function send(value = input) {
+  async function send(value = input) {
     const question = value.trim().slice(0, 500);
-    if (!question) return;
+    if (!question || sending.current) return;
 
+    sending.current = true;
+    setBusy(true);
+    setError("");
     setInput("");
 
     const words = question
       .toLowerCase()
       .replace(/[^\p{L}\p{N}\s]/gu, " ")
       .split(/\s+/)
-      .filter((word) => word && !ignored.has(word));
+      .filter((word) => word && word.length > 1 && !ignored.has(word));
 
     const matches = words.length
       ? products.filter((product) => {
@@ -131,38 +62,40 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
         })
       : [];
 
-    let text;
     let found = [];
 
     if (matches.length) {
       found = matches.slice(0, 6);
-      text = "Here are matching products from the loaded catalog:";
     } else if (
-      /\b(show available products|catalog|all products)\b/i.test(question)
+      /\b(show|available|catalog|all)\b/i.test(question)
     ) {
       found = products.filter((product) => product.stock > 0).slice(0, 6);
-      text = found.length
-        ? "Here are some available products:"
-        : "No available products are loaded. Close this chat and refresh the catalog.";
-    } else {
-      const topic = help.find(([pattern]) => pattern.test(question));
-      text = topic
-        ? topic[1]
-        : /\b(hello|hi|hey|salam)\b/i.test(question)
-          ? "Hello! Ask about a product, tracking, checkout, returns, or your account."
-          : "Try a product name or category, or ask about tracking, returns, payments, or your account. I cannot modify orders or provide guaranteed delivery times.";
     }
 
     const userId = nextId.current++;
-    const replyId = nextId.current++;
-
     setMessages((current) =>
-      [
-        ...current,
-        { id: userId, text: question, mine: true },
-        { id: replyId, text, products: found },
-      ].slice(-60),
+      [...current, { id: userId, text: question, mine: true }].slice(-60),
     );
+
+    const history = [
+      ...messages.slice(-10).map((message) => ({
+        role: message.mine ? "user" : "assistant",
+        content: message.text,
+      })),
+      { role: "user", content: question },
+    ];
+
+    try {
+      const reply = await sendAssistantMessage("en", history);
+      setMessages((current) =>
+        [...current, { id: nextId.current++, text: reply, products: found }].slice(-60),
+      );
+    } catch (failure) {
+      setError(failure.message || "The assistant is temporarily unavailable.");
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
   }
 
   return (
@@ -175,7 +108,7 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
           <View style={styles.header}>
             <View style={styles.grow}>
               <Text style={styles.title}>ShopMart assistant</Text>
-              <Text style={styles.caption}>Product finder & shopping help</Text>
+              <Text style={styles.caption}>AI product finder & shopping help</Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -196,8 +129,9 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
             }
           >
             <Text style={styles.notice}>
-              Automated help using catalog matching and prepared answers. Do not
-              enter passwords or verification codes.
+              AI-powered shopping support. Messages are processed by our AI
+              provider. Do not enter passwords, verification codes, or payment
+              details.
             </Text>
 
             {messages.map((message) => (
@@ -228,6 +162,16 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
                 ))}
               </View>
             ))}
+            {busy ? (
+              <Text accessibilityRole="text" style={styles.caption}>
+                Preparing a reply…
+              </Text>
+            ) : null}
+            {error ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {error}
+              </Text>
+            ) : null}
           </ScrollView>
 
           <ScrollView
@@ -263,9 +207,9 @@ export default function ChatModal({ products = [], onViewProduct, onClose }) {
             />
             <Pressable
               accessibilityRole="button"
-              disabled={!input.trim()}
+              disabled={!input.trim() || busy}
               onPress={() => send()}
-              style={[styles.send, !input.trim() && styles.disabled]}
+              style={[styles.send, (!input.trim() || busy) && styles.disabled]}
             >
               <Text style={styles.white}>Send</Text>
             </Pressable>
@@ -288,6 +232,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 21, fontWeight: "800", color: "#25304a" },
   caption: { color: "#9299ab", fontSize: 11, marginTop: 5 },
+  error: { color: "#b42318", fontSize: 12, lineHeight: 18, marginTop: 8 },
   close: { padding: 13, borderRadius: 12, backgroundColor: "#f3effd" },
   link: { color: "#7c3aed", fontSize: 11, fontWeight: "700" },
   messages: { padding: 18 },

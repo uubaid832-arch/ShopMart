@@ -74,6 +74,8 @@ public class SecurityConfig {
                                                                 "/api/products/*",
                                                                 "/api/auth/csrf")
                                                 .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/assistant/chat")
+                                                .permitAll()
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
                                                                 "/api/auth/register", "/api/auth/register/verify", "/api/auth/register/resend",

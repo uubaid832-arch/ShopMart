@@ -406,8 +406,8 @@ export default function ChatWidget({ products = [], onSendMessage }) {
               <div className="mb-5">
                 <p className="mt-0 text-sm leading-6 text-slate-600">
                   {text(
-                    "Welcome! Ask about a product or select a question. Please do not share passwords or payment details.",
-                    "خوش آمدید! کسی مصنوع کے بارے میں پوچھیں یا سوال منتخب کریں۔ اپنا پاس ورڈ یا ادائیگی کی نجی تفصیلات شیئر نہ کریں۔",
+                    "Welcome! Ask about a product or select a question. Messages are processed by our AI provider. Do not share passwords, verification codes, or payment details.",
+                    "خوش آمدید! کسی مصنوع کے بارے میں پوچھیں یا سوال منتخب کریں۔ پیغامات ہمارے AI فراہم کنندہ کو بھیجے جاتے ہیں۔ پاس ورڈ، تصدیقی کوڈ یا ادائیگی کی تفصیلات شیئر نہ کریں۔",
                   )}
                 </p>
 
