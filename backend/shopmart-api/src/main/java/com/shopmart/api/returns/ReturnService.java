@@ -33,7 +33,8 @@ public class ReturnService {
     requireUser(userId);
     validatePage(page, size);
 
-    String orderFilter = orderId == null ? "" : " AND o.id = ?";
+    // Keep trailing whitespace: the following SQL text block begins with ORDER BY.
+    String orderFilter = orderId == null ? "" : " AND o.id = ? ";
     List<Object> countArgs = new ArrayList<>();
     countArgs.add(userId);
     if (orderId != null) countArgs.add(orderId);
@@ -100,7 +101,8 @@ public class ReturnService {
     requireUser(userId);
     validatePage(page, size);
 
-    String orderFilter = orderId == null ? "" : " AND o.id = ?";
+    // Keep trailing whitespace: the following SQL text block begins with ORDER BY.
+    String orderFilter = orderId == null ? "" : " AND o.id = ? ";
     List<Object> countArgs = new ArrayList<>();
     countArgs.add(userId);
     if (orderId != null) countArgs.add(orderId);
