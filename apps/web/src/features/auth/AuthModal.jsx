@@ -24,6 +24,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
   const [step, setStep] = useState("login");
   const [challenge, setChallenge] = useState(null);
   const [email, setEmail] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -35,6 +36,10 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     mounted.current = true;
     return () => { mounted.current = false; };
   }, []);
+
+  useEffect(() => {
+    setShowPassword(false);
+  }, [step]);
 
   useEffect(() => {
     if (!challenge) return;
@@ -52,6 +57,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     if (inFlight.current) return;
     setStep(next);
     setChallenge(null);
+    setShowPassword(false);
     setError("");
     setNotice("");
   }
@@ -191,7 +197,7 @@ export default function AuthModal({ onClose, onAuthenticated }) {
     return (
       <label className="grid gap-2 text-sm font-semibold">
         {label}
-        <input name={name} type="password" dir="ltr" autoComplete={autoComplete}
+        <input name={name} type={showPassword ? "text" : "password"} dir="ltr" autoComplete={autoComplete}
           required minLength={minimum} maxLength={72} className={inputClass} />
       </label>
     );
@@ -255,6 +261,17 @@ export default function AuthModal({ onClose, onAuthenticated }) {
                   {text("Use at least 8 characters and no more than 72 UTF-8 bytes.", "کم از کم 8 حروف اور زیادہ سے زیادہ 72 UTF-8 بائٹس استعمال کریں۔")}
                 </p>
               </>
+            )}
+            {["login", "register", "reset"].includes(step) && (
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(event) => setShowPassword(event.target.checked)}
+                  className="size-4 accent-violet-600"
+                />
+                {text("Show password", "پاس ورڈ دکھائیں")}
+              </label>
             )}
             {expired && (
               <p role="status" className="m-0 text-sm text-rose-700">

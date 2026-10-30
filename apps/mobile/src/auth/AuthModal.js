@@ -17,6 +17,7 @@ import ForgotPasswordModal from "./ForgotPasswordModal";
 
 export default function AuthModal({ onSignIn, onVerify, onClose }) {
   const [registering, setRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState({
     name: "",
     email: "",
@@ -60,6 +61,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
     if (pending.current) return;
     setChallenge(null);
     setRegistering(false);
+    setShowPassword(false);
     setError("");
     setNotice("");
     setValues((current) => ({
@@ -127,6 +129,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
           password: values.password,
         });
         if (!isRegistrationChallenge(result)) throw new Error("Email verification is unavailable. Check that the latest backend is deployed.");
+        setShowPassword(false);
         setChallenge(result);
         setNow(Date.now());
         setValues((current) => ({
@@ -138,6 +141,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
       } else {
         const result = await onSignIn({ email, password: values.password });
         if (result?.requiresOtp) {
+          setShowPassword(false);
           setChallenge(result);
           setNow(Date.now());
           setValues((current) => ({
@@ -256,7 +260,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                     value={values[name]}
                     onChangeText={(value) => update(name, value)}
                     editable={!saving}
-                    secureTextEntry={password}
+                    secureTextEntry={password && !showPassword}
                     autoCapitalize={name === "name" ? "words" : "none"}
                     autoCorrect={false}
                     keyboardType={
@@ -291,6 +295,28 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                 </View>
               );
             })}
+            {!challenge && (
+              <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: showPassword }}
+                accessibilityLabel="Show password"
+                disabled={saving}
+                onPress={() => setShowPassword((visible) => !visible)}
+                style={[styles.showPassword, saving && styles.disabled]}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    showPassword && styles.checkboxChecked,
+                  ]}
+                >
+                  {showPassword ? (
+                    <Text style={styles.checkmark}>✓</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.showPasswordText}>Show password</Text>
+              </Pressable>
+            )}
             {expired && (
               <Text style={styles.error}>
                 Code expired. Start a new sign-in below.
@@ -360,6 +386,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                   disabled={saving}
                   onPress={() => {
                     setRegistering((value) => !value);
+                    setShowPassword(false);
                     setError("");
                     setNotice("");
                     setValues((current) => ({
@@ -430,6 +457,26 @@ const styles = StyleSheet.create({
   primaryText: { color: "#fff", fontWeight: "800", textAlign: "center" },
   switch: { paddingVertical: 20 },
   switchText: { color: "#7c3aed", textAlign: "center", fontWeight: "600" },
+  showPassword: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 9,
+    paddingVertical: 2,
+  },
+  checkbox: {
+    width: 19,
+    height: 19,
+    borderWidth: 1,
+    borderColor: "#94a3b8",
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  checkboxChecked: { borderColor: "#7c3aed", backgroundColor: "#7c3aed" },
+  checkmark: { color: "#fff", fontSize: 14, lineHeight: 17, fontWeight: "800" },
+  showPasswordText: { color: "#64748b", fontSize: 13, fontWeight: "500" },
   disabled: { opacity: 0.5 },
   error: { color: "#be123c", marginBottom: 14, lineHeight: 21 },
   notice: { color: "#047857", marginBottom: 14, lineHeight: 21 },
