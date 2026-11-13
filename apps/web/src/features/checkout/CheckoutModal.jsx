@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "../../components/Modal";
-import { placeCodOrder, processMockPayment } from "../../api/orders";
+import { placeBankTransferOrder, placeCodOrder, processMockPayment } from "../../api/orders";
 import SafepayCheckout from "../payments/SafepayCheckout";
 import BankTransferDetails from "./BankTransferDetails";
 import { sameCart } from "../payments/useSafepay";
@@ -290,7 +290,11 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     try {
       const request = requestRef.current;
 
-      const placeOrder = request.paymentMethod === "cod" ? placeCodOrder : processMockPayment;
+      const placeOrder = request.paymentMethod === "cod"
+        ? placeCodOrder
+        : request.paymentMethod === "bank"
+          ? placeBankTransferOrder
+          : processMockPayment;
 
       if (request.paymentMethod === "card") {
         await new Promise((resolve) => window.setTimeout(resolve, 2000));
@@ -305,6 +309,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         details: request.details,
       });
 
+      setBankTransferOpen(false);
       setGatewayOpen(false);
       setStep(3);
       cart.clearCart();
@@ -465,6 +470,9 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         phone={details.phone}
         onBack={() => setBankTransferOpen(false)}
         onClose={close}
+        onPlaceOrder={() => submitOrder()}
+        busy={submitting}
+        error={error}
       />
     );
   }
@@ -505,6 +513,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
               <span aria-hidden="true" className="order-success-mark grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-xl font-black text-white">✓</span>
               {confirmation.paymentProvider === "SAFEPAY"
                 ? "Paid via Safepay. Your order has been placed. (Sandbox)"
+                : confirmation.paymentMethod === "BANK_TRANSFER"
+                  ? "Your bank transfer order has been placed and is pending payment receipt review."
                 : confirmation.paymentMethod === "DEMO"
                   ? "Your demo-payment order has been placed. No money was charged."
                   : text(

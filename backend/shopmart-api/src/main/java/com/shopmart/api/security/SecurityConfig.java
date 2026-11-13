@@ -54,12 +54,9 @@ public class SecurityConfig {
                 http
                                 .csrf(csrf -> csrf
                                                 .csrfTokenRepository(csrfRepository)
-                                                .ignoringRequestMatchers(
-                                                                "/api/webhooks/safepay/refunds",
-                                                                "/api/assistant/chat"))
+                                                .ignoringRequestMatchers("/api/webhooks/safepay/refunds"))
                                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/api/webhooks/safepay/refunds").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/assistant/chat").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/checkout/safepay/return").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/checkout/safepay/sessions", "/api/checkout/safepay/sessions/*/verify", "/api/checkout/safepay/sessions/*/resume").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/checkout/safepay/sessions/*").authenticated()
@@ -309,6 +306,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/vouchers").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/vouchers").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/admin/vouchers/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/admin/vouchers/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/rider/dashboard", "/api/rider/cod/collections", "/api/rider/cod/handovers", "/api/rider/cod/handovers/*").hasRole("RIDER")
                         .requestMatchers(HttpMethod.POST, "/api/rider/cod/handovers").hasRole("RIDER")
                         .anyRequest().denyAll())

@@ -564,14 +564,17 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
               {(order.status === "PENDING" || order.status === "CONFIRMED") && (
                 <View style={s.card}>
                   <Text style={s.cardTitle}>Order actions</Text>
+                  {order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING" ? (
+                    <Text style={s.muted}>Bank transfer receipt is pending review. Do not confirm or dispatch until payment is verified.</Text>
+                  ) : null}
                   {order.status === "PENDING" && (
                     <>
-                    <Button
+                    {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING") && <Button
                       title="Confirm order"
                       icon="check"
                       disabled={locked}
                       onPress={() => changeStatus("CONFIRMED")}
-                    />
+                    />}
                     </>
                   )}
                   {order.status === "CONFIRMED" && (

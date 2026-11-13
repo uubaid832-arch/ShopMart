@@ -77,7 +77,7 @@ public class OrderService {
         String city = request.city().strip();
         String paymentMethod = request.paymentMethod();
 
-        if (!Set.of("COD", "DEMO").contains(paymentMethod)) {
+        if (!Set.of("COD", "DEMO", "BANK_TRANSFER").contains(paymentMethod)) {
             throw failure(
                     HttpStatus.BAD_REQUEST,
                     "Select a supported payment method.");
@@ -85,7 +85,7 @@ public class OrderService {
 
         String paymentStatus = "DEMO".equals(paymentMethod)
                 ? "DEMO_PAID"
-                : "UNPAID";
+                : "BANK_TRANSFER".equals(paymentMethod) ? "PENDING" : "UNPAID";
 
         if (name.isBlank()
                 || phone.isBlank()
@@ -188,9 +188,7 @@ public class OrderService {
         if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(pricing.discount()))!=0)
             throw new VoucherService.Rejected("Prices changed. Remove and apply the voucher again to confirm the new total.");
         UUID orderId = UUID.randomUUID();
-        Long publicNumber = jdbc.queryForObject(
-                "SELECT nextval('public.order_public_number_seq')", Long.class);
-        String orderNumber = "SM-" + String.format(Locale.ROOT, "%08d", publicNumber);
+        String orderNumber = "SM-" + orderId;
 
         // Prices and stock are checked by the server.
         // Demo payments represent no actual money collected.

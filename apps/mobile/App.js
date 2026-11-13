@@ -149,6 +149,9 @@ function ShopMart() {
   const heartPulse = useRef(new Animated.Value(1)).current;
   const [cartPulseId, setCartPulseId] = useState(null);
   const [heartPulseId, setHeartPulseId] = useState(null);
+  const [cartToast, setCartToast] = useState("");
+  const cartToastOpacity = useRef(new Animated.Value(0)).current;
+  const cartToastScale = useRef(new Animated.Value(0.86)).current;
 
   const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
   const [chatOpen, setChatOpen] = useState(false);
@@ -204,9 +207,25 @@ function ShopMart() {
   }
 
   function addProduct(productId) {
+    const product = products.find((item) => item.id === productId);
     cart.addItem(productId);
     setCartPulseId(productId);
     pop(cartPulse);
+    if (product) {
+      setCartToast(product.name);
+      cartToastOpacity.setValue(0);
+      cartToastScale.setValue(0.86);
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(cartToastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+          Animated.spring(cartToastScale, { toValue: 1, speed: 22, bounciness: 8, useNativeDriver: true }),
+        ]),
+        Animated.delay(1500),
+        Animated.timing(cartToastOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]).start(({ finished }) => {
+        if (finished) setCartToast("");
+      });
+    }
   }
 
   function toggleProductWishlist(productId, wasSaved) {
@@ -416,6 +435,19 @@ function ShopMart() {
           </IconButton>
         </View>
       </View>
+
+      {cartToast ? (
+        <Animated.View
+          accessibilityRole="status"
+          style={[styles.cartToast, { opacity: cartToastOpacity, transform: [{ scale: cartToastScale }] }]}
+        >
+          <Icon name="cart" size={20} color="#047857" />
+          <Text style={styles.cartToastText} numberOfLines={1}>{cartToast} added to cart ✓</Text>
+          <Pressable accessibilityRole="button" onPress={() => setCartOpen(true)}>
+            <Text style={styles.cartToastLink}>View cart</Text>
+          </Pressable>
+        </Animated.View>
+      ) : null}
 
       <FlatList
         data={products}
@@ -777,6 +809,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#fbfafc",
   },
+  cartToast: {
+    position: "absolute",
+    zIndex: 30,
+    top: 68,
+    left: 16,
+    right: 16,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: 15,
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    elevation: 6,
+  },
+  cartToastText: { color: "#065f46", fontSize: 13, fontWeight: "700", flex: 1 },
+  cartToastLink: { color: "#047857", fontSize: 12, fontWeight: "900" },
   brand: {
     fontSize: 29,
     fontWeight: "900",

@@ -18,7 +18,7 @@ public final class OrderModels {
             @NotBlank @Size(max = 32) String phone,
             @NotBlank @Size(max = 500) String address,
             @NotBlank @Size(max = 150) String city,
-            @NotBlank @Pattern(regexp = "COD|DEMO") String paymentMethod,
+            @NotBlank @Pattern(regexp = "COD|DEMO|BANK_TRANSFER") String paymentMethod,
             @NotEmpty @Size(max = 50) List<@NotNull @Valid ItemRequest> items,
             @Size(max = 40) String voucherCode,
             @DecimalMin("0.01") @Digits(integer=18,fraction=2) java.math.BigDecimal expectedTotal) {

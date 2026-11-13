@@ -143,7 +143,10 @@ public class AdminOrderService {
           HttpStatus.CONFLICT,
           "This order status change is not allowed.");
     }
-    if (!OrderPaymentRules.supportsDelivery(order)) {
+    boolean unpaidBankTransferCancellation = next.equals("CANCELLED")
+        && "BANK_TRANSFER".equals(order.get("payment_method"))
+        && "PENDING".equals(order.get("payment_status"));
+    if (!OrderPaymentRules.supportsDelivery(order) && !unpaidBankTransferCancellation) {
       throw failure(
           HttpStatus.CONFLICT,
           "This order does not have a supported payment state.");

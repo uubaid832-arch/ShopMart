@@ -81,9 +81,14 @@ export function placeCodOrder(values) {
   return placeOrder({ ...values, paymentMethod: "COD" });
 }
 
+export function placeBankTransferOrder(values) {
+  return placeOrder({ ...values, paymentMethod: "BANK_TRANSFER" });
+}
+
 export function placeDemoOrder(values) {
   return placeOrder({ ...values, paymentMethod: "DEMO" });
 }
+
 export async function getCustomerOrders(accessToken, page = 0, signal) {
   const response = await fetch(`/api/orders?page=${page}&size=10`, {
     headers: { Authorization: `Bearer ${accessToken}` },

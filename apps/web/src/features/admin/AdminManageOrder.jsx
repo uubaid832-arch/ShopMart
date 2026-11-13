@@ -290,13 +290,16 @@ export default function AdminManageOrder({ id, onClose }) {
       />
     );
   }
+
   const status = String(order.status).toUpperCase();
   const isCod =
     order.paymentMethod === "Cash on Delivery" || order.paymentMethod === "COD";
   const isSafepay = order.paymentProvider === "SAFEPAY";
-
-  // The admin API displays DEMO payments as "Safepay (Sandbox)".
+  // The admin API normalizes DEMO to the display label "Safepay (Sandbox)".
+  // Treat that provider-backed payment as a supported order payment method.
   const isDemo = order.paymentMethod === "DEMO" || isSafepay;
+  const isBankTransfer = order.paymentMethod === "BANK_TRANSFER";
+  const pendingBankTransfer = isBankTransfer && order.paymentStatus === "PENDING";
   const supportsDelivery = isCod || isDemo;
 
   const canAssign = supportsDelivery && status === "CONFIRMED";
@@ -304,7 +307,7 @@ export default function AdminManageOrder({ id, onClose }) {
   const returning = Boolean(warehouse?.reportedAt && !warehouse.resolvedAt);
   const canDispatch = canAssign && riderReady && !returning;
   const canCancel =
-    supportsDelivery && ["PENDING", "CONFIRMED"].includes(status) && !returning;
+    (supportsDelivery || pendingBankTransfer) && ["PENDING", "CONFIRMED"].includes(status) && !returning;
   const stage = stages.indexOf(status);
 
   const retryRider =
@@ -320,7 +323,9 @@ export default function AdminManageOrder({ id, onClose }) {
     }).format(Number(amount));
 
   const guidance = {
-    PENDING: "Confirm this order, then assign a rider.",
+    PENDING: pendingBankTransfer
+      ? "Bank transfer is pending receipt review. Do not confirm or dispatch until payment is verified."
+      : "Confirm this order, then assign a rider.",
     CONFIRMED: riderReady
       ? "A rider is assigned. Dispatch when the parcel is ready."
       : "Assign an enabled rider before dispatch.",
@@ -473,31 +478,28 @@ export default function AdminManageOrder({ id, onClose }) {
 
               <div className="my-4 rounded-xl bg-violet-50 p-4">
                 <p className="m-0 text-xs text-slate-500">
-                  {isSafepay
-                    ? "Safepay (Sandbox)"
+                  {isSafepay ? "Safepay (Sandbox)" : isBankTransfer
+                    ? "Bank transfer"
                     : isDemo
-                      ? "Demo payment — no money charged"
-                      : order.paymentMethod}
+                    ? "Demo payment — no money charged"
+                    : order.paymentMethod}
                 </p>
                 <p className="mb-2 mt-2 break-words text-2xl font-extrabold text-violet-700">
                   {formatPrice(order.total)}
                 </p>
                 <span className="inline-block rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
-                  {isSafepay
+                  {isBankTransfer ? "Pending — receipt review required" : isSafepay ? (status === "CANCELLED" ? "Safepay payment voided" : "Paid via Safepay") : isDemo
                     ? status === "CANCELLED"
-                      ? "Safepay payment voided"
-                      : "Paid via Safepay"
-                    : isDemo
-                      ? status === "CANCELLED"
-                        ? "Demo payment voided"
-                        : "Test payment successful"
-                      : order.paymentStatus}{" "}
+                      ? "Demo payment voided"
+                      : "Test payment successful"
+                    : order.paymentStatus}{" "}
                 </span>
               </div>
 
               <p className="mb-4 mt-0 text-xs leading-5 text-slate-500">
                 {guidance[status] ?? "No status changes are available here."}
               </p>
+
 
               <div className="grid gap-2">
                 {supportsDelivery && status === "PENDING" && (
@@ -554,11 +556,7 @@ export default function AdminManageOrder({ id, onClose }) {
           <section className={card}>
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="min-w-0">
-                {status === "DISPATCHED" &&
-                  warehouse?.attemptId &&
-                  !warehouse.resolvedAt && (
-                    <CustomerContact token={token} item={order} />
-                  )}
+                {status === "DISPATCHED" && warehouse?.attemptId && !warehouse.resolvedAt && <CustomerContact token={token} item={order} />}
                 <h3 className="m-0 text-xs font-bold uppercase tracking-wide text-slate-500">
                   Customer & delivery
                 </h3>
@@ -631,6 +629,7 @@ export default function AdminManageOrder({ id, onClose }) {
             warehouse?.attemptId &&
             !warehouse.resolvedAt && (
               <section className="rounded-2xl border border-solid border-amber-200 bg-amber-50 p-4 sm:p-5">
+
                 <h3 className="m-0 text-base font-bold text-amber-900">
                   Warehouse return
                 </h3>

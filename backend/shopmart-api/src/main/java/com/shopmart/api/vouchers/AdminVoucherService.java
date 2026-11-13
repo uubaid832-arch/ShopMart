@@ -28,7 +28,7 @@ public class AdminVoucherService {
       int usageLimit,int perUserLimit,long used,Instant expiresAt,boolean enabled,long version,Instant createdAt) {}
   public record Page(List<Voucher> items,int page,int size,long totalItems,int totalPages) {}
   private void requireAdmin(UUID user) {
-    if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM public.users WHERE id=? AND enabled=TRUE AND role='ADMIN')",Boolean.class,user)))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+    if(!Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM public.users WHERE id=? AND enabled=TRUE AND role='ADMIN')",Boolean.class,user)))throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Administrator access is required.");
   }
   @Transactional(readOnly=true)
   public Page list(UUID user,int page,int size) {

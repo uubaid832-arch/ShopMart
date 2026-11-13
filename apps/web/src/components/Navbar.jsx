@@ -33,8 +33,22 @@ export default function Navbar({
 }) {
   const { language, setLanguage, t, direction } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cartJustChanged, setCartJustChanged] = useState(false);
+  const previousCartCount = useRef(cartCount);
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
+
+  useEffect(() => {
+    const previous = previousCartCount.current;
+    previousCartCount.current = cartCount;
+    if (cartCount <= previous) {
+      setCartJustChanged(false);
+      return undefined;
+    }
+    setCartJustChanged(true);
+    const timeout = window.setTimeout(() => setCartJustChanged(false), 600);
+    return () => window.clearTimeout(timeout);
+  }, [cartCount]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -159,7 +173,13 @@ export default function Navbar({
               aria-haspopup="dialog"
               className="relative grid size-11 place-items-center rounded-xl border-0 bg-transparent p-0 text-slate-600 transition hover:bg-violet-50 hover:text-violet-700"
             >
-              <Icon size={21} strokeWidth={1.8} aria-hidden="true" />
+              <Icon
+                key={label === t("cart") && cartJustChanged ? `cart-${cartCount}` : label}
+                size={21}
+                strokeWidth={1.8}
+                aria-hidden="true"
+                className={label === t("cart") && cartJustChanged ? "cart-icon-pop" : undefined}
+              />
 
               {count > 0 && (
                 <span

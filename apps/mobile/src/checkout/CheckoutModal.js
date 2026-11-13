@@ -164,7 +164,6 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
         return;
       }
       if (snapshot.current.request.paymentMethod === "BANK_TRANSFER") {
-        snapshot.current = null;
         setLocked(false);
         setBankTransferOpen(true);
         return;
@@ -196,6 +195,32 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
     }
   }
 
+  async function placeBankTransferOrder() {
+    if (pending.current || !snapshot.current) return;
+    pending.current = true;
+    setSaving(true);
+    setLocked(true);
+    setError("");
+    try {
+      const order = await placeMobileOrder(session.accessToken, snapshot.current.request);
+      setConfirmation(order);
+      setBankTransferOpen(false);
+      cart.clearCart();
+    } catch (failure) {
+      const rejected = [400, 401, 403, 409].includes(failure.status);
+      if (rejected) {
+        snapshot.current = null;
+        setLocked(false);
+      }
+      setError(rejected
+        ? failure.message
+        : "The result is uncertain. Retry here to confirm this order without creating a duplicate.");
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
+  }
+
   function finish() {
     onClose();
     onPlaced?.();
@@ -217,6 +242,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
         phone={details.phone}
         onBack={() => setBankTransferOpen(false)}
         onClose={() => setBankTransferOpen(false)}
+        onPlaceOrder={placeBankTransferOrder}
+        busy={saving}
+        error={error}
       />
     );
 
@@ -289,6 +317,8 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   <Text style={styles.description}>
                     {confirmation.paymentMethod === "DEMO"
                       ? "Your Safepay sandbox order has been placed. No real money was charged."
+                      : confirmation.paymentMethod === "BANK_TRANSFER"
+                        ? "Your bank transfer order has been placed and is pending payment receipt review."
                       : "Your Cash on Delivery order has been placed."}
                   </Text>
                 </View>
