@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import SavedAddressesManager from "./SavedAddressesManager";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -202,6 +203,7 @@ export default function ProfileModal({ session, onSaved, onClose }) {
                     {busy ? "Saving..." : "Save changes"}
                   </Text>
                 </Pressable>
+                <SavedAddressesManager token={token} />
               </>
             ) : (
               <Pressable

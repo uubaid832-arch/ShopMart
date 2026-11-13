@@ -317,6 +317,32 @@ export default function VouchersModule({ session, onClose, onChanged }) {
                     )
                   }
                 />
+                {!item.enabled && (
+                  <Button
+                    title="Delete disabled voucher"
+                    danger
+                    disabled={op.blocked}
+                    onPress={() =>
+                      confirm(
+                        "Delete this disabled voucher?",
+                        item.used > 0
+                          ? "This voucher has already been used, so it must remain for order history."
+                          : "This permanently removes the disabled voucher.",
+                        () =>
+                          op.run(
+                            () =>
+                              adminRequest(
+                                session.accessToken,
+                                `/vouchers/${item.id}`,
+                                { method: "DELETE" },
+                              ),
+                            "Voucher deleted.",
+                          ),
+                        true,
+                      )
+                    }
+                  />
+                )}
               </Card>
             )}
           />

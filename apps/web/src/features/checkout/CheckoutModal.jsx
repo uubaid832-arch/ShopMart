@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Modal from "../../components/Modal";
 import { placeCodOrder, processMockPayment } from "../../api/orders";
 import SafepayCheckout from "../payments/SafepayCheckout";
+import BankTransferDetails from "./BankTransferDetails";
 import { sameCart } from "../payments/useSafepay";
 import MockPaymentGateway from "./MockPaymentGateway";
 import { useVoucher } from "./useVoucher";
@@ -46,14 +47,7 @@ const fields = [
 const paymentMethods = [
   { id: "cod", label: ["Cash on Delivery", "وصولی پر نقد ادائیگی"] },
   { id: "card", label: ["Card — Safepay", "کارڈ — سیف پے"] },
-  {
-    id: "jazzcash",
-    label: ["JazzCash — Demo payment", "جاز کیش — ڈیمو ادائیگی"],
-  },
-  {
-    id: "easypaisa",
-    label: ["Easypaisa — Demo payment", "ایزی پیسہ — ڈیمو ادائیگی"],
-  },
+  { id: "bank", label: ["Bank transfer (demo)", "بینک ٹرانسفر (ڈیمو)"] },
 ];
 
 const primaryButton =
@@ -142,6 +136,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   const [addressResult, setAddressResult] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [bankTransferOpen, setBankTransferOpen] = useState(false);
   const [safepayRequest, setSafepayRequest] = useState(null);
   const [safepayWindow, setSafepayWindow] = useState(null);
   const [gatewayOpen, setGatewayOpen] = useState(false);
@@ -295,10 +290,9 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     try {
       const request = requestRef.current;
 
-      const placeOrder =
-        request.paymentMethod === "cod" ? placeCodOrder : processMockPayment;
+      const placeOrder = request.paymentMethod === "cod" ? placeCodOrder : processMockPayment;
 
-      if (request.paymentMethod !== "cod") {
+      if (request.paymentMethod === "card") {
         await new Promise((resolve) => window.setTimeout(resolve, 2000));
       }
       const order = await placeOrder({
@@ -373,6 +367,10 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
       return;
     }
 
+    if (paymentMethod === "bank") {
+      setBankTransferOpen(true);
+      return;
+    }
     if (paymentMethod !== "cod") {
       if (voucher.code.trim() && !voucher.quote) {
         setError("Apply or remove the voucher before paying.");
@@ -459,6 +457,18 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     );
   }
 
+  if (bankTransferOpen) {
+    return (
+      <BankTransferDetails
+        total={voucher.quote?.total ?? cart.total}
+        name={details.name}
+        phone={details.phone}
+        onBack={() => setBankTransferOpen(false)}
+        onClose={close}
+      />
+    );
+  }
+
   return (
     <Modal onClose={close} labelledBy="checkout-title" size="lg">
       <header
@@ -490,8 +500,9 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
           <>
             <p
               role="status"
-              className="rounded-xl bg-emerald-50 p-4 text-emerald-800"
+              className="flex items-center gap-3 rounded-xl bg-emerald-50 p-4 text-emerald-800"
             >
+              <span aria-hidden="true" className="order-success-mark grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-xl font-black text-white">✓</span>
               {confirmation.paymentProvider === "SAFEPAY"
                 ? "Paid via Safepay. Your order has been placed. (Sandbox)"
                 : confirmation.paymentMethod === "DEMO"
@@ -786,7 +797,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                           ? text("Place COD order", "COD آرڈر درج کریں")
                           : paymentMethod === "card"
                             ? "Pay with Safepay →"
-                            : "Open demo gateway"}
+                            : "View bank transfer details"}
                 </button>
               </div>
             </fieldset>

@@ -56,6 +56,14 @@ public class AdminUserController {
         .body(users.updateEnabled(userId(jwt), id, request));
   }
 
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteDisabled(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID id) {
+    users.deleteDisabled(userId(jwt), id);
+    return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+  }
+
   private static UUID userId(Jwt jwt) {
     if (jwt == null || jwt.getSubject() == null) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);

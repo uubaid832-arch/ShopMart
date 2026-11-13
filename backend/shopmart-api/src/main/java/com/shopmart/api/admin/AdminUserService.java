@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -248,6 +249,24 @@ public class AdminUserService {
         """, request.enabled(), userId);
 
     return find(userId);
+  }
+
+  @Transactional
+  public void deleteDisabled(UUID adminId, UUID userId) {
+    requireAdmin(adminId);
+    var matches = jdbc.queryForList("SELECT role, enabled FROM public.users WHERE id=? FOR UPDATE", userId);
+    if (matches.isEmpty()) throw failure(HttpStatus.NOT_FOUND, "User not found.");
+    String role = (String) matches.get(0).get("role");
+    if ("ADMIN".equals(role) || adminId.equals(userId))
+      throw failure(HttpStatus.FORBIDDEN, "Administrator accounts are protected.");
+    if (Boolean.TRUE.equals(matches.get(0).get("enabled")))
+      throw failure(HttpStatus.CONFLICT, "Disable this account before deleting it.");
+    try {
+      jdbc.update("DELETE FROM public.users WHERE id=? AND enabled=FALSE", userId);
+    } catch (DataIntegrityViolationException linkedRecords) {
+      throw failure(HttpStatus.CONFLICT,
+          "This account has linked order, delivery, or audit history and cannot be permanently deleted.");
+    }
   }
 
   private UserResponse find(UUID id) {

@@ -46,7 +46,9 @@ async function userRequest(
       409:
         method === "POST"
           ? "An account with this email already exists."
-          : "The account changed or the rider has active deliveries. Refresh the list and resolve active assignments before disabling a rider.",
+          : method === "DELETE"
+            ? "Only disabled accounts without linked order, delivery, or audit history can be deleted."
+            : "The account changed or the rider has active deliveries. Refresh the list and resolve active assignments before disabling a rider.",
     };
 
     throw new Error(
@@ -54,6 +56,8 @@ async function userRequest(
         "The request could not be confirmed. Refresh the list before trying again.",
     );
   }
+
+  if (response.status === 204) return null;
 
   return response.json();
 }
@@ -87,5 +91,11 @@ export function updateUserEnabled(token, user) {
       enabled: !user.enabled,
       version: user.version,
     },
+  });
+}
+
+export function deleteDisabledUser(token, user) {
+  return userRequest(token, `/${encodeURIComponent(user.id)}`, {
+    method: "DELETE",
   });
 }

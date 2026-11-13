@@ -1,8 +1,9 @@
 import SafepayCheckout from "../payments/SafepayCheckout";
 import { sameCart } from "../payments/useSafepay";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -19,6 +20,7 @@ import { placeMobileOrder } from "../api/orders";
 import SavedAddresses from "./SavedAddresses";
 import { useVoucher } from "../vouchers/useVoucher";
 import VoucherField from "../vouchers/VoucherField";
+import BankTransferDetails from "./BankTransferDetails";
 const fields = [
   ["name", "Recipient name", 150],
   ["email", "Email address", 254],
@@ -50,9 +52,22 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   const [locked, setLocked] = useState(false);
   const [error, setError] = useState("");
   const [confirmation, setConfirmation] = useState(null);
+  const successScale = useRef(new Animated.Value(0.4)).current;
+  const [bankTransferOpen, setBankTransferOpen] = useState(false);
   const voucher = useVoucher(session, cart.items);
   const pending = useRef(false);
   const snapshot = useRef(null);
+
+  useEffect(() => {
+    if (!confirmation) return;
+    successScale.setValue(0.4);
+    Animated.spring(successScale, {
+      toValue: 1,
+      speed: 15,
+      bounciness: 12,
+      useNativeDriver: true,
+    }).start();
+  }, [confirmation, successScale]);
 
   function close() {
     if (pending.current) return;
@@ -148,6 +163,12 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
         setSafepayOpen(true);
         return;
       }
+      if (snapshot.current.request.paymentMethod === "BANK_TRANSFER") {
+        snapshot.current = null;
+        setLocked(false);
+        setBankTransferOpen(true);
+        return;
+      }
       const order = await placeMobileOrder(
         session.accessToken,
         snapshot.current.request,
@@ -187,6 +208,17 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
     snapshot.current?.subtotal ?? voucher.quote?.subtotal ?? cart.total;
   const summaryDiscount =
     snapshot.current?.discount ?? voucher.quote?.discountAmount ?? "0.00";
+
+  if (bankTransferOpen)
+    return (
+      <BankTransferDetails
+        total={summaryTotal}
+        name={details.name}
+        phone={details.phone}
+        onBack={() => setBankTransferOpen(false)}
+        onClose={() => setBankTransferOpen(false)}
+      />
+    );
 
   if (safepayOpen)
     return (
@@ -248,6 +280,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
             {confirmation ? (
               <>
                 <View style={styles.success}>
+                  <Animated.View style={[styles.successMark, { transform: [{ scale: successScale }] }]}>
+                    <Text style={styles.successCheck}>✓</Text>
+                  </Animated.View>
                   <Text style={styles.successTitle}>
                     Thank you for your order!
                   </Text>
@@ -356,6 +391,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   {[
                     { id: "COD", label: "Cash on Delivery" },
                     { id: "DEMO", label: "Card — Safepay" },
+                    { id: "BANK_TRANSFER", label: "Bank transfer (demo)" },
                   ].map((method) => (
                     <Pressable
                       key={method.id}
@@ -419,7 +455,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                         ? "Retry confirmation"
                         : paymentMethod === "DEMO"
                           ? "Pay with Safepay"
-                          : "Place Cash on Delivery order"}
+                          : paymentMethod === "BANK_TRANSFER"
+                            ? "Place bank transfer order"
+                            : "Place Cash on Delivery order"}
                   </Text>
                 </Pressable>
               </>
@@ -500,5 +538,7 @@ const styles = StyleSheet.create({
   error: { color: "#be123c", lineHeight: 21, marginBottom: 16, fontSize: 13 },
   success: { backgroundColor: "#ecfdf5", padding: 20, borderRadius: 18 },
   successTitle: { color: "#047857", fontSize: 20, fontWeight: "800" },
+  successMark: { width: 58, height: 58, borderRadius: 29, backgroundColor: "#059669", alignItems: "center", justifyContent: "center", marginBottom: 12 },
+  successCheck: { color: "#fff", fontSize: 34, lineHeight: 38, fontWeight: "900" },
   reference: { color: "#475569", fontSize: 12, marginTop: 20 },
 });

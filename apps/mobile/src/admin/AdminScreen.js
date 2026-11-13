@@ -184,6 +184,7 @@ function OrderCard({ order, onPress }) {
 function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
+  const [riderSearch, setRiderSearch] = useState("");
   const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -464,7 +465,19 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                           Choose an active rider before dispatching.
                         </Text>
                         {assignment.data?.riders.length ? (
-                          assignment.data.riders.map((rider) => (
+                          <>
+                          <TextInput
+                            accessibilityLabel="Search active riders"
+                            placeholder="Search active riders by name"
+                            value={riderSearch}
+                            onChangeText={setRiderSearch}
+                            editable={!locked}
+                            autoCapitalize="words"
+                            style={s.riderSearch}
+                          />
+                          {assignment.data.riders.filter((rider) =>
+                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                          ).map((rider) => (
                             <Pressable
                               key={rider.id}
                               accessibilityRole="radio"
@@ -490,7 +503,11 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                               </View>
                               <Text style={[s.body, s.grow]}>{rider.name}</Text>
                             </Pressable>
-                          ))
+                          ))}
+                          {assignment.data.riders.filter((rider) =>
+                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                          ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
+                          </>
                         ) : (
                           <Text style={s.muted}>
                             No enabled riders. Create or enable a rider using
@@ -548,12 +565,14 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                 <View style={s.card}>
                   <Text style={s.cardTitle}>Order actions</Text>
                   {order.status === "PENDING" && (
+                    <>
                     <Button
                       title="Confirm order"
                       icon="check"
                       disabled={locked}
                       onPress={() => changeStatus("CONFIRMED")}
                     />
+                    </>
                   )}
                   {order.status === "CONFIRMED" && (
                     <>
@@ -1783,6 +1802,16 @@ const s = StyleSheet.create({
     marginTop: 10,
   },
   riderSelected: { borderColor: "#a477ee", backgroundColor: "#f1e9ff" },
+  riderSearch: {
+    borderWidth: 1,
+    borderColor: "#eae3f2",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    marginTop: 10,
+    color: "#25304a",
+  },
   radio: {
     width: 19,
     height: 19,

@@ -4,6 +4,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
@@ -23,6 +24,7 @@ export default function SavedAddresses({
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [manual, setManual] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -71,6 +73,13 @@ export default function SavedAddresses({
           item.city === details.city,
       )
     : null;
+  const filteredItems = current
+    ? result.items.filter((item) =>
+        `${item.label} ${item.recipientName} ${item.phone} ${item.addressLine} ${item.city}`
+          .toLowerCase()
+          .includes(search.trim().toLowerCase()),
+      )
+    : [];
 
   function enterManually() {
     if (disabled) return;
@@ -141,7 +150,18 @@ export default function SavedAddresses({
 
           {open && (
             <View style={styles.dropdown}>
-              {result.items.map((item) => {
+              <TextInput
+                accessibilityLabel="Search saved addresses"
+                placeholder="Search by label, name, phone, city or street"
+                value={search}
+                onChangeText={setSearch}
+                editable={!disabled}
+                autoCorrect={false}
+                style={styles.search}
+              />
+              {filteredItems.length === 0 ? (
+                <Text style={styles.muted}>No saved address matches that search.</Text>
+              ) : filteredItems.map((item) => {
                 const active = selected?.id === item.id;
 
                 return (
@@ -160,6 +180,7 @@ export default function SavedAddresses({
                       setSelectedId(item.id);
                       setManual(false);
                       setOpen(false);
+                      setSearch("");
                     }}
                     style={[styles.address, active && styles.selected]}
                   >
@@ -245,6 +266,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e5def4",
     borderRadius: 15,
+  },
+  search: {
+    borderWidth: 1,
+    borderColor: "#e5def4",
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    padding: 12,
+    color: "#25304a",
+    marginBottom: 8,
   },
   address: {
     borderWidth: 1,

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Image,
   ScrollView,
@@ -144,6 +145,10 @@ function ShopMart() {
   const [passwordOpen, setPasswordOpen] = useState(false);
   const wishlist = useMobileWishlist(auth.session?.user.id, !auth.restoring);
   const [biometricOpen, setBiometricOpen] = useState(false);
+  const cartPulse = useRef(new Animated.Value(1)).current;
+  const heartPulse = useRef(new Animated.Value(1)).current;
+  const [cartPulseId, setCartPulseId] = useState(null);
+  const [heartPulseId, setHeartPulseId] = useState(null);
 
   const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
   const [chatOpen, setChatOpen] = useState(false);
@@ -189,6 +194,28 @@ function ShopMart() {
       (category === "All" || product.category === category) &&
       `${product.name} ${product.category}`.toLowerCase().includes(query),
   );
+
+  function pop(value) {
+    value.setValue(0.72);
+    Animated.sequence([
+      Animated.spring(value, { toValue: 1.24, speed: 26, bounciness: 9, useNativeDriver: true }),
+      Animated.spring(value, { toValue: 1, speed: 22, bounciness: 7, useNativeDriver: true }),
+    ]).start();
+  }
+
+  function addProduct(productId) {
+    cart.addItem(productId);
+    setCartPulseId(productId);
+    pop(cartPulse);
+  }
+
+  function toggleProductWishlist(productId, wasSaved) {
+    wishlist.toggleItem(productId);
+    if (!wasSaved) {
+      setHeartPulseId(productId);
+      pop(heartPulse);
+    }
+  }
 
   function openSignedIn(action) {
     if (auth.session) action();
@@ -380,11 +407,11 @@ function ShopMart() {
             onPress={() => setCartOpen(true)}
           >
             {cart.count > 0 && (
-              <View style={styles.badge}>
+              <Animated.View style={[styles.badge, { transform: [{ scale: cartPulse }] }]}>
                 <Text style={styles.badgeText}>
                   {cart.count > 99 ? "99+" : cart.count}
                 </Text>
-              </View>
+              </Animated.View>
             )}
           </IconButton>
         </View>
@@ -471,15 +498,12 @@ function ShopMart() {
                   accessibilityLabel={`${saved ? "Unsave" : "Save"} ${item.name}`}
                   accessibilityState={{ selected: saved }}
                   disabled={wishlist.loading}
-                  onPress={() => wishlist.toggleItem(item.id)}
+                  onPress={() => toggleProductWishlist(item.id, saved)}
                   style={styles.heart}
                 >
-                  <Icon
-                    name="heart"
-                    size={19}
-                    color={saved ? "#7c3aed" : "#454d66"}
-                    filled={saved}
-                  />
+                  <Animated.View style={heartPulseId === item.id ? { transform: [{ scale: heartPulse }] } : undefined}>
+                    <Icon name="heart" size={19} color={saved ? "#7c3aed" : "#454d66"} filled={saved} />
+                  </Animated.View>
                 </Pressable>
               </View>
               <View style={styles.cardContent}>
@@ -522,7 +546,7 @@ function ShopMart() {
                       accessibilityRole="button"
                       accessibilityLabel={`Add one ${item.name}`}
                       disabled={cart.loading || atLimit}
-                      onPress={() => cart.addItem(item.id)}
+                      onPress={() => addProduct(item.id)}
                       style={[styles.stepButton, atLimit && styles.dim]}
                     >
                       <Icon name="plus" size={19} color="#7c3aed" />
@@ -533,18 +557,16 @@ function ShopMart() {
                     accessibilityRole="button"
                     accessibilityLabel={`Add ${item.name} to cart`}
                     disabled={cart.loading || unavailable || atLimit}
-                    onPress={() => cart.addItem(item.id)}
+                    onPress={() => addProduct(item.id)}
                     style={[
                       styles.addButton,
                       (cart.loading || unavailable || atLimit) &&
                         styles.disabled,
                     ]}
                   >
-                    <Icon
-                      name="cart"
-                      color={unavailable ? "#7b8498" : "#fff"}
-                      size={17}
-                    />
+                    <Animated.View style={cartPulseId === item.id ? { transform: [{ scale: cartPulse }] } : undefined}>
+                      <Icon name="cart" color={unavailable ? "#7b8498" : "#fff"} size={17} />
+                    </Animated.View>
                     <Text
                       style={[
                         styles.addText,
@@ -684,7 +706,12 @@ function ShopMart() {
       )}
       {chatOpen && (
         <ChatModal
+          products={result?.items || []}
           onClose={() => setChatOpen(false)}
+          onViewProduct={(product) => {
+            setChatOpen(false);
+            setSelectedProduct(product);
+          }}
         />
       )}
       {authOpen && (

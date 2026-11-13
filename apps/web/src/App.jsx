@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getProducts } from "./api/products";
-import { sendAssistantMessage } from "./api/assistant";
 import "./App.css";
 
 import { useCart } from "./features/cart/useCart";
@@ -263,7 +262,7 @@ function ProductCard({
                 )
           }
           onClick={() => onToggleWishlist(product.id)}
-          className={`absolute end-3 top-3 z-20 grid size-10 place-items-center rounded-full border-0 p-0 shadow-sm transition hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none ${
+          className={`absolute end-3 top-3 z-20 grid size-10 place-items-center rounded-full border-0 p-0 shadow-sm transition hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none ${isWishlisted ? "wishlist-pop" : ""} ${
             isWishlisted
               ? "bg-rose-600 text-white"
               : "bg-white text-rose-600 hover:bg-rose-50"
@@ -354,6 +353,7 @@ function ProductCard({
           onClick={() => onAdd(product)}
           className="mt-4 w-full rounded-xl border-0 bg-violet-100 p-3 font-semibold text-violet-700 transition enabled:hover:bg-violet-600 enabled:hover:text-white disabled:bg-slate-100 disabled:text-slate-500"
         >
+          <span aria-hidden="true" className="me-2">🛒</span>
           {outOfStock
             ? text("Out of stock", "اسٹاک ختم")
             : atLimit
@@ -565,7 +565,7 @@ function Storefront({ products }) {
     if (product.stock <= 0 || quantity >= product.stock) return;
 
     cart.addItem(product);
-    setNotice({ name: product.name });
+    setNotice({ name: product.name, key: Date.now() });
   }
 
   function renderProduct(product) {
@@ -886,8 +886,10 @@ function Storefront({ products }) {
           {notice && (
             <div
               role="status"
-              className="mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+              key={notice.key}
+              className="cart-added-toast mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
             >
+              <span aria-hidden="true" className="cart-icon-pop text-xl">🛒</span>
               <span>
                 <bdi>{notice.name}</bdi>{" "}
                 {text("added to your cart.", "آپ کی ٹوکری میں شامل ہو گیا۔")}
@@ -1167,12 +1169,7 @@ function Storefront({ products }) {
         </div>
       </footer>
 
-      <ChatWidget
-        products={catalog}
-        onSendMessage={({ language: chatLanguage, messages }) =>
-          sendAssistantMessage(chatLanguage, messages)
-        }
-      />
+      <ChatWidget products={catalog} />
     </>
   );
 }

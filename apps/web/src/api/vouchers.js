@@ -46,3 +46,8 @@ export async function voucherRequest(
   }
   return data;
 }
+
+export const deleteDisabledVoucher = (token, id) =>
+  voucherRequest(token, `/admin/vouchers/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });

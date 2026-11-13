@@ -328,6 +328,22 @@ export default function AdminVouchers() {
                 >
                   {item.enabled ? "Disable" : "Enable"}
                 </button>
+                {!item.enabled && (
+                  <button
+                    type="button"
+                    disabled={busy || uncertain}
+                    className="ml-2 rounded-xl border-0 bg-rose-100 px-4 py-3 text-sm font-bold text-rose-700 disabled:opacity-50"
+                    onClick={() => {
+                      if (!window.confirm(item.used > 0 ? `${item.code} has redemptions and must stay for order history. Delete anyway?` : `Permanently delete disabled voucher ${item.code}?`)) return;
+                      mutate(
+                        () => voucherRequest(token, `/admin/vouchers/${item.id}`, { method: "DELETE" }),
+                        "Voucher deleted.",
+                      );
+                    }}
+                  >
+                    Delete disabled voucher
+                  </button>
+                )}
               </article>
             ))
           ) : (

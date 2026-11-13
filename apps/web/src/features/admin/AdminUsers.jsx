@@ -3,6 +3,7 @@ import { useSession } from "../auth/useSession";
 import {
   getAdminUsers,
   createRider,
+  deleteDisabledUser,
   updateUserEnabled,
 } from "../../api/adminUsers";
 import RiderForm from "./RiderForm";
@@ -111,6 +112,25 @@ export default function AdminUsers() {
       setFeedback(
         `${user.name}'s account ${user.enabled ? "disabled" : "enabled"}.`,
       );
+    } catch (failure) {
+      setActionError(failure.message);
+    } finally {
+      inFlight.current = false;
+      setSavingId(null);
+      setReload((value) => value + 1);
+    }
+  }
+
+  async function deleteUser(user) {
+    if (inFlight.current || user.enabled || user.role === "ADMIN") return;
+    if (!window.confirm(`Permanently delete disabled account "${user.name}"? Accounts with order or delivery history cannot be deleted.`)) return;
+    inFlight.current = true;
+    setSavingId(user.id);
+    setFeedback("");
+    setActionError("");
+    try {
+      await deleteDisabledUser(token, user);
+      setFeedback(`${user.name}'s account was deleted.`);
     } catch (failure) {
       setActionError(failure.message);
     } finally {
@@ -345,6 +365,11 @@ export default function AdminUsers() {
                               className="rounded-lg border-0 bg-violet-50 px-3 py-2 font-semibold text-violet-700 enabled:hover:bg-violet-100 disabled:opacity-50"
                             >
                               Reset password
+                            </button>
+                          )}
+                          {!user.enabled && (
+                            <button type="button" disabled={busy} onClick={() => deleteUser(user)} className="rounded-lg border-0 bg-rose-100 px-3 py-2 font-semibold text-rose-700 enabled:hover:bg-rose-200 disabled:opacity-50">
+                              Delete disabled account
                             </button>
                           )}
                         </div>

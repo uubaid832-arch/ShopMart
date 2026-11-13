@@ -319,6 +319,30 @@ export default function PeopleModule({ session, onClose, onChanged }) {
                         )
                       }
                     />
+                    {!user.enabled && (
+                      <Button
+                        title="Delete disabled account"
+                        danger
+                        disabled={op.blocked}
+                        onPress={() =>
+                          confirm(
+                            "Permanently delete this account?",
+                            "Only disabled accounts can be deleted. Accounts with order, delivery, or audit history are retained.",
+                            () =>
+                              op.run(
+                                () =>
+                                  adminRequest(
+                                    session.accessToken,
+                                    `/users/${user.id}`,
+                                    { method: "DELETE" },
+                                  ),
+                                "Account deleted.",
+                              ),
+                            true,
+                          )
+                        }
+                      />
+                    )}
                     {user.role === "RIDER" && (
                       <Button
                         title="Reset password"

@@ -3,11 +3,6 @@ import { useLanguage } from "../language/useLanguage";
 
 const fields = [
   {
-    name: "label",
-    label: ["Address label", "پتے کا نام"],
-    autoComplete: "section-address nickname",
-  },
-  {
     name: "recipientName",
     label: ["Recipient name", "وصول کنندہ کا نام"],
     autoComplete: "section-address name",
@@ -41,6 +36,10 @@ export default function AddressForm({ address, onSave, onCancel }) {
 
   const [feedback, setFeedback] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [label, setLabel] = useState(address?.label || "Home");
+  const [otherLabel, setOtherLabel] = useState(
+    ["Home", "Office", "Other"].includes(address?.label) ? "" : address?.label || "",
+  );
   const inFlight = useRef(false);
 
   async function handleSubmit(event) {
@@ -68,7 +67,12 @@ export default function AddressForm({ address, onSave, onCancel }) {
         [...data].map(([key, value]) => [key, value.trim()]),
       ),
       isDefault: data.has("isDefault"),
+      label: label === "Other" ? otherLabel.trim() : label,
     };
+    if (!values.label) {
+      setFeedback({ message: text("Enter a label for this address.", "اس پتے کا نام درج کریں۔") });
+      return;
+    }
 
     inFlight.current = true;
     setSaving(true);
@@ -108,6 +112,25 @@ export default function AddressForm({ address, onSave, onCancel }) {
           <legend className="sr-only">
             {text("Address details", "پتے کی تفصیلات")}
           </legend>
+
+          <label className="grid gap-2 text-sm font-semibold">
+            {text("Address label", "پتے کا نام")}
+            <select
+              value={label}
+              onChange={(event) => setLabel(event.target.value)}
+              className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3"
+            >
+              <option value="Home">{text("Home", "گھر")}</option>
+              <option value="Office">{text("Office", "دفتر")}</option>
+              <option value="Other">{text("Other", "دیگر")}</option>
+            </select>
+          </label>
+          {label === "Other" && (
+            <label className="grid gap-2 text-sm font-semibold">
+              {text("Custom label", "اپنا نام")}
+              <input value={otherLabel} onChange={(event) => setOtherLabel(event.target.value)} maxLength={80} required className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3" />
+            </label>
+          )}
 
           {fields.map(({ name, label, type = "text", autoComplete }) => (
             <label key={name} className="grid gap-2 text-sm font-semibold">

@@ -64,5 +64,17 @@ public class AdminVoucherService {
     if(jdbc.update("UPDATE public.vouchers SET enabled=?,version=version+1 WHERE id=? AND version=?",request.enabled(),id,request.version())!=1)
       throw new VoucherService.Rejected("This voucher changed. Refresh before changing its status.");
   }
+  @Transactional
+  public void deleteDisabled(UUID user, UUID id) {
+    requireAdmin(user);
+    var matches = jdbc.queryForList("SELECT enabled FROM public.vouchers WHERE id=? FOR UPDATE", id);
+    if (matches.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Voucher not found.");
+    if (Boolean.TRUE.equals(matches.get(0).get("enabled")))
+      throw new VoucherService.Rejected("Disable the voucher before deleting it.");
+    Boolean referenced = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM public.voucher_redemptions WHERE voucher_id=?) OR EXISTS(SELECT 1 FROM public.orders WHERE voucher_id=?)", Boolean.class, id, id);
+    if (Boolean.TRUE.equals(referenced))
+      throw new VoucherService.Rejected("This voucher is referenced by a redemption or order and must be retained for order history.");
+    jdbc.update("DELETE FROM public.vouchers WHERE id=? AND enabled=FALSE", id);
+  }
   private static Voucher map(Map<String,Object> row){return new Voucher((UUID)row.get("id"),(String)row.get("code"),(String)row.get("kind"),row.get("value").toString(),row.get("min_subtotal").toString(),row.get("max_discount")==null?null:row.get("max_discount").toString(),((Number)row.get("usage_limit")).intValue(),((Number)row.get("per_user_limit")).intValue(),((Number)row.get("used")).longValue(),((Timestamp)row.get("expires_at")).toInstant(),Boolean.TRUE.equals(row.get("enabled")),((Number)row.get("version")).longValue(),((Timestamp)row.get("created_at")).toInstant());}
 }
