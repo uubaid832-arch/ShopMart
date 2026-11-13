@@ -19,6 +19,9 @@ function normalizeOrder(order) {
       : order.paymentMethod === "COD"
         ? "Cash on Delivery"
         : order.paymentMethod,
+    // Keep the provider/database status available for action logic. The
+    // display label below is title-cased and must not drive state checks.
+    paymentStatusCode: order.paymentStatus,
     paymentStatus:
       isSafepay && order.paymentStatus === "DEMO_PAID"
         ? "Paid via Safepay"

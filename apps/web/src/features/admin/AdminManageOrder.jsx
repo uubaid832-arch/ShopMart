@@ -308,8 +308,9 @@ export default function AdminManageOrder({ id, onClose }) {
   // Treat that provider-backed payment as a supported order payment method.
   const isDemo = order.paymentMethod === "DEMO" || isSafepay;
   const isBankTransfer = order.paymentMethod === "BANK_TRANSFER";
-  const pendingBankTransfer = isBankTransfer && order.paymentStatus === "PENDING";
-  const bankTransferPaid = isBankTransfer && order.paymentStatus === "PAID";
+  const paymentStatusCode = order.paymentStatusCode ?? order.paymentStatus;
+  const pendingBankTransfer = isBankTransfer && paymentStatusCode === "PENDING";
+  const bankTransferPaid = isBankTransfer && paymentStatusCode === "PAID";
   const supportsDelivery = isCod || isDemo || bankTransferPaid;
 
   const canAssign = supportsDelivery && status === "CONFIRMED";
