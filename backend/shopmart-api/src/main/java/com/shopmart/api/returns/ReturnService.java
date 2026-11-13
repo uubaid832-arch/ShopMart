@@ -83,6 +83,11 @@ public class ReturnService {
 
   @Transactional(readOnly = true)
   public Page<ReturnResponse> list(UUID userId, int page, int size) {
+    return list(userId, page, size, null);
+  }
+
+  @Transactional(readOnly = true)
+  public Page<ReturnResponse> list(UUID userId, int page, int size, UUID orderId) {
     requireUser(userId);
     validatePage(page, size);
 
@@ -92,7 +97,8 @@ public class ReturnService {
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
-        """, Long.class, userId);
+          AND (CAST(? AS UUID) IS NULL OR o.id = ?)
+        """, Long.class, userId, orderId, orderId);
 
     List<ReturnResponse> items = jdbc.query("""
         SELECT r.*, i.order_id, i.product_name, i.quantity,
@@ -101,6 +107,7 @@ public class ReturnService {
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
+          AND (CAST(? AS UUID) IS NULL OR o.id = ?)
         ORDER BY r.created_at DESC, r.id DESC
         LIMIT ? OFFSET ?
         """,
@@ -116,7 +123,7 @@ public class ReturnService {
             rs.getBigDecimal("refund_amount").toPlainString(),
             rs.getString("refund_status"),
             rs.getTimestamp("created_at").toInstant(), rs.getString("rejection_reason")),
-        userId, size, (long) page * size);
+        userId, orderId, orderId, size, (long) page * size);
 
     return new Page<>(
         items, page, size, total, totalPages(total, size));

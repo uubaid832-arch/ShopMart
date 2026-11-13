@@ -37,10 +37,11 @@ public class ReturnController {
   public ResponseEntity<ReturnService.Page<ReturnService.ReturnResponse>> list(
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) UUID orderId) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(returns.list(userId(jwt), page, size));
+        .body(returns.list(userId(jwt), page, size, orderId));
   }
 
   @PostMapping
