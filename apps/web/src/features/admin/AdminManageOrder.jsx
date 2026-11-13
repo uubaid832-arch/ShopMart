@@ -4,7 +4,7 @@ import CustomerContact from "./CustomerContact";
 import AssignRiderModal from "./AssignRiderModal";
 import DeliveryLocationMap from "../tracking/DeliveryLocationMap";
 import { useSession } from "../auth/useSession";
-import { getAdminOrder, updateAdminOrderStatus } from "../../api/adminOrders";
+import { confirmAdminBankTransferReceipt, getAdminOrder, updateAdminOrderStatus } from "../../api/adminOrders";
 import { getOrderAssignment } from "../../api/orderDelivery";
 import { assignDeliveryRider } from "../../api/deliveries";
 import InvoiceDownload from "../../components/InvoiceDownload";
@@ -150,6 +150,15 @@ export default function AdminManageOrder({ id, onClose }) {
         : status === "DISPATCHED"
           ? "Order dispatched. The rider has been notified."
           : "Order cancelled and stock restored.",
+    );
+  }
+
+  async function confirmBankTransferReceipt() {
+    if (!window.confirm("Confirm this receipt only after reviewing it. This demo action records the transfer as received in ShopMart; it does not verify a bank account.")) return;
+    await runAction(
+      "BANK_TRANSFER_RECEIPT",
+      () => confirmAdminBankTransferReceipt(token, id),
+      "Receipt confirmed. You can now confirm the order.",
     );
   }
 
@@ -300,14 +309,15 @@ export default function AdminManageOrder({ id, onClose }) {
   const isDemo = order.paymentMethod === "DEMO" || isSafepay;
   const isBankTransfer = order.paymentMethod === "BANK_TRANSFER";
   const pendingBankTransfer = isBankTransfer && order.paymentStatus === "PENDING";
-  const supportsDelivery = isCod || isDemo;
+  const bankTransferPaid = isBankTransfer && order.paymentStatus === "PAID";
+  const supportsDelivery = isCod || isDemo || bankTransferPaid;
 
   const canAssign = supportsDelivery && status === "CONFIRMED";
   const riderReady = Boolean(delivery?.riderId && delivery.riderEnabled);
   const returning = Boolean(warehouse?.reportedAt && !warehouse.resolvedAt);
   const canDispatch = canAssign && riderReady && !returning;
   const canCancel =
-    (supportsDelivery || pendingBankTransfer) && ["PENDING", "CONFIRMED"].includes(status) && !returning;
+    (pendingBankTransfer || (supportsDelivery && !bankTransferPaid)) && ["PENDING", "CONFIRMED"].includes(status) && !returning;
   const stage = stages.indexOf(status);
 
   const retryRider =
@@ -324,7 +334,9 @@ export default function AdminManageOrder({ id, onClose }) {
 
   const guidance = {
     PENDING: pendingBankTransfer
-      ? "Bank transfer is pending receipt review. Do not confirm or dispatch until payment is verified."
+      ? "Bank transfer receipt is awaiting admin review. Confirm receipt first; the demo does not connect to a bank."
+      : bankTransferPaid
+        ? "Bank transfer receipt confirmed. Confirm the order, then assign a rider."
       : "Confirm this order, then assign a rider.",
     CONFIRMED: riderReady
       ? "A rider is assigned. Dispatch when the parcel is ready."
@@ -488,7 +500,7 @@ export default function AdminManageOrder({ id, onClose }) {
                   {formatPrice(order.total)}
                 </p>
                 <span className="inline-block rounded-lg bg-white px-2 py-1 text-[11px] font-semibold text-slate-600">
-                  {isBankTransfer ? "Pending — receipt review required" : isSafepay ? (status === "CANCELLED" ? "Safepay payment voided" : "Paid via Safepay") : isDemo
+                  {bankTransferPaid ? "Bank transfer received" : isBankTransfer ? "Pending — receipt review required" : isSafepay ? (status === "CANCELLED" ? "Safepay payment voided" : "Paid via Safepay") : isDemo
                     ? status === "CANCELLED"
                       ? "Demo payment voided"
                       : "Test payment successful"
@@ -502,6 +514,16 @@ export default function AdminManageOrder({ id, onClose }) {
 
 
               <div className="grid gap-2">
+                {pendingBankTransfer && status === "PENDING" && (
+                  <button
+                    type="button"
+                    disabled={Boolean(saving)}
+                    onClick={confirmBankTransferReceipt}
+                    className={primary}
+                  >
+                    {saving === "BANK_TRANSFER_RECEIPT" ? "Confirming receipt…" : "Confirm receipt received"}
+                  </button>
+                )}
                 {supportsDelivery && status === "PENDING" && (
                   <button
                     type="button"

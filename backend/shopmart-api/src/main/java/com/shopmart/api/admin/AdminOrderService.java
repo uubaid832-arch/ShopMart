@@ -92,6 +92,30 @@ public class AdminOrderService {
   }
 
   @Transactional
+  public OrderReceipt confirmBankTransferReceipt(UUID adminId, UUID orderId) {
+    requireAdmin(adminId);
+    var matches = jdbc.queryForList("""
+        SELECT user_id, status, payment_method, payment_status
+        FROM public.orders WHERE id = ? FOR UPDATE
+        """, orderId);
+    if (matches.isEmpty()) throw failure(HttpStatus.NOT_FOUND, "Order not found.");
+    var order = matches.get(0);
+    UUID customerId = (UUID) order.get("user_id");
+    if (!"BANK_TRANSFER".equals(order.get("payment_method")))
+      throw failure(HttpStatus.CONFLICT, "This is not a bank transfer order.");
+    if ("PAID".equals(order.get("payment_status")))
+      return orders.getOrder(customerId, orderId);
+    if (!"PENDING".equals(order.get("payment_status")) || !"PENDING".equals(order.get("status")))
+      throw failure(HttpStatus.CONFLICT, "Only pending bank transfer orders can have their receipt confirmed.");
+    jdbc.update("""
+        UPDATE public.orders
+        SET payment_status = 'PAID', version = version + 1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND payment_method = 'BANK_TRANSFER' AND payment_status = 'PENDING'
+        """, orderId);
+    return orders.getOrder(customerId, orderId);
+  }
+
+  @Transactional
   public OrderReceipt updateStatus(
       UUID adminId,
       UUID orderId,
@@ -146,6 +170,12 @@ public class AdminOrderService {
     boolean unpaidBankTransferCancellation = next.equals("CANCELLED")
         && "BANK_TRANSFER".equals(order.get("payment_method"))
         && "PENDING".equals(order.get("payment_status"));
+    if (next.equals("CANCELLED")
+        && "BANK_TRANSFER".equals(order.get("payment_method"))
+        && "PAID".equals(order.get("payment_status"))) {
+      throw failure(HttpStatus.CONFLICT,
+          "This bank transfer is marked received. Process a refund before cancelling the order.");
+    }
     if (!OrderPaymentRules.supportsDelivery(order) && !unpaidBankTransferCancellation) {
       throw failure(
           HttpStatus.CONFLICT,

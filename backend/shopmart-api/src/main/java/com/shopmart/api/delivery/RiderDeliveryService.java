@@ -139,7 +139,7 @@ public class RiderDeliveryService {
         requireDispatchedDelivery(order);
         requireParcelOutsideWarehouse(orderId);
 
-        // Only COD becomes PAID. Demo payments never record actual cash.
+        // COD cash is recorded here; admin-confirmed bank transfers are already PAID.
         jdbc.update("""
                 UPDATE public.orders
                 SET status = 'DELIVERED',
@@ -280,7 +280,7 @@ public class RiderDeliveryService {
                 || !OrderPaymentRules.supportsDelivery(order)) {
             throw failure(
                     HttpStatus.CONFLICT,
-                    "Only dispatched COD or successful demo-payment orders support this action.");
+                    "Only dispatched COD, Safepay, or admin-confirmed bank transfer orders support this action.");
         }
     }
 

@@ -233,9 +233,12 @@ export default function RiderDeliveries() {
     if (inFlight.current) return;
 
     const isDemo = delivery.paymentMethod === "DEMO";
+    const isPrepaidBankTransfer = delivery.paymentMethod === "BANK_TRANSFER" && delivery.paymentStatus === "PAID";
 
     const message = isDemo
       ? "Confirm this order was delivered? This is a demo payment. Do not collect cash."
+      : isPrepaidBankTransfer
+        ? "Confirm delivery after handing over the parcel. The bank transfer is already confirmed; do not collect cash."
       : `Confirm delivery and collection of ${formatPrice(
           delivery.total,
           delivery.currency,
@@ -252,7 +255,7 @@ export default function RiderDeliveries() {
       await completeRiderDelivery(token, delivery.id);
 
       setFeedback(
-        isDemo
+        isDemo || isPrepaidBankTransfer
           ? "Delivery completed. No cash payment was recorded."
           : "Delivery completed and cash payment recorded.",
       );
@@ -297,7 +300,7 @@ export default function RiderDeliveries() {
           >
             {savingId === delivery.id
               ? "Updating…"
-              : delivery.paymentMethod === "DEMO"
+              : delivery.paymentMethod === "DEMO" || (delivery.paymentMethod === "BANK_TRANSFER" && delivery.paymentStatus === "PAID")
                 ? "Confirm delivered"
                 : "Delivered & cash collected"}
           </button>
@@ -397,7 +400,9 @@ export default function RiderDeliveries() {
                 ((delivery.paymentMethod === "COD" &&
                   delivery.paymentStatus === "UNPAID") ||
                   (delivery.paymentMethod === "DEMO" &&
-                    delivery.paymentStatus === "DEMO_PAID"));
+                    delivery.paymentStatus === "DEMO_PAID") ||
+                  (delivery.paymentMethod === "BANK_TRANSFER" &&
+                    delivery.paymentStatus === "PAID"));
               return (
                 <li
                   key={delivery.id}
@@ -439,6 +444,8 @@ export default function RiderDeliveries() {
                         ? delivery.status === "CANCELLED"
                           ? "Demo payment voided — no cash collection"
                           : "Paid Order — do not collect cash"
+                        : delivery.paymentMethod === "BANK_TRANSFER" && delivery.paymentStatus === "PAID"
+                          ? "Bank transfer received — do not collect cash"
                         : `Cash on delivery · ${delivery.paymentStatus}`}
                     </p>
                     <p className="mb-0 mt-1 text-xl font-bold">

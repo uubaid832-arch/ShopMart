@@ -49,6 +49,13 @@ public class AdminOrderController {
         .body(orders.history(userId(jwt), id));
   }
 
+  @PostMapping("/{id}/bank-transfer/confirm")
+  public ResponseEntity<OrderReceipt> confirmBankTransferReceipt(
+      @AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(orders.confirmBankTransferReceipt(userId(jwt), id));
+  }
+
   @PatchMapping("/{id}/status")
   public ResponseEntity<OrderReceipt> updateStatus(
       @AuthenticationPrincipal Jwt jwt,

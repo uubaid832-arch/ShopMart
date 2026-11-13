@@ -1,7 +1,6 @@
 package com.shopmart.api.orders;
 
 import java.util.Map;
-import java.util.Set;
 
 public final class OrderPaymentRules {
 
@@ -12,7 +11,9 @@ public final class OrderPaymentRules {
     return ("COD".equals(order.get("payment_method"))
         && "UNPAID".equals(order.get("payment_status")))
         || ("DEMO".equals(order.get("payment_method"))
-            && Set.of("DEMO_PAID", "PARTIALLY_REFUNDED")
-                .contains(order.get("payment_status")));
+            && java.util.Set.of("DEMO_PAID", "PARTIALLY_REFUNDED")
+                .contains(order.get("payment_status")))
+        || ("BANK_TRANSFER".equals(order.get("payment_method"))
+            && "PAID".equals(order.get("payment_status")));
   }
 }

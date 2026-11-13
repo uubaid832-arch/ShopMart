@@ -134,6 +134,8 @@ public class MobileApiSecurityConfig {
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/mobile/admin/orders/*/status")
                         .hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/mobile/admin/orders/*/bank-transfer/confirm")
+                        .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/mobile/admin/deliveries/*/assignment")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET,

@@ -7,6 +7,7 @@ const readable = (value = "") =>
 
 function normalizeOrder(order) {
   const isSafepay = order.paymentProvider === "SAFEPAY";
+  const isBankTransfer = order.paymentMethod === "BANK_TRANSFER";
   return {
     ...order,
     customerName: order.delivery.name,
@@ -21,6 +22,8 @@ function normalizeOrder(order) {
     paymentStatus:
       isSafepay && order.paymentStatus === "DEMO_PAID"
         ? "Paid via Safepay"
+        : isBankTransfer && order.paymentStatus === "PAID"
+          ? "Bank transfer received"
         : readable(order.paymentStatus),
     items: order.items.map((item) => ({
       ...item,
@@ -30,12 +33,13 @@ function normalizeOrder(order) {
   };
 }
 
-async function adminRequest(path, accessToken, { signal, status } = {}) {
+async function adminRequest(path, accessToken, { signal, status, method, values } = {}) {
   const headers = {
     Authorization: `Bearer ${accessToken}`,
   };
 
-  if (status) {
+  const write = Boolean(status || method);
+  if (write) {
     const response = await fetch("/api/auth/csrf", {
       credentials: "same-origin",
       cache: "no-store",
@@ -52,12 +56,12 @@ async function adminRequest(path, accessToken, { signal, status } = {}) {
   }
 
   const response = await fetch(`/api/admin/orders${path}`, {
-    method: status ? "PATCH" : "GET",
+    method: write ? (method || "PATCH") : "GET",
     credentials: "same-origin",
     cache: "no-store",
     headers,
     signal,
-    body: status ? JSON.stringify({ status }) : undefined,
+    body: status ? JSON.stringify({ status }) : values ? JSON.stringify(values) : undefined,
   });
 
   if (!response.ok) {
@@ -102,3 +106,10 @@ export async function updateAdminOrderStatus(accessToken, id, status) {
     await adminRequest(`/${id}/status`, accessToken, { status }),
   );
 }
+
+export async function confirmAdminBankTransferReceipt(accessToken, id) {
+  return normalizeOrder(
+    await adminRequest(`/${id}/bank-transfer/confirm`, accessToken, { method: "POST" }),
+  );
+}
+

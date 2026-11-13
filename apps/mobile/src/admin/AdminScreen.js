@@ -135,6 +135,15 @@ function Status({ value }) {
     </View>
   );
 }
+function paymentLabel(order) {
+  if (order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") {
+    return order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus);
+  }
+  if (order.paymentMethod === "BANK_TRANSFER") {
+    return order.paymentStatus === "PAID" ? "Bank transfer received" : "Pending receipt confirmation";
+  }
+  return readable(order.paymentStatus);
+}
 function ErrorMessage({ message, onRetry }) {
   return (
     <View style={s.errorBox}>
@@ -170,7 +179,7 @@ function OrderCard({ order, onPress }) {
               {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
                 ? "Cash on delivery"
                 : readable(order.paymentMethod)}{" "}
-              · {(order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
+              · {paymentLabel(order)}
             </Text>
           )}
         </View>
@@ -272,6 +281,24 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
       },
     ]);
   }
+  function confirmBankTransferReceipt() {
+    Alert.alert(
+      "Confirm receipt",
+      "Confirm only after reviewing the receipt. This demo action marks the transfer received in ShopMart; it does not verify a bank account.",
+      [
+        { text: "Go back", style: "cancel" },
+        {
+          text: "Confirm receipt",
+          onPress: () => mutate(
+            `${orderPath}/bank-transfer/confirm`,
+            "POST",
+            undefined,
+            "Receipt confirmed. You can now confirm the order.",
+          ),
+        },
+      ],
+    );
+  }
   const loading = detail.loading || assignment.loading;
   const canDispatch =
     assignment.data?.delivery.riderId && assignment.data.delivery.riderEnabled;
@@ -356,7 +383,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                   {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
                     ? "Cash on delivery"
                     : readable(order.paymentMethod)}{" "}
-                  · {(order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
+                  · {paymentLabel(order)}
                 </Text>
                 <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
                 <AdminInvoiceButton
@@ -565,7 +592,12 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                 <View style={s.card}>
                   <Text style={s.cardTitle}>Order actions</Text>
                   {order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING" ? (
-                    <Text style={s.muted}>Bank transfer receipt is pending review. Do not confirm or dispatch until payment is verified.</Text>
+                    <>
+                      <Text style={s.muted}>Receipt is pending manual review. This demo does not connect to a bank.</Text>
+                      <Button title="Confirm receipt received" icon="check" disabled={locked} onPress={confirmBankTransferReceipt} />
+                    </>
+                  ) : order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID" ? (
+                    <Text style={s.success}>Bank transfer received (admin confirmed).</Text>
                   ) : null}
                   {order.status === "PENDING" && (
                     <>
@@ -592,13 +624,15 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                       )}
                     </>
                   )}
-                  <Button
-                    title="Cancel order"
-                    icon="close"
-                    danger
-                    disabled={locked}
-                    onPress={() => changeStatus("CANCELLED")}
-                  />
+                  {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID") && (
+                    <Button
+                      title="Cancel order"
+                      icon="close"
+                      danger
+                      disabled={locked}
+                      onPress={() => changeStatus("CANCELLED")}
+                    />
+                  )}
                 </View>
               )}
               {order.status === "DISPATCHED" && (

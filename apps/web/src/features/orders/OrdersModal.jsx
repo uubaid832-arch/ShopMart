@@ -291,6 +291,8 @@ export default function OrdersModal({
                         {(order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") &&
                         normalize(order.paymentStatus) === "DEMO_PAID"
                           ? "Paid via Safepay"
+                          : order.paymentMethod === "BANK_TRANSFER" && normalize(order.paymentStatus) === "PAID"
+                            ? "Bank transfer received"
                           : displayLabel(order.paymentStatus)}
                       </span>
                     </section>

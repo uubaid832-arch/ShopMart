@@ -369,7 +369,7 @@ public class WarehouseService {
         || !OrderPaymentRules.supportsDelivery(order)) {
       throw failure(
           HttpStatus.CONFLICT,
-          "Only dispatched COD or successful demo-payment orders support this action.");
+          "Only dispatched COD, Safepay, or admin-confirmed bank transfer orders support this action.");
     }
   }
 

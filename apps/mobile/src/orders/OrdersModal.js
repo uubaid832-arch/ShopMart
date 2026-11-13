@@ -25,6 +25,7 @@ function paymentMethodLabel(order) {
 
 function paymentStatusLabel(order) {
   if (order.paymentStatus === "DEMO_PAID" && (order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO")) return "Paid via Safepay";
+  if (order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID") return "Bank transfer received";
   return readable(order.paymentStatus);
 }
 

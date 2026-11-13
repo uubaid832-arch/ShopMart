@@ -119,6 +119,8 @@ public class SecurityConfig {
                                                                 HttpMethod.PATCH,
                                                                 "/api/admin/orders/*/status")
                                                 .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.POST, "/api/admin/orders/*/bank-transfer/confirm")
+                                                .hasRole("ADMIN")
                                                 .requestMatchers(
                                                                 HttpMethod.GET,
                                                                 "/api/orders/*/tracking")

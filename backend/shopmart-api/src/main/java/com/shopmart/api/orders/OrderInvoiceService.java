@@ -106,6 +106,8 @@ public class OrderInvoiceService {
 
         String paymentMethod = safepay
             ? "Safepay (Sandbox)"
+            : "BANK_TRANSFER".equals(order.paymentMethod())
+                ? "Bank transfer"
             : demo
             ? "Demo payment"
             : "COD".equals(order.paymentMethod())
@@ -118,6 +120,8 @@ public class OrderInvoiceService {
                 : "DEMO_VOID".equals(order.paymentStatus())
                     ? "Cancelled - sandbox"
                     : readable(order.paymentStatus())
+            : "BANK_TRANSFER".equals(order.paymentMethod())
+                ? "PAID".equals(order.paymentStatus()) ? "Bank transfer received" : "Pending receipt confirmation"
             : demo
             ? "DEMO_VOID".equals(order.paymentStatus())
                 ? "Voided - no money charged"

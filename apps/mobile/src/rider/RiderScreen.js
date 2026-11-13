@@ -198,11 +198,14 @@ export default function RiderScreen({
       style: "currency",
       currency: item.currency || "PKR",
     }).format(Number(item.total));
+    const bankPaid = item.paymentMethod === "BANK_TRANSFER" && item.paymentStatus === "PAID";
     Alert.alert(
       "Confirm successful delivery",
       item.paymentMethod === "COD"
         ? `Only confirm after handing over the parcel and collecting ${amount} in cash. This also marks the COD payment as paid.`
-        : "Only confirm after handing over the parcel. This does not collect real cash for a demo payment.",
+        : bankPaid
+          ? "Only confirm after handing over the parcel. The bank transfer was already confirmed by the admin; do not collect cash."
+          : "Only confirm after handing over the parcel. This does not collect real cash for a demo payment.",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Confirm delivered", onPress: () => complete(item) },
@@ -476,7 +479,9 @@ export default function RiderScreen({
                               : readable(item.paymentMethod)}
                           </Text>
                           <Text style={styles.payment}>
-                            {readable(item.paymentStatus)}
+                            {item.paymentMethod === "BANK_TRANSFER" && item.paymentStatus === "PAID"
+                              ? "Bank transfer received — do not collect cash"
+                              : readable(item.paymentStatus)}
                           </Text>
                         </View>
                         <Text style={styles.amount}>
