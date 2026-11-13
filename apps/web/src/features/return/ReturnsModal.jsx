@@ -92,7 +92,7 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
 
     Promise.all([
       getEligibleReturns(accessToken, eligiblePage, controller.signal, orderId),
-      getReturnRequests(accessToken, historyPage, controller.signal, orderId),
+      getReturnRequests(accessToken, historyPage, controller.signal),
     ])
       .then(([eligible, history]) => {
         if (!controller.signal.aborted) {
@@ -350,11 +350,9 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
                 <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
                   {text(
                     orderId
-                      ? "This order has no eligible items, or a return request already exists for each item."
+                      ? "No eligible items for this order. It must be delivered, paid, and not already have a return request."
                       : "No eligible items on this page. Only delivered, paid COD or verified Safepay items without an existing return request are eligible.",
-                    orderId
-                      ? "اس آرڈر میں واپسی کے لیے کوئی اہل آئٹم نہیں، یا ہر آئٹم کے لیے درخواست پہلے سے موجود ہے۔"
-                      : "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
+                    "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
                   )}
                 </p>
               )}

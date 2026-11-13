@@ -64,10 +64,11 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    const path = tab === "eligible" ? "/eligible" : "";
-    const orderFilter = orderId ? `&orderId=${encodeURIComponent(orderId)}` : "";
+    const path = tab === "eligible"
+      ? `/eligible?page=${page}&size=10${orderId ? `&orderId=${encodeURIComponent(orderId)}` : ""}`
+      : `?page=${page}&size=10`;
 
-    request(token, `${path}?page=${page}&size=10${orderFilter}`, undefined, controller.signal)
+    request(token, path, undefined, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted) {
           setResult({ token, tab, page, reload, data, error: "" });
@@ -229,9 +230,7 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                 {data.items.length === 0 && (
                   <Text style={styles.description}>
                     {tab === "eligible"
-                      ? orderId
-                        ? "This order has no eligible items, or a return request already exists for each item."
-                        : "No eligible products on this page."
+                      ? orderId ? "No eligible items for this order. It must be delivered, paid, and not already have a return request." : "No eligible products on this page."
                       : "No return requests on this page."}
                   </Text>
                 )}

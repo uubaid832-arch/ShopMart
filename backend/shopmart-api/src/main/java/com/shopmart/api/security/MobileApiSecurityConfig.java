@@ -170,7 +170,8 @@ public class MobileApiSecurityConfig {
                         .requestMatchers(HttpMethod.DELETE,
                                 "/api/mobile/admin/products/*",
                                 "/api/mobile/admin/products/*/images/*",
-                                "/api/mobile/admin/categories/*")
+                                "/api/mobile/admin/categories/*",
+                                "/api/mobile/admin/users/*")
                         .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/mobile/vouchers/quote").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/mobile/admin/vouchers").hasRole("ADMIN")

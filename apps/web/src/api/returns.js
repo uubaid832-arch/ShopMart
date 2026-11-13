@@ -52,12 +52,8 @@ export const getEligibleReturns = (token, page, signal, orderId = null) =>
     { signal },
   );
 
-export const getReturnRequests = (token, page, signal, orderId = null) =>
-  returnRequest(
-    token,
-    `?page=${page}&size=10${orderId ? `&orderId=${encodeURIComponent(orderId)}` : ""}`,
-    { signal },
-  );
+export const getReturnRequests = (token, page, signal) =>
+  returnRequest(token, `?page=${page}&size=10`, { signal });
 
 export const submitReturn = (token, values) =>
   returnRequest(token, "", { values });

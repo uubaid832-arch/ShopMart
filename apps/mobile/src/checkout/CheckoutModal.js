@@ -214,7 +214,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
       }
       setError(rejected
         ? failure.message
-        : "The result is uncertain. Retry here to confirm this order without creating a duplicate.");
+        : `The result is uncertain${failure.status ? ` (HTTP ${failure.status})` : ""}. Check My Orders before retrying; this form reuses the same request ID to prevent duplicates.`);
     } finally {
       pending.current = false;
       setSaving(false);

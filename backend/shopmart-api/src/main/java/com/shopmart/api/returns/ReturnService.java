@@ -3,7 +3,6 @@ package com.shopmart.api.returns;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.UUID;
 
 import jakarta.validation.constraints.*;
@@ -33,12 +32,6 @@ public class ReturnService {
     requireUser(userId);
     validatePage(page, size);
 
-    // Keep trailing whitespace: the following SQL text block begins with ORDER BY.
-    String orderFilter = orderId == null ? "" : " AND o.id = ? ";
-    List<Object> countArgs = new ArrayList<>();
-    countArgs.add(userId);
-    if (orderId != null) countArgs.add(orderId);
-
     long total = jdbc.queryForObject("""
         SELECT COUNT(*)
         FROM public.order_items i
@@ -49,15 +42,12 @@ public class ReturnService {
             OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
                 AND EXISTS (SELECT 1 FROM public.safepay_sessions sp
                             WHERE sp.order_id = o.id AND sp.state = 'PAID')))
+          AND (CAST(? AS UUID) IS NULL OR o.id = ?)
           AND NOT EXISTS (
               SELECT 1 FROM public.return_requests r
               WHERE r.order_item_id = i.id
           )
-        """ + orderFilter, Long.class, countArgs.toArray());
-
-    List<Object> itemArgs = new ArrayList<>(countArgs);
-    itemArgs.add(size);
-    itemArgs.add((long) page * size);
+        """, Long.class, userId, orderId, orderId);
 
     List<EligibleItem> items = jdbc.query("""
         SELECT i.id, i.order_id, i.product_name, i.quantity,
@@ -70,11 +60,11 @@ public class ReturnService {
             OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
                 AND EXISTS (SELECT 1 FROM public.safepay_sessions sp
                             WHERE sp.order_id = o.id AND sp.state = 'PAID')))
+          AND (CAST(? AS UUID) IS NULL OR o.id = ?)
           AND NOT EXISTS (
               SELECT 1 FROM public.return_requests r
               WHERE r.order_item_id = i.id
           )
-        """ + orderFilter + """
         ORDER BY o.created_at DESC, i.id
         LIMIT ? OFFSET ?
         """,
@@ -85,7 +75,7 @@ public class ReturnService {
             rs.getString("product_name"),
             rs.getInt("quantity"),
             rs.getTimestamp("created_at").toInstant()),
-        itemArgs.toArray());
+        userId, orderId, orderId, size, (long) page * size);
 
     return new Page<>(
         items, page, size, total, totalPages(total, size));
@@ -93,19 +83,8 @@ public class ReturnService {
 
   @Transactional(readOnly = true)
   public Page<ReturnResponse> list(UUID userId, int page, int size) {
-    return list(userId, page, size, null);
-  }
-
-  @Transactional(readOnly = true)
-  public Page<ReturnResponse> list(UUID userId, int page, int size, UUID orderId) {
     requireUser(userId);
     validatePage(page, size);
-
-    // Keep trailing whitespace: the following SQL text block begins with ORDER BY.
-    String orderFilter = orderId == null ? "" : " AND o.id = ? ";
-    List<Object> countArgs = new ArrayList<>();
-    countArgs.add(userId);
-    if (orderId != null) countArgs.add(orderId);
 
     long total = jdbc.queryForObject("""
         SELECT COUNT(*)
@@ -113,11 +92,7 @@ public class ReturnService {
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
-        """ + orderFilter, Long.class, countArgs.toArray());
-
-    List<Object> itemArgs = new ArrayList<>(countArgs);
-    itemArgs.add(size);
-    itemArgs.add((long) page * size);
+        """, Long.class, userId);
 
     List<ReturnResponse> items = jdbc.query("""
         SELECT r.*, i.order_id, i.product_name, i.quantity,
@@ -126,7 +101,6 @@ public class ReturnService {
         JOIN public.order_items i ON i.id = r.order_item_id
         JOIN public.orders o ON o.id = i.order_id
         WHERE o.user_id = ?
-        """ + orderFilter + """
         ORDER BY r.created_at DESC, r.id DESC
         LIMIT ? OFFSET ?
         """,
@@ -142,7 +116,7 @@ public class ReturnService {
             rs.getBigDecimal("refund_amount").toPlainString(),
             rs.getString("refund_status"),
             rs.getTimestamp("created_at").toInstant(), rs.getString("rejection_reason")),
-        itemArgs.toArray());
+        userId, size, (long) page * size);
 
     return new Page<>(
         items, page, size, total, totalPages(total, size));
@@ -216,6 +190,7 @@ public class ReturnService {
         .subtract((BigDecimal)item.get("discount_amount"));
 
     UUID id = UUID.randomUUID();
+
     jdbc.update("""
         INSERT INTO public.return_requests (
             id, order_item_id, reason, refund_amount

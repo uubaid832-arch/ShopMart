@@ -36,6 +36,7 @@ export default function OrdersModal({
   formatPrice,
   onClose,
   onTrackOrder,
+  onViewHistory,
   onReturnOrder,
   footer,
 }) {
@@ -226,35 +227,19 @@ export default function OrdersModal({
                   <InvoiceDownload orderId={order.id} />
                 </div>
                 <div className="flex flex-wrap gap-2 px-5 pb-4">
-                  {["PENDING", "CONFIRMED", "DISPATCHED"].includes(
-                    normalize(order.status),
-                  ) && onTrackOrder && (
-                    <button
-                      type="button"
-                      onClick={() => onTrackOrder(order.id)}
-                      className="rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700"
-                    >
+                  {["PENDING", "CONFIRMED", "DISPATCHED"].includes(normalize(order.status)) && onTrackOrder && (
+                    <button type="button" onClick={() => onTrackOrder(order)} className="rounded-xl border-0 bg-violet-600 px-4 py-2 text-sm font-semibold text-white">
                       {text("Track order", "آرڈر ٹریک کریں")}
                     </button>
                   )}
-                  {["DELIVERED", "RETURNED", "CANCELLED"].includes(
-                    normalize(order.status),
-                  ) && onTrackOrder && (
-                    <button
-                      type="button"
-                      onClick={() => onTrackOrder(order.id)}
-                      className="rounded-xl border-0 bg-violet-100 px-4 py-3 text-sm font-semibold text-violet-700 hover:bg-violet-200"
-                    >
-                      {text("Track order history", "آرڈر کی تاریخ دیکھیں")}
+                  {["DELIVERED", "RETURNED", "CANCELLED"].includes(normalize(order.status)) && onViewHistory && (
+                    <button type="button" onClick={() => onViewHistory(order)} className="rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700">
+                      {text("View order history", "آرڈر کی ہسٹری دیکھیں")}
                     </button>
                   )}
                   {normalize(order.status) === "DELIVERED" && onReturnOrder && (
-                    <button
-                      type="button"
-                      onClick={() => onReturnOrder(order.id)}
-                      className="rounded-xl border-0 bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
-                    >
-                      {text("Request a return", "واپسی کی درخواست دیں")}
+                    <button type="button" onClick={() => onReturnOrder(order.id)} className="rounded-xl border-0 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">
+                      {text("Return this order", "یہ آرڈر واپس کریں")}
                     </button>
                   )}
                 </div>
@@ -294,7 +279,7 @@ export default function OrdersModal({
                       </h4>
 
                       <p className="mb-2 mt-2 text-sm font-semibold text-slate-800">
-                        {order.paymentProvider === "SAFEPAY"
+                        {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO"
                           ? "Safepay · Sandbox"
                           : normalize(order.paymentMethod) ===
                               "CASH_ON_DELIVERY"
@@ -303,7 +288,7 @@ export default function OrdersModal({
                       </p>
 
                       <span className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-medium capitalize text-slate-600">
-                        {order.paymentProvider === "SAFEPAY" &&
+                        {(order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") &&
                         normalize(order.paymentStatus) === "DEMO_PAID"
                           ? "Paid via Safepay"
                           : displayLabel(order.paymentStatus)}

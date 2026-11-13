@@ -167,10 +167,10 @@ function OrderCard({ order, onPress }) {
           <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
           {order.paymentMethod && (
             <Text style={s.muted}>
-              {order.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
+              {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
                 ? "Cash on delivery"
                 : readable(order.paymentMethod)}{" "}
-              · {order.paymentProvider === "SAFEPAY" && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
+              · {(order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
             </Text>
           )}
         </View>
@@ -353,10 +353,10 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                   </Text>
                 )}
                 <Text style={s.muted}>
-                  {order.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
+                  {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
                     ? "Cash on delivery"
                     : readable(order.paymentMethod)}{" "}
-                  · {order.paymentProvider === "SAFEPAY" && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
+                  · {(order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") && order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus)}
                 </Text>
                 <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
                 <AdminInvoiceButton

@@ -325,7 +325,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
       setError(
         rejected
           ? failure.message || "Check your details and cart before retrying."
-          : "The order result could not be confirmed. Retry confirmation here with the same details to avoid a duplicate order.",
+          : `The order result could not be confirmed${failure.status ? ` (HTTP ${failure.status})` : ""}. Check My Orders before retrying; this form keeps the same request ID to prevent a duplicate.`,
       );
     } finally {
       inFlight.current = false;

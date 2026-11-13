@@ -3,13 +3,7 @@ import { getCustomerOrders } from "../../api/orders";
 import OrdersModal from "./OrdersModal";
 import { useLanguage } from "../language/useLanguage";
 
-export default function CustomerOrders({
-  accessToken,
-  formatPrice,
-  onClose,
-  onTrackOrder,
-  onReturnOrder,
-}) {
+export default function CustomerOrders({ accessToken, formatPrice, onClose, onTrackOrder, onViewHistory, onReturnOrder }) {
   const { language, direction } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
 
@@ -61,6 +55,7 @@ export default function CustomerOrders({
       formatPrice={formatPrice}
       onClose={onClose}
       onTrackOrder={onTrackOrder}
+      onViewHistory={onViewHistory}
       onReturnOrder={onReturnOrder}
       footer={
         !loading && !error && data?.totalPages > 1 ? (

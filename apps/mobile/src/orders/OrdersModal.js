@@ -13,10 +13,20 @@ import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMobileOrders, getMobileTracking, getMobileOrder } from "../api/orders";
 import CustomerInvoiceButton from "./CustomerInvoiceButton";
-import { canTrackLive } from "./orderRules";
+import { canTrackLive, hasFinalOrderHistory, isProcessingOrder } from "./orderRules";
 import RiderLocation from "./RiderLocation";
 
 const readable = (value = "") => value.replaceAll("_", " ").toLowerCase();
+
+function paymentMethodLabel(order) {
+  if (order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") return "Safepay (Sandbox)";
+  return order.paymentMethod === "COD" ? "Cash on delivery" : readable(order.paymentMethod);
+}
+
+function paymentStatusLabel(order) {
+  if (order.paymentStatus === "DEMO_PAID" && (order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO")) return "Paid via Safepay";
+  return readable(order.paymentStatus);
+}
 
 const formatPrice = (amount, currency = "PKR") =>
   new Intl.NumberFormat("en-PK", {
@@ -223,7 +233,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
           {onOpenReturns && (
             <Pressable
               accessibilityRole="button"
-              onPress={onOpenReturns}
+              onPress={() => onOpenReturns(null)}
               style={styles.returnButton}
             >
               <Icon name="return" size={17} />
@@ -247,11 +257,17 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
               </View>)}
               {Number(selected.discountAmount) > 0 && <Text style={styles.payment}>Voucher {selected.voucherCode}: -{formatPrice(selected.discountAmount, selected.currency)}</Text>}
               <Text style={styles.total}>Total: {formatPrice(selected.total, selected.currency)}</Text>
-              <Text style={styles.description}>{selected.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : selected.paymentMethod === "COD" ? "Cash on delivery" : readable(selected.paymentMethod)} · {selected.paymentProvider === "SAFEPAY" && selected.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(selected.paymentStatus)}</Text>
+              <Text style={styles.description}>{paymentMethodLabel(selected)} · {paymentStatusLabel(selected)}</Text>
             </View>
             <CustomerInvoiceButton session={session} orderId={selected.id} />
+            {selected.status === "DELIVERED" && onOpenReturns && (
+              <Pressable accessibilityRole="button" onPress={() => onOpenReturns(selected.id)} style={styles.returnButton}>
+                <Icon name="return" size={18} />
+                <Text style={styles.returnText}>Request a return</Text>
+              </Pressable>
+            )}
             {liveTracking && <RiderLocation key={selected.id} session={session} order={selected} />}
-            <Text style={styles.sectionTitle}>Tracking history</Text>
+            <Text style={styles.sectionTitle}>{hasFinalOrderHistory(selected.status) ? "Order history" : "Tracking history"}</Text>
             <View style={styles.card}>
               {!trackingCurrent ? <ActivityIndicator color="#7c3aed" /> : trackingResult.error ? <Text accessibilityRole="alert" style={styles.error}>{trackingResult.error}</Text> : <>
                 {trackingResult.data.events.length === 0 && <Text style={styles.muted}>No tracking history yet.</Text>}
@@ -342,9 +358,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                     <View style={styles.grow}>
                       <Text style={styles.totalLabel}>Order total</Text>
                       <Text style={styles.payment}>
-                        {item.paymentProvider === "SAFEPAY" ? "Safepay (Sandbox)" : item.paymentMethod === "COD"
-                          ? "Cash on delivery"
-                          : readable(item.paymentMethod)}
+                        {paymentMethodLabel(item)}
                       </Text>
                     </View>
                     <View style={styles.totalRight}>
@@ -352,38 +366,20 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                         {formatPrice(item.total, item.currency)}
                       </Text>
                       <Text style={styles.payment}>
-                        {item.paymentProvider === "SAFEPAY" && item.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(item.paymentStatus)}
+                        {paymentStatusLabel(item)}
                       </Text>
                     </View>
                   </View>
-                  {["PENDING", "CONFIRMED", "DISPATCHED"].includes(item.status) && (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => setSelected(item)}
-                      style={styles.trackButton}
-                    >
-                      <Icon name="truck" size={19} color="#fff" />
-                      <Text style={styles.trackText}>Track order</Text>
-                    </Pressable>
-                  )}
-                  {["DELIVERED", "RETURNED", "CANCELLED"].includes(item.status) && (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => setSelected(item)}
-                      style={styles.trackButton}
-                    >
-                      <Icon name="truck" size={19} color="#fff" />
-                      <Text style={styles.trackText}>Track order history</Text>
+                  {(isProcessingOrder(item.status) || hasFinalOrderHistory(item.status)) && (
+                    <Pressable accessibilityRole="button" onPress={() => setSelected(item)} style={styles.trackButton}>
+                      <Icon name={isProcessingOrder(item.status) ? "truck" : "box"} size={19} color="#fff" />
+                      <Text style={styles.trackText}>{isProcessingOrder(item.status) ? "Track order" : "View order history"}</Text>
                     </Pressable>
                   )}
                   {item.status === "DELIVERED" && onOpenReturns && (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => onOpenReturns(item.id)}
-                      style={styles.returnButton}
-                    >
-                      <Icon name="return" size={17} />
-                      <Text style={styles.returnText}>Request a return</Text>
+                    <Pressable accessibilityRole="button" onPress={() => onOpenReturns(item.id)} style={styles.returnButton}>
+                      <Icon name="return" size={18} />
+                      <Text style={styles.returnText}>Return this order</Text>
                     </Pressable>
                   )}
                 </View>

@@ -17,14 +17,14 @@ const statusTranslations = {
   RETURNED: ["Returned", "واپس ہو گیا"],
 };
 
-export default function TrackingModal({ accessToken, onClose, initialOrderId = null }) {
+export default function TrackingModal({ accessToken, onClose, initialOrder = null, mode = "all" }) {
   const { language, direction } = useLanguage();
   const urdu = language === "ur";
   const text = (en, ur) => (urdu ? ur : en);
   const locale = urdu ? "ur-PK" : "en-PK";
 
   const [page, setPage] = useState(0);
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedId, setSelectedId] = useState(initialOrder?.id ?? "");
   const [reload, setReload] = useState(0);
   const [ordersResult, setOrdersResult] = useState(null);
   const [trackingResult, setTrackingResult] = useState(null);
@@ -49,7 +49,7 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
   }
 
   useEffect(() => {
-    if (!accessToken || initialOrderId) return;
+    if (!accessToken) return;
 
     const controller = new AbortController();
 
@@ -78,24 +78,28 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
       });
 
     return () => controller.abort();
-  }, [accessToken, page, reload, initialOrderId]);
+  }, [accessToken, page, reload]);
 
-  const ordersCurrent = Boolean(initialOrderId) || (
+  const ordersCurrent =
     ordersResult?.token === accessToken &&
     ordersResult?.page === page &&
-    ordersResult?.reload === reload
-  );
+    ordersResult?.reload === reload;
 
-  const data = ordersCurrent ? ordersResult?.data : null;
-  const orders = initialOrderId
-    ? []
-    : (data?.items ?? []).filter((item) =>
-        ["PENDING", "CONFIRMED", "DISPATCHED"].includes(item.status),
-      );
-  const order = initialOrderId
-    ? null
-    : orders.find((item) => item.id === selectedId) ?? orders[0];
-  const orderId = initialOrderId ?? order?.id;
+  const data = ordersCurrent ? ordersResult.data : null;
+  const orders = data?.items ?? [];
+  const listedOrders = mode === "track"
+    ? orders.filter((item) => ["PENDING", "CONFIRMED", "DISPATCHED"].includes(String(item.status).toUpperCase()))
+    : mode === "history"
+      ? orders.filter((item) => ["DELIVERED", "RETURNED", "CANCELLED"].includes(String(item.status).toUpperCase()))
+      : orders;
+  const initialMatches = initialOrder && (mode === "all"
+    || (mode === "track" && ["PENDING", "CONFIRMED", "DISPATCHED"].includes(String(initialOrder.status).toUpperCase()))
+    || (mode === "history" && ["DELIVERED", "RETURNED", "CANCELLED"].includes(String(initialOrder.status).toUpperCase())));
+  const selectableOrders = initialMatches && !listedOrders.some((item) => item.id === initialOrder.id)
+    ? [initialOrder, ...listedOrders]
+    : listedOrders;
+  const order = selectableOrders.find((item) => item.id === selectedId) ?? selectableOrders[0];
+  const orderId = order?.id;
 
   useEffect(() => {
     if (!accessToken || !orderId) return;
@@ -141,14 +145,14 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
         "Please sign in to track your orders.",
         "اپنے آرڈرز کی صورتحال دیکھنے کے لیے سائن اِن کریں۔",
       )
-    : !initialOrderId && ordersCurrent && ordersResult?.error
+    : ordersCurrent && ordersResult.error
       ? text(
           ordersResult.error,
           "آرڈرز لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں یا دوبارہ سائن اِن کریں۔",
         )
       : "";
 
-  const loading = Boolean(accessToken) && !initialOrderId && !ordersCurrent;
+  const loading = Boolean(accessToken) && !ordersCurrent;
 
   return (
     <Modal
@@ -167,7 +171,9 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
           </p>
 
           <h2 id="tracking-title" className="mb-0 mt-2 text-2xl font-bold">
-            {text("Track your order", "اپنے آرڈر کی صورتحال دیکھیں")}
+            {mode === "history"
+              ? text("Order history", "آرڈر کی ہسٹری")
+              : text("Track your order", "اپنے آرڈر کی صورتحال دیکھیں")}
           </h2>
         </div>
 
@@ -216,10 +222,12 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
           >
             {error}
           </p>
-        ) : orders.length === 0 && !initialOrderId ? (
+        ) : selectableOrders.length === 0 ? (
           <div className="py-8 text-center">
             <h3 className="m-0 text-lg font-bold">
-              {text("No orders to track", "دیکھنے کے لیے کوئی آرڈر موجود نہیں")}
+                  {mode === "history"
+                    ? text("No completed order history", "مکمل آرڈرز کی ہسٹری موجود نہیں")
+                    : text("No orders to track", "دیکھنے کے لیے کوئی آرڈر موجود نہیں")}
             </h3>
             <p className="mb-0 mt-2 text-sm text-slate-500">
               {text(
@@ -230,14 +238,14 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
           </div>
         ) : (
           <>
-            {!initialOrderId && <label className="grid gap-2 text-sm font-semibold">
+            <label className="grid gap-2 text-sm font-semibold">
               {text("Select an order", "آرڈر منتخب کریں")}
               <select
                 value={orderId}
                 onChange={(event) => setSelectedId(event.target.value)}
                 className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3"
               >
-                {orders.map((item) => {
+                {selectableOrders.map((item) => {
                   const products = item.items
                     .map((product) => product.name)
                     .join(", ");
@@ -254,9 +262,9 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
                   );
                 })}
               </select>
-            </label>}
+            </label>
 
-            {!initialOrderId && data?.totalPages > 1 && (
+            {data.totalPages > 1 && (
               <nav
                 aria-label={text("Order pages", "آرڈرز کے صفحات")}
                 className="mt-3 flex items-center justify-between gap-3"
@@ -366,11 +374,9 @@ export default function TrackingModal({ accessToken, onClose, initialOrderId = n
                   )}
                 </section>
 
-                {tracking.status === "DISPATCHED" && <DeliveryLocationMap
-                  key={orderId}
-                  token={accessToken}
-                  orderId={orderId}
-                />}
+                {order.status === "DISPATCHED" && (
+                  <DeliveryLocationMap key={orderId} token={accessToken} orderId={orderId} />
+                )}
               </>
             )}
           </>

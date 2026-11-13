@@ -381,7 +381,7 @@ export function ReturnsModule({ session, onClose, onChanged }) {
                 )}
                 {item.paymentMethod === "DEMO" && item.paymentProvider !== "SAFEPAY" && (
                   <Text style={ui.muted}>
-                    Demo payments do not support a real cash refund here.
+                    No verified Safepay payment is linked to this order, so a refund is unavailable.
                   </Text>
                 )}
               </Card>
