@@ -15,6 +15,7 @@ import { getMobileOrders, getMobileTracking, getMobileOrder } from "../api/order
 import CustomerInvoiceButton from "./CustomerInvoiceButton";
 import { canTrackLive, hasFinalOrderHistory, isProcessingOrder } from "./orderRules";
 import RiderLocation from "./RiderLocation";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const readable = (value = "") => value.replaceAll("_", " ").toLowerCase();
 
@@ -47,12 +48,13 @@ const iconPaths = {
   pin: "M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Zm-5 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
 };
 
-function Icon({ name, size = 21, color = "#7c3aed" }) {
+function Icon({ name, size = 21, color }) {
+  const { theme } = useMobileAppearance();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d={iconPaths[name]}
-        stroke={color}
+        stroke={color || theme.colors.accent}
         strokeWidth={1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -61,17 +63,17 @@ function Icon({ name, size = 21, color = "#7c3aed" }) {
   );
 }
 
-function statusColors(status) {
+function statusColors(status, palette, isDark) {
   if (["DELIVERED", "COMPLETED"].includes(status))
-    return ["#ecfdf5", "#047857"];
+    return [isDark ? "#123b2e" : "#ecfdf5", palette.success];
   if (["CANCELLED", "DELIVERY_FAILED", "FAILED", "REJECTED"].includes(status))
-    return ["#fff1f2", "#be123c"];
-  if (["PENDING", "PLACED"].includes(status)) return ["#fffbeb", "#b45309"];
-  return ["#f2ecff", "#7c3aed"];
+    return [isDark ? "#3b202b" : "#fff1f2", palette.danger];
+  if (["PENDING", "PLACED"].includes(status)) return [isDark ? "#3a301b" : "#fffbeb", palette.warning];
+  return [palette.accentSoft, palette.accent];
 }
 
-function Status({ value }) {
-  const [backgroundColor, color] = statusColors(value);
+function Status({ value, palette, isDark }) {
+  const [backgroundColor, color] = statusColors(value, palette, isDark);
   return (
     <View style={[styles.badge, { backgroundColor }]}>
       <View style={[styles.dot, { backgroundColor: color }]} />
@@ -80,7 +82,54 @@ function Status({ value }) {
   );
 }
 
+const progressSteps = [
+  { status: "PENDING", label: "Placed" },
+  { status: "CONFIRMED", label: "Confirmed" },
+  { status: "DISPATCHED", label: "Dispatched" },
+  { status: "DELIVERED", label: "Delivered" },
+];
+
+function OrderProgress({ status, events, palette }) {
+  const stageByStatus = Object.fromEntries(progressSteps.map((step, index) => [step.status, index]));
+  const statuses = [...(events || []).map(event => event.status), status];
+  const completedIndex = statuses.reduce(
+    (last, current) => Math.max(last, stageByStatus[current] ?? -1),
+    -1,
+  );
+  const wasReturned = status === "RETURNED";
+  const wasCancelled = status === "CANCELLED";
+  const completeThrough = wasReturned ? progressSteps.length - 1 : completedIndex;
+
+  return (
+    <View style={styles.progressWrap}>
+      <View style={styles.progressRow}>
+        {progressSteps.map((step, index) => {
+          const done = index <= completeThrough;
+          return (
+            <View key={step.status} style={styles.progressItem}>
+              {index < progressSteps.length - 1 && (
+                <View style={[styles.progressLine, { backgroundColor: index < completeThrough ? palette.accent : palette.border }]} />
+              )}
+              <View style={[styles.progressDot, { backgroundColor: done ? palette.accent : palette.border }]}>
+                {done && <Text style={styles.progressCheck}>✓</Text>}
+              </View>
+              <Text style={[styles.progressLabel, { color: done ? palette.text : palette.muted }]}>{step.label}</Text>
+            </View>
+          );
+        })}
+      </View>
+      {(wasReturned || wasCancelled) && (
+        <Text style={[styles.terminalStatus, { color: wasCancelled ? palette.danger : palette.accent }]}>
+          {wasCancelled ? "This order was cancelled." : "This order was returned."}
+        </Text>
+      )}
+    </View>
+  );
+}
+
 export default function OrdersModal({ session, onClose, onOpenReturns }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const token = session.accessToken;
 
   const [page, setPage] = useState(0);
@@ -179,21 +228,21 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={back}>
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
           {selected && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back to my orders"
               onPress={() => setSelected(null)}
-              style={styles.iconButton}
+              style={[styles.iconButton, { backgroundColor: palette.soft }]}
             >
-              <Icon name="back" color="#27304a" />
+              <Icon name="back" color={palette.text} />
             </Pressable>
           )}
           <View style={styles.grow}>
-            <Text style={styles.eyebrow}>SHOPMART PURCHASES</Text>
-            <Text style={styles.title}>
+            <Text style={[styles.eyebrow, { color: palette.accent }]}>SHOPMART PURCHASES</Text>
+            <Text style={[styles.title, { color: palette.text }]}>
               {selected ? "Order details" : "My orders"}
             </Text>
           </View>
@@ -202,10 +251,10 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
             accessibilityLabel="Refresh orders"
             disabled={refreshing}
             onPress={() => setReload((value) => value + 1)}
-            style={[styles.iconButton, refreshing && styles.dim]}
+            style={[styles.iconButton, { backgroundColor: palette.soft }, refreshing && styles.dim]}
           >
             {refreshing ? (
-              <ActivityIndicator size="small" color="#7c3aed" />
+              <ActivityIndicator size="small" color={palette.accent} />
             ) : (
               <Icon name="refresh" />
             )}
@@ -214,18 +263,18 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
             accessibilityRole="button"
             accessibilityLabel="Close orders"
             onPress={onClose}
-            style={styles.iconButton}
+            style={[styles.iconButton, { backgroundColor: palette.soft }]}
           >
-            <Icon name="close" color="#667085" />
+            <Icon name="close" color={palette.muted} />
           </Pressable>
         </View>
 
-        <View style={styles.toolbar}>
+          <View style={[styles.toolbar, { backgroundColor: palette.background }]}>
           <View>
-            <Text style={styles.toolbarTitle}>
+            <Text style={[styles.toolbarTitle, { color: palette.text }]}>
               {selected ? selected.orderNumber : "Your shopping journey"}
             </Text>
-            <Text style={styles.muted}>
+            <Text style={[styles.muted, { color: palette.muted }]}>
               {selected
                 ? "Purchase details and tracking history"
                 : "Track purchases and manage returns"}
@@ -235,92 +284,94 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
             <Pressable
               accessibilityRole="button"
               onPress={() => onOpenReturns(null)}
-              style={styles.returnButton}
+              style={[styles.returnButton, { backgroundColor: palette.accentSoft }]}
             >
               <Icon name="return" size={17} />
-              <Text style={styles.returnText}>Returns & refunds</Text>
+              <Text style={[styles.returnText, { color: palette.accent }]}>Returns & refunds</Text>
             </Pressable>
           )}
         </View>
 
         {selected ? (
           <ScrollView contentContainerStyle={styles.content}>
-            <View style={styles.statusCard}>
-              <Text style={styles.eyebrow}>ORDER DETAILS</Text>
-              <Text style={styles.statusTitle}>{readable(selected.status)}</Text>
-              <Text style={styles.muted}>{selected.orderNumber} · {new Date(selected.createdAt).toLocaleString("en-PK")}</Text>
+            <View style={[styles.statusCard, { backgroundColor: palette.accentSoft, borderColor: palette.border }]}>
+              <Text style={[styles.eyebrow, { color: palette.accent }]}>ORDER DETAILS</Text>
+              <Text style={[styles.statusTitle, { color: palette.text }]}>{readable(selected.status)}</Text>
+              <Text style={[styles.muted, { color: palette.muted }]}>{selected.orderNumber} · {new Date(selected.createdAt).toLocaleString("en-PK")}</Text>
             </View>
-            <Text style={styles.sectionTitle}>Purchased items</Text>
-            <View style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>Purchased items</Text>
+            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               {selected.items.map(item => <View key={item.productId} style={styles.productRow}>
-                <View style={styles.grow}><Text style={styles.productName}>{item.name}</Text><Text style={styles.muted}>{formatPrice(item.price, selected.currency)} × {item.quantity}</Text></View>
-                <Text style={styles.itemPrice}>{formatPrice(Number(item.price) * item.quantity, selected.currency)}</Text>
+                <View style={styles.grow}><Text style={[styles.productName, { color: palette.text }]}>{item.name}</Text><Text style={[styles.muted, { color: palette.muted }]}>{formatPrice(item.price, selected.currency)} × {item.quantity}</Text></View>
+                <Text style={[styles.itemPrice, { color: palette.text }]}>{formatPrice(Number(item.price) * item.quantity, selected.currency)}</Text>
               </View>)}
-              {Number(selected.discountAmount) > 0 && <Text style={styles.payment}>Voucher {selected.voucherCode}: -{formatPrice(selected.discountAmount, selected.currency)}</Text>}
-              <Text style={styles.total}>Total: {formatPrice(selected.total, selected.currency)}</Text>
-              <Text style={styles.description}>{paymentMethodLabel(selected)} · {paymentStatusLabel(selected)}</Text>
+              {Number(selected.discountAmount) > 0 && <Text style={[styles.payment, { color: palette.muted }]}>Voucher {selected.voucherCode}: -{formatPrice(selected.discountAmount, selected.currency)}</Text>}
+              <Text style={[styles.total, { color: palette.text }]}>Total: {formatPrice(selected.total, selected.currency)}</Text>
+              <Text style={[styles.description, { color: palette.muted }]}>{paymentMethodLabel(selected)} · {paymentStatusLabel(selected)}</Text>
             </View>
             <CustomerInvoiceButton session={session} orderId={selected.id} />
             {selected.status === "DELIVERED" && onOpenReturns && (
-              <Pressable accessibilityRole="button" onPress={() => onOpenReturns(selected.id)} style={styles.returnButton}>
+            <Pressable accessibilityRole="button" onPress={() => onOpenReturns(selected.id)} style={[styles.returnButton, { backgroundColor: palette.accentSoft, borderColor: palette.accent, marginTop: 12 }]}>
                 <Icon name="return" size={18} />
-                <Text style={styles.returnText}>Request a return</Text>
+                <Text style={[styles.returnText, { color: palette.accent }]}>Request a return</Text>
               </Pressable>
             )}
             {liveTracking && <RiderLocation key={selected.id} session={session} order={selected} />}
-            <Text style={styles.sectionTitle}>{hasFinalOrderHistory(selected.status) ? "Order history" : "Tracking history"}</Text>
-            <View style={styles.card}>
-              {!trackingCurrent ? <ActivityIndicator color="#7c3aed" /> : trackingResult.error ? <Text accessibilityRole="alert" style={styles.error}>{trackingResult.error}</Text> : <>
-                {trackingResult.data.events.length === 0 && <Text style={styles.muted}>No tracking history yet.</Text>}
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>{hasFinalOrderHistory(selected.status) ? "Order history" : "Tracking history"}</Text>
+            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              {!trackingCurrent ? <ActivityIndicator color={palette.accent} /> : trackingResult.error ? <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>{trackingResult.error}</Text> : <>
+                <OrderProgress status={selected.status} events={trackingResult.data.events} palette={palette} />
+                {trackingResult.data.events.length === 0 && <Text style={[styles.muted, { color: palette.muted }]}>No tracking history yet.</Text>}
                 {trackingResult.data.events.map(event => <View key={event.id} style={styles.event}>
-                  <View style={styles.eventCopy}><Text style={styles.name}>{event.message}</Text><Text style={styles.muted}>{new Date(event.createdAt).toLocaleString("en-PK")}</Text></View>
+                  <View style={styles.timeline}><View style={[styles.eventDot, { backgroundColor: palette.accent }]} /></View>
+                  <View style={styles.eventCopy}><Text style={[styles.name, { color: palette.text }]}>{event.message}</Text><Text style={[styles.muted, { color: palette.muted }]}>{new Date(event.createdAt).toLocaleString("en-PK")}</Text></View>
                 </View>)}
               </>}
             </View>
-            <Text style={styles.sectionTitle}>Delivery details</Text>
-            <View style={styles.card}>
-              <Text style={styles.name}>{selected.delivery.name}</Text>
-              <Text style={styles.description}>{selected.delivery.address}, {selected.delivery.city}</Text>
-              <Text style={styles.description}>{selected.delivery.phone}</Text>
-              <Text style={styles.description}>{selected.delivery.email}</Text>
+            <Text style={[styles.sectionTitle, { color: palette.text }]}>Delivery details</Text>
+            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <Text style={[styles.name, { color: palette.text }]}>{selected.delivery.name}</Text>
+              <Text style={[styles.description, { color: palette.muted }]}>{selected.delivery.address}, {selected.delivery.city}</Text>
+              <Text style={[styles.description, { color: palette.muted }]}>{selected.delivery.phone}</Text>
+              <Text style={[styles.description, { color: palette.muted }]}>{selected.delivery.email}</Text>
             </View>
           </ScrollView>
         ) : !current ? (
-          <ActivityIndicator
+            <ActivityIndicator
             size="large"
-            color="#7c3aed"
+            color={palette.accent}
             style={styles.loader}
           />
         ) : result.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
+          <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
             {result.error}
           </Text>
         ) : (
           <>
-            <FlatList
+              <FlatList
               data={data.items}
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.content}
               ListEmptyComponent={
                 <View style={styles.empty}>
-                  <View style={styles.emptyIcon}>
+                  <View style={[styles.emptyIcon, { backgroundColor: palette.accentSoft }]}>
                     <Icon name="box" size={42} />
                   </View>
-                  <Text style={styles.emptyTitle}>No orders on this page</Text>
-                  <Text style={styles.muted}>
+                  <Text style={[styles.emptyTitle, { color: palette.text }]}>No orders on this page</Text>
+                  <Text style={[styles.muted, { color: palette.muted }]}>
                     Your purchases will appear here.
                   </Text>
                 </View>
               }
               renderItem={({ item }) => (
-                <View style={styles.card}>
+                <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
                   <View style={styles.cardHeader}>
-                    <View style={styles.orderIcon}>
+                    <View style={[styles.orderIcon, { backgroundColor: palette.accentSoft }]}>
                       <Icon name="box" size={21} />
                     </View>
                     <View style={styles.grow}>
-                      <Text style={styles.orderNumber}>{item.orderNumber}</Text>
-                      <Text style={styles.date}>
+                      <Text style={[styles.orderNumber, { color: palette.text }]}>{item.orderNumber}</Text>
+                      <Text style={[styles.date, { color: palette.muted }]}>
                         {new Date(item.createdAt).toLocaleDateString("en-PK", {
                           day: "numeric",
                           month: "short",
@@ -329,18 +380,18 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                       </Text>
                     </View>
                   </View>
-                  <Status value={item.status} />
+                  <Status value={item.status} palette={palette} isDark={theme.isDark} />
                   <CustomerInvoiceButton session={session} orderId={item.id} />
-                  <View style={styles.products}>
+                  <View style={[styles.products, { borderBottomColor: palette.border }]}>
                     {item.items.map((product) => (
                       <View key={product.productId} style={styles.productRow}>
                         <View style={styles.grow}>
-                          <Text style={styles.productName}>{product.name}</Text>
-                          <Text style={styles.muted}>
+                          <Text style={[styles.productName, { color: palette.text }]}>{product.name}</Text>
+                          <Text style={[styles.muted, { color: palette.muted }]}>
                             Qty {product.quantity}
                           </Text>
                         </View>
-                        <Text style={styles.itemPrice}>
+                        <Text style={[styles.itemPrice, { color: palette.text }]}>
                           {formatPrice(
                             Number(product.price) * product.quantity,
                             item.currency,
@@ -350,53 +401,53 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                     ))}
                   </View>
                   {Number(item.discountAmount) > 0 && (
-                    <Text style={styles.payment}>
+                    <Text style={[styles.payment, { color: palette.muted }]}>
                       Voucher {item.voucherCode}: -
                       {formatPrice(item.discountAmount, item.currency)}
                     </Text>
                   )}
                   <View style={styles.totalRow}>
                     <View style={styles.grow}>
-                      <Text style={styles.totalLabel}>Order total</Text>
-                      <Text style={styles.payment}>
+                      <Text style={[styles.totalLabel, { color: palette.muted }]}>Order total</Text>
+                      <Text style={[styles.payment, { color: palette.muted }]}>
                         {paymentMethodLabel(item)}
                       </Text>
                     </View>
                     <View style={styles.totalRight}>
-                      <Text style={styles.total}>
+                      <Text style={[styles.total, { color: palette.text }]}>
                         {formatPrice(item.total, item.currency)}
                       </Text>
-                      <Text style={styles.payment}>
+                      <Text style={[styles.payment, { color: palette.muted }]}>
                         {paymentStatusLabel(item)}
                       </Text>
                     </View>
                   </View>
                   {(isProcessingOrder(item.status) || hasFinalOrderHistory(item.status)) && (
-                    <Pressable accessibilityRole="button" onPress={() => setSelected(item)} style={styles.trackButton}>
+                  <Pressable accessibilityRole="button" onPress={() => setSelected(item)} style={[styles.trackButton, { backgroundColor: palette.accent }]}>
                       <Icon name={isProcessingOrder(item.status) ? "truck" : "box"} size={19} color="#fff" />
                       <Text style={styles.trackText}>{isProcessingOrder(item.status) ? "Track order" : "View order history"}</Text>
                     </Pressable>
                   )}
                   {item.status === "DELIVERED" && onOpenReturns && (
-                    <Pressable accessibilityRole="button" onPress={() => onOpenReturns(item.id)} style={styles.returnButton}>
+                    <Pressable accessibilityRole="button" onPress={() => onOpenReturns(item.id)} style={[styles.returnButton, { backgroundColor: palette.accentSoft, borderColor: palette.accent, alignSelf: "stretch", justifyContent: "center", marginTop: 10 }]}>
                       <Icon name="return" size={18} />
-                      <Text style={styles.returnText}>Return this order</Text>
+                      <Text style={[styles.returnText, { color: palette.accent }]}>Return this order</Text>
                     </Pressable>
                   )}
                 </View>
               )}
             />
             {data.totalPages > 1 && (
-              <View style={styles.pagination}>
+              <View style={[styles.pagination, { backgroundColor: palette.background }]}>
                 <Pressable
                   accessibilityRole="button"
                   disabled={page === 0}
                   onPress={() => setPage((value) => value - 1)}
-                  style={[styles.pageButton, page === 0 && styles.dim]}
+                  style={[styles.pageButton, { backgroundColor: palette.accentSoft }, page === 0 && styles.dim]}
                 >
-                  <Text style={styles.link}>Previous</Text>
+                  <Text style={[styles.link, { color: palette.accent }]}>Previous</Text>
                 </Pressable>
-                <Text style={styles.muted}>
+                <Text style={[styles.muted, { color: palette.muted }]}>
                   {page + 1} / {data.totalPages}
                 </Text>
                 <Pressable
@@ -405,10 +456,11 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
                   onPress={() => setPage((value) => value + 1)}
                   style={[
                     styles.pageButton,
+                    { backgroundColor: palette.accentSoft },
                     page + 1 >= data.totalPages && styles.dim,
                   ]}
                 >
-                  <Text style={styles.link}>Next</Text>
+                  <Text style={[styles.link, { color: palette.accent }]}>Next</Text>
                 </Pressable>
               </View>
             )}
@@ -590,6 +642,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   event: { flexDirection: "row", gap: 12 },
+  progressWrap: { marginBottom: 20 },
+  progressRow: { flexDirection: "row", alignItems: "flex-start" },
+  progressItem: { flex: 1, minWidth: 0, alignItems: "center", position: "relative" },
+  progressDot: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  progressCheck: { color: "#fff", fontSize: 13, lineHeight: 16, fontWeight: "900" },
+  progressLine: { position: "absolute", left: "50%", width: "100%", top: 10, height: 3 },
+  progressLabel: { marginTop: 7, marginRight: 2, fontSize: 10, lineHeight: 13, fontWeight: "700", textAlign: "center" },
+  terminalStatus: { marginTop: 14, fontSize: 13, fontWeight: "700" },
   timeline: { width: 12, alignItems: "center" },
   eventDot: {
     width: 10,

@@ -188,8 +188,13 @@ public class OrderService {
         if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(pricing.discount()))!=0)
             throw new VoucherService.Rejected("Prices changed. Remove and apply the voucher again to confirm the new total.");
         UUID orderId = UUID.randomUUID();
-        String orderNumber = "SM-" + orderId.toString().replace("-", "")
-                .substring(0, 16).toUpperCase(Locale.ROOT);
+        Long orderSequence = jdbc.queryForObject(
+                "SELECT nextval('public.shopmart_order_number_seq')",
+                Long.class);
+        if (orderSequence == null || orderSequence < 1) {
+            throw new IllegalStateException("Could not generate an order number.");
+        }
+        String orderNumber = String.format(Locale.ROOT, "SM-%06d", orderSequence);
 
         // Prices and stock are checked by the server.
         // Demo payments represent no actual money collected.

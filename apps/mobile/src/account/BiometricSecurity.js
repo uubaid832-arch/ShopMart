@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import Svg, { Path } from "react-native-svg";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 export function useBiometricLock(userId, sessionReady) {
   const key = userId ? `shopmart.biometric.${userId}` : "";
@@ -179,12 +180,12 @@ export function useBiometricLock(userId, sessionReady) {
   };
 }
 
-function Fingerprint({ size = 58 }) {
+function Fingerprint({ size = 58, color = "#7c3aed" }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d="M3 10a9 9 0 0 1 18 0M6 11a6 6 0 0 1 12 0v3m-9-3a3 3 0 0 1 6 0v3c0 4-1 6-3 8M12 11v3c0 3-1 6-3 8M6 14c0 3-1 5-2 6m14-3c0 2-.5 3-1 4M3 14v2"
-        stroke="#7c3aed"
+        stroke={color}
         strokeWidth="1.6"
         strokeLinecap="round"
       />
@@ -193,25 +194,27 @@ function Fingerprint({ size = 58 }) {
 }
 
 export function BiometricLockScreen({ security, onUsePassword }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
       <View style={styles.lockContent}>
-        <View style={styles.heroIcon}>
-          <Fingerprint />
+        <View style={[styles.heroIcon, { backgroundColor: palette.accentSoft }]}>
+          <Fingerprint color={palette.accent} />
         </View>
-        <Text style={styles.title}>ShopMart is locked</Text>
-        <Text style={styles.description}>
+        <Text style={[styles.title, { color: palette.text }]}>ShopMart is locked</Text>
+        <Text style={[styles.description, { color: palette.muted }]}>
           Verify your identity to access your signed-in account.
         </Text>
         {!security.checked ? (
-          <ActivityIndicator color="#7c3aed" style={styles.loader} />
+          <ActivityIndicator color={palette.accent} style={styles.loader} />
         ) : (
           <>
             <Pressable
               accessibilityRole="button"
               disabled={security.busy}
               onPress={security.unlock}
-              style={styles.primary}
+              style={[styles.primary, { backgroundColor: palette.accent }]}
             >
               <Text style={styles.primaryText}>
                 {security.busy ? "Verifying..." : "Unlock with biometrics"}
@@ -221,14 +224,14 @@ export function BiometricLockScreen({ security, onUsePassword }) {
               accessibilityRole="button"
               disabled={security.busy}
               onPress={onUsePassword}
-              style={styles.secondary}
+              style={[styles.secondary, { backgroundColor: palette.soft }]}
             >
-              <Text style={styles.link}>Sign out and use password</Text>
+              <Text style={[styles.link, { color: palette.accent }]}>Sign out and use password</Text>
             </Pressable>
           </>
         )}
         {security.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
+          <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
             {security.error}
           </Text>
         ) : null}
@@ -238,6 +241,8 @@ export function BiometricLockScreen({ security, onUsePassword }) {
 }
 
 export default function BiometricSettingsModal({ security, onClose, onLock }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   return (
     <Modal
       visible
@@ -246,35 +251,35 @@ export default function BiometricSettingsModal({ security, onClose, onLock }) {
         if (!security.busy) onClose();
       }}
     >
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Fingerprint & security</Text>
+            <Text style={[styles.headerTitle, { color: palette.text }]}>Fingerprint & security</Text>
             <Pressable
               accessibilityRole="button"
               disabled={security.busy}
               onPress={onClose}
-              style={styles.close}
+              style={[styles.close, { backgroundColor: palette.soft }]}
             >
-              <Text style={styles.link}>Close</Text>
+              <Text style={[styles.link, { color: palette.accent }]}>Close</Text>
             </Pressable>
           </View>
-          <View style={styles.infoCard}>
-            <View style={styles.heroIcon}>
-              <Fingerprint />
+          <View style={[styles.infoCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <View style={[styles.heroIcon, { backgroundColor: palette.accentSoft }]}>
+              <Fingerprint color={palette.accent} />
             </View>
-            <Text style={styles.title}>A safer way back in</Text>
-            <Text style={styles.description}>
+            <Text style={[styles.title, { color: palette.text }]}>A safer way back in</Text>
+            <Text style={[styles.description, { color: palette.muted }]}>
               Use your phone's fingerprint or supported strong biometric to
               unlock ShopMart.
             </Text>
-            <Text style={styles.status}>
+            <Text style={[styles.status, { color: palette.accent }]}>
               {security.enabled
                 ? "Enabled on this device"
                 : "Currently disabled"}
             </Text>
           </View>
-          <Text style={styles.description}>
+          <Text style={[styles.description, { color: palette.muted }]}>
             When enabled, ShopMart locks when reopened or sent to the
             background. Android chooses the supported biometric method. Your
             fingerprint stays with your phone.
@@ -283,7 +288,7 @@ export default function BiometricSettingsModal({ security, onClose, onLock }) {
             accessibilityRole="button"
             disabled={security.busy || !security.checked}
             onPress={() => security.setEnabled(!security.enabled)}
-            style={styles.primary}
+            style={[styles.primary, { backgroundColor: palette.accent }]}
           >
             <Text style={styles.primaryText}>
               {security.busy
@@ -298,18 +303,18 @@ export default function BiometricSettingsModal({ security, onClose, onLock }) {
               accessibilityRole="button"
               disabled={security.busy}
               onPress={onLock}
-              style={styles.secondary}
+              style={[styles.secondary, { backgroundColor: palette.soft }]}
             >
-              <Text style={styles.link}>Lock now</Text>
+              <Text style={[styles.link, { color: palette.accent }]}>Lock now</Text>
             </Pressable>
           )}
-          <Text style={styles.note}>
+          <Text style={[styles.note, { color: palette.muted }]}>
             This setting is saved separately for each account on this phone,
             including after sign-out. Password sign-in and required OTP
             verification still apply when signing in again.
           </Text>
           {security.error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
+            <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
               {security.error}
             </Text>
           ) : null}

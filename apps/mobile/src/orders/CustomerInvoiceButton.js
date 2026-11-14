@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Alert, Platform } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text } from "react-native";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { apiBaseUrl } from "../admin/adminApi";
-import { Button } from "../admin/adminUi";
+import Svg, { Path } from "react-native-svg";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 export default function CustomerInvoiceButton({ session, orderId, disabled }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const lifecycle = useRef({ active: true, controller: null });
@@ -81,12 +84,25 @@ export default function CustomerInvoiceButton({ session, orderId, disabled }) {
     }
   }
   return (
-    <Button
-      title={busy ? "Preparing invoice..." : "Download invoice"}
-      icon="download"
-      secondary
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={busy ? "Preparing invoice" : "Download invoice"}
       disabled={disabled || busy}
       onPress={download}
-    />
+      style={[styles.button, { backgroundColor: palette.accentSoft, borderColor: palette.border }, (disabled || busy) && styles.disabled]}
+    >
+      {busy ? <ActivityIndicator size="small" color={palette.accent} /> : (
+        <Svg width={19} height={19} viewBox="0 0 24 24" fill="none">
+          <Path d="M12 3v12m0 0 5-5m-5 5-5-5M4 17v4h16v-4" stroke={palette.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      )}
+      <Text style={[styles.label, { color: palette.accent }]}>{busy ? "Preparing invoice..." : "Download invoice"}</Text>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  button: { minHeight: 46, alignSelf: "stretch", borderWidth: 1, borderRadius: 13, marginVertical: 10, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
+  label: { fontSize: 13, fontWeight: "800" },
+  disabled: { opacity: 0.5 },
+});

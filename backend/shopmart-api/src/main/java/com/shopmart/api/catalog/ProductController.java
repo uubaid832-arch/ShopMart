@@ -1,7 +1,10 @@
 package com.shopmart.api.catalog;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -35,9 +38,15 @@ public class ProductController {
             size,
             Sort.by("name").ascending().and(Sort.by("id"))));
 
+    List<Product> products = result.getContent();
+    Map<UUID, ProductRepository.ProductReviewSummary> reviews = products.isEmpty()
+        ? Map.of()
+        : repository.findVisibleReviewSummaries(products.stream().map(Product::getId).toList())
+            .stream().collect(Collectors.toMap(ProductRepository.ProductReviewSummary::getProductId, Function.identity()));
+
     return new ProductListResponse(
-        result.getContent().stream()
-            .map(ProductController::toResponse)
+        products.stream()
+            .map(product -> toResponse(product, reviews.get(product.getId())))
             .toList(),
         result.getNumber(),
         result.getSize(),
@@ -48,13 +57,16 @@ public class ProductController {
   @GetMapping("/{id}")
   public ProductResponse getProduct(@PathVariable UUID id) {
     return repository.findByIdAndActiveTrue(id)
-        .map(ProductController::toResponse)
+        .map(product -> {
+          List<ProductRepository.ProductReviewSummary> summaries = repository.findVisibleReviewSummaries(List.of(id));
+          return toResponse(product, summaries.isEmpty() ? null : summaries.get(0));
+        })
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.NOT_FOUND,
             "Product not found."));
   }
 
-  private static ProductResponse toResponse(Product product) {
+  private static ProductResponse toResponse(Product product, ProductRepository.ProductReviewSummary reviews) {
     Category category = product.getCategory();
 
     return new ProductResponse(
@@ -66,7 +78,9 @@ public class ProductController {
         product.getCurrency(),
         product.getStock(),
         product.getIllustration(),
-        product.getColor());
+        product.getColor(),
+        reviews == null || reviews.getAverageRating() == null ? 0.0 : reviews.getAverageRating(),
+        reviews == null || reviews.getReviewCount() == null ? 0L : reviews.getReviewCount());
   }
 
   public record CategoryResponse(UUID id, String name) {
@@ -81,7 +95,9 @@ public class ProductController {
       String currency,
       int stock,
       String illustration,
-      String color) {
+      String color,
+      double averageRating,
+      long reviewCount) {
   }
 
   public record ProductListResponse(

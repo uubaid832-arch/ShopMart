@@ -303,7 +303,10 @@ export default function AdminManageOrder({ id, onClose }) {
   const status = String(order.status).toUpperCase();
   const isCod =
     order.paymentMethod === "Cash on Delivery" || order.paymentMethod === "COD";
-  const isSafepay = order.paymentProvider === "SAFEPAY";
+  const isSafepay =
+    order.paymentProvider === "SAFEPAY" ||
+    order.paymentMethod === "Safepay (Sandbox)" ||
+    order.paymentMethod === "SAFEPAY";
   // The admin API normalizes DEMO to the display label "Safepay (Sandbox)".
   // Treat that provider-backed payment as a supported order payment method.
   const isDemo = order.paymentMethod === "DEMO" || isSafepay;

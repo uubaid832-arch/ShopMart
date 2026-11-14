@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "").trim().replace(/\/+$/, "");
 
@@ -24,6 +25,8 @@ async function request(token, method = "GET", id, values) {
 const empty = { label: "Home", customLabel: "", recipientName: "", phone: "", addressLine: "", city: "", postalCode: "", country: "Pakistan", isDefault: false };
 
 export default function SavedAddressesManager({ token }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [items, setItems] = useState(null);
   const [form, setForm] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -40,17 +43,17 @@ export default function SavedAddressesManager({ token }) {
 
   const field = (key, label, placeholder, multiline = false) => (
     <View key={key} style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={[styles.fieldLabel, { color: palette.text }]}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         placeholder={placeholder}
-        placeholderTextColor="#8791a3"
+        placeholderTextColor={palette.muted}
         value={form[key]}
         onChangeText={(value) => setForm((current) => ({ ...current, [key]: key === "phone" ? value.replace(/\D/g, "") : value }))}
         keyboardType={key === "phone" ? "phone-pad" : "default"}
         multiline={multiline}
         maxLength={key === "addressLine" ? 250 : key === "phone" ? 32 : 100}
-        style={[styles.input, multiline && styles.multiline]}
+        style={[styles.input, { color: palette.text, backgroundColor: palette.surface, borderColor: palette.border }, multiline && styles.multiline]}
       />
     </View>
   );
@@ -80,36 +83,36 @@ export default function SavedAddressesManager({ token }) {
   }
 
   return (
-    <View style={styles.panel}>
-      <Text style={styles.heading}>Saved addresses</Text>
-      {items === null ? <ActivityIndicator color="#7c3aed" /> : items.map((item) => (
-        <View key={item.id} style={styles.address}>
-          <Text style={styles.addressTitle}>{item.label}{item.isDefault ? " · Default" : ""}</Text>
-          <Text style={styles.copy}>{item.recipientName} · {item.phone}</Text>
-          <Text style={styles.copy}>{item.addressLine}, {item.city}{item.postalCode ? ` ${item.postalCode}` : ""}</Text>
+    <View style={[styles.panel, { backgroundColor: palette.background, borderColor: palette.border }]}>
+      <Text style={[styles.heading, { color: palette.text }]}>Saved addresses</Text>
+      {items === null ? <ActivityIndicator color={palette.accent} /> : items.map((item) => (
+        <View key={item.id} style={[styles.address, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+          <Text style={[styles.addressTitle, { color: palette.accent }]}>{item.label}{item.isDefault ? " · Default" : ""}</Text>
+          <Text style={[styles.copy, { color: palette.muted }]}>{item.recipientName} · {item.phone}</Text>
+          <Text style={[styles.copy, { color: palette.muted }]}>{item.addressLine}, {item.city}{item.postalCode ? ` ${item.postalCode}` : ""}</Text>
           <View style={styles.row}>
-            <Pressable accessibilityRole="button" disabled={busy} onPress={() => setForm({ ...item, customLabel: ["Home", "Office", "Other"].includes(item.label) ? "" : item.label, label: ["Home", "Office", "Other"].includes(item.label) ? item.label : "Other" })}><Text style={styles.link}>Edit</Text></Pressable>
-            <Pressable accessibilityRole="button" disabled={busy} onPress={() => remove(item)}><Text style={styles.danger}>Delete</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => setForm({ ...item, customLabel: ["Home", "Office", "Other"].includes(item.label) ? "" : item.label, label: ["Home", "Office", "Other"].includes(item.label) ? item.label : "Other" })}><Text style={[styles.link, { color: palette.accent }]}>Edit</Text></Pressable>
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => remove(item)}><Text style={[styles.danger, { color: palette.danger }]}>Delete</Text></Pressable>
           </View>
         </View>
       ))}
       {form ? (
         <View style={styles.form}>
-          <Text style={styles.copy}>Address label</Text>
+          <Text style={[styles.copy, { color: palette.muted }]}>Address label</Text>
           <View style={styles.labelChoices}>
-            {["Home", "Office", "Other"].map((label) => <Pressable key={label} accessibilityRole="radio" accessibilityLabel={`${label} address label`} accessibilityState={{ checked: form.label === label }} onPress={() => setForm({ ...form, label })} style={[styles.choice, form.label === label && styles.selected]}><Text style={styles.choiceText}>{label}</Text></Pressable>)}
+            {["Home", "Office", "Other"].map((label) => <Pressable key={label} accessibilityRole="radio" accessibilityLabel={`${label} address label`} accessibilityState={{ checked: form.label === label }} onPress={() => setForm({ ...form, label })} style={[styles.choice, { backgroundColor: form.label === label ? palette.accentSoft : palette.surface, borderColor: form.label === label ? palette.accent : palette.border }]}><Text style={[styles.choiceText, { color: palette.accent }]}>{label}</Text></Pressable>)}
           </View>
           {form.label === "Other" && (
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Custom address label</Text>
+              <Text style={[styles.fieldLabel, { color: palette.text }]}>Custom address label</Text>
               <TextInput
                 accessibilityLabel="Custom address label"
                 placeholder="For example, Parents or Shop"
-                placeholderTextColor="#8791a3"
+                placeholderTextColor={palette.muted}
                 value={form.customLabel}
                 onChangeText={(value) => setForm({ ...form, customLabel: value })}
                 maxLength={80}
-                style={styles.input}
+                style={[styles.input, { color: palette.text, backgroundColor: palette.surface, borderColor: palette.border }]}
               />
             </View>
           )}
@@ -118,12 +121,12 @@ export default function SavedAddressesManager({ token }) {
           {field("addressLine", "Street address", "House/flat, street and area", true)}
           {field("city", "City", "e.g. Lahore")}
           {field("postalCode", "Postal code (optional)", "Enter postal code if available")}
-          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: form.isDefault }} onPress={() => setForm({ ...form, isDefault: !form.isDefault })} style={styles.row}><Text style={styles.copy}>{form.isDefault ? "☑" : "☐"} Use as default</Text></Pressable>
-          <View style={styles.row}><Pressable disabled={busy} onPress={save} style={styles.primary}><Text style={styles.primaryText}>{busy ? "Saving…" : "Save address"}</Text></Pressable><Pressable disabled={busy} onPress={() => setForm(null)} style={styles.choice}><Text style={styles.choiceText}>Cancel</Text></Pressable></View>
+          <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: form.isDefault }} onPress={() => setForm({ ...form, isDefault: !form.isDefault })} style={styles.row}><Text style={[styles.copy, { color: palette.text }]}>{form.isDefault ? "☑" : "☐"} Use as default</Text></Pressable>
+          <View style={styles.row}><Pressable disabled={busy} onPress={save} style={[styles.primary, { backgroundColor: palette.accent }]}><Text style={styles.primaryText}>{busy ? "Saving…" : "Save address"}</Text></Pressable><Pressable disabled={busy} onPress={() => setForm(null)} style={[styles.choice, { backgroundColor: palette.surface, borderColor: palette.border }]}><Text style={[styles.choiceText, { color: palette.accent }]}>Cancel</Text></Pressable></View>
         </View>
-      ) : <Pressable disabled={busy} onPress={() => setForm({ ...empty })} style={styles.primary}><Text style={styles.primaryText}>+ Add address</Text></Pressable>}
-      {error ? <Text accessibilityRole="alert" style={styles.danger}>{error}</Text> : null}
-      {notice ? <Text style={styles.link}>{notice}</Text> : null}
+      ) : <Pressable disabled={busy} onPress={() => setForm({ ...empty })} style={[styles.primary, { backgroundColor: palette.accent }]}><Text style={styles.primaryText}>+ Add address</Text></Pressable>}
+      {error ? <Text accessibilityRole="alert" style={[styles.danger, { color: palette.danger }]}>{error}</Text> : null}
+      {notice ? <Text style={[styles.link, { color: palette.accent }]}>{notice}</Text> : null}
     </View>
   );
 }

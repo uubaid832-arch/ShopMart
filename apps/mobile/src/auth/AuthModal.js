@@ -20,6 +20,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
   const [registering, setRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState({
     name: "",
     email: "",
@@ -63,6 +64,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
     if (pending.current) return;
     setChallenge(null);
     setRegistering(false);
+    setShowPassword(false);
     setError("");
     setNotice("");
     setValues((current) => ({
@@ -259,7 +261,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                     value={values[name]}
                     onChangeText={(value) => update(name, value)}
                     editable={!saving}
-                    secureTextEntry={password}
+                    secureTextEntry={password && !showPassword}
                     autoCapitalize={name === "name" ? "words" : "none"}
                     autoCorrect={false}
                     keyboardType={
@@ -297,6 +299,25 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                 </View>
               );
             })}
+            {!challenge && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Show password"
+                accessibilityState={{ checked: showPassword }}
+                onPress={() => setShowPassword((visible) => !visible)}
+                style={styles.passwordToggle}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    { borderColor: palette.border, backgroundColor: showPassword ? palette.accent : palette.surface },
+                  ]}
+                >
+                  {showPassword ? <Text style={styles.checkboxTick}>✓</Text> : null}
+                </View>
+                <Text style={[styles.passwordToggleText, { color: palette.muted }]}>Show password</Text>
+              </Pressable>
+            )}
             {expired && (
               <Text style={[styles.error, { color: palette.danger }]}>
                 Code expired. Start a new sign-in below.
@@ -366,6 +387,7 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                   disabled={saving}
                   onPress={() => {
                     setRegistering((value) => !value);
+                    setShowPassword(false);
                     setError("");
                     setNotice("");
                     setValues((current) => ({
@@ -393,6 +415,10 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" },
   content: { padding: 24, paddingBottom: 40 },
+  passwordToggle: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 9, minHeight: 44, marginTop: 4, marginBottom: 8 },
+  checkbox: { width: 21, height: 21, borderWidth: 1.5, borderRadius: 5, alignItems: "center", justifyContent: "center" },
+  checkboxTick: { color: "#fff", fontWeight: "900", fontSize: 14, lineHeight: 17 },
+  passwordToggleText: { fontSize: 14, fontWeight: "600" },
   header: {
     flexDirection: "row",
     alignItems: "center",

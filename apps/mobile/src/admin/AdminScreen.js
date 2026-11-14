@@ -37,9 +37,21 @@ import { setAdminPalette } from "./adminUi";
 import AppearanceModal from "../appearance/AppearanceModal";
 
 let themePalette = {
-  background: "#f8f7fc", surface: "#fff", elevated: "#fff", soft: "#f5f3fa",
-  text: "#17203c", muted: "#71798c", border: "#e7e2ee", accent: "#7c3aed",
-  accentSoft: "#f0eafa", danger: "#be123c", dangerSoft: "#fff1f2", success: "#15803d",
+  background: "#f8f9fc",
+  surface: "#fff",
+  elevated: "#fff",
+  soft: "#f3f5f8",
+  text: "#17243b",
+  muted: "#718096",
+  border: "#e2e8f0",
+  accent: "#2864d8",
+  accentSoft: "#edf4ff",
+  warning: "#a66b12",
+  warningSoft: "#fff6e2",
+  danger: "#be123c",
+  dangerSoft: "#fff1f2",
+  success: "#2d8b57",
+  successSoft: "#e9f7ef",
 };
 
 const paths = {
@@ -62,6 +74,8 @@ const paths = {
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2",
   bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
   arrow: "m9 5 7 7-7 7",
+  down: "m5 9 7 7 7-7",
+  up: "m5 15 7-7 7 7",
   back: "m15 5-7 7 7 7",
   close: "m6 6 12 12M6 18 18 6",
   wallet: "M3 5h16v15H3V5Zm0 0 13-3v3m-1 5h6v6h-6v-6m3 3h.01",
@@ -69,15 +83,15 @@ const paths = {
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
   lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
-  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
+  palette:
+    "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 function Icon({ name, size = 21, color }) {
-  const { theme } = useMobileAppearance();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d={paths[name]}
-        stroke={color || theme.colors.accent}
+        stroke={color || themePalette.accent}
         strokeWidth={1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -85,14 +99,14 @@ function Icon({ name, size = 21, color }) {
     </Svg>
   );
 }
-function IconButton({ icon, label, onPress, disabled }) {
+function IconButton({ icon, label, onPress, disabled, compact = false }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={disabled}
       onPress={onPress}
-      style={[s.iconButton, disabled && s.dim]}
+      style={[s.iconButton, compact && s.compactIconButton, disabled && s.dim]}
     >
       <Icon name={icon} />
     </Pressable>
@@ -123,7 +137,13 @@ function Button({
         <Icon
           name={icon}
           size={18}
-          color={danger ? theme.colors.danger : secondary ? theme.colors.accent : "#fff"}
+          color={
+            danger
+              ? theme.colors.danger
+              : secondary
+                ? theme.colors.accent
+                : "#fff"
+          }
         />
       )}
       <Text style={[s.buttonText, secondary && s.link, danger && s.dangerText]}>
@@ -140,7 +160,10 @@ function Status({ value }) {
       : value === "CANCELLED"
         ? { bg: theme.colors.dangerSoft, fg: theme.colors.danger }
         : value === "PENDING"
-          ? { bg: theme.isDark ? "#3b3020" : "#fff5de", fg: theme.colors.warning }
+          ? {
+              bg: theme.isDark ? "#3b3020" : "#fff5de",
+              fg: theme.colors.warning,
+            }
           : { bg: theme.colors.accentSoft, fg: theme.colors.accent };
   return (
     <View style={[s.status, { backgroundColor: tone.bg }]}>
@@ -150,10 +173,14 @@ function Status({ value }) {
 }
 function paymentLabel(order) {
   if (order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") {
-    return order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus);
+    return order.paymentStatus === "DEMO_PAID"
+      ? "Paid via Safepay"
+      : readable(order.paymentStatus);
   }
   if (order.paymentMethod === "BANK_TRANSFER") {
-    return order.paymentStatus === "PAID" ? "Bank transfer received" : "Pending receipt confirmation";
+    return order.paymentStatus === "PAID"
+      ? "Bank transfer received"
+      : "Pending receipt confirmation";
   }
   return readable(order.paymentStatus);
 }
@@ -189,9 +216,12 @@ function OrderCard({ order, onPress }) {
           <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
           {order.paymentMethod && (
             <Text style={s.muted}>
-              {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
-                ? "Cash on delivery"
-                : readable(order.paymentMethod)}{" "}
+              {order.paymentProvider === "SAFEPAY" ||
+              order.paymentMethod === "DEMO"
+                ? "Safepay (Sandbox)"
+                : order.paymentMethod === "COD"
+                  ? "Cash on delivery"
+                  : readable(order.paymentMethod)}{" "}
               · {paymentLabel(order)}
             </Text>
           )}
@@ -207,6 +237,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
   const [riderSearch, setRiderSearch] = useState("");
+  const [riderPickerOpen, setRiderPickerOpen] = useState(false);
   const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -302,12 +333,13 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
         { text: "Go back", style: "cancel" },
         {
           text: "Confirm receipt",
-          onPress: () => mutate(
-            `${orderPath}/bank-transfer/confirm`,
-            "POST",
-            undefined,
-            "Receipt confirmed. You can now confirm the order.",
-          ),
+          onPress: () =>
+            mutate(
+              `${orderPath}/bank-transfer/confirm`,
+              "POST",
+              undefined,
+              "Receipt confirmed. You can now confirm the order.",
+            ),
         },
       ],
     );
@@ -370,7 +402,11 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
           </Text>
         ) : null}
         {loading ? (
-          <ActivityIndicator size="large" color={themePalette.accent} style={s.loader} />
+          <ActivityIndicator
+            size="large"
+            color={themePalette.accent}
+            style={s.loader}
+          />
         ) : detail.error ? (
           <ErrorMessage message={detail.error} onRetry={refresh} />
         ) : (
@@ -393,9 +429,12 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                   </Text>
                 )}
                 <Text style={s.muted}>
-                  {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
-                    ? "Cash on delivery"
-                    : readable(order.paymentMethod)}{" "}
+                  {order.paymentProvider === "SAFEPAY" ||
+                  order.paymentMethod === "DEMO"
+                    ? "Safepay (Sandbox)"
+                    : order.paymentMethod === "COD"
+                      ? "Cash on delivery"
+                      : readable(order.paymentMethod)}{" "}
                   · {paymentLabel(order)}
                 </Text>
                 <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
@@ -504,49 +543,99 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                         <Text style={s.muted}>
                           Choose an active rider before dispatching.
                         </Text>
-                        {assignment.data?.riders.length ? (
+                        {(assignment.data?.riders ?? []).length ? (
                           <>
-                          <TextInput
-                            accessibilityLabel="Search active riders"
-                            placeholder="Search active riders by name"
-                            value={riderSearch}
-                            onChangeText={setRiderSearch}
-                            editable={!locked}
-                            autoCapitalize="words"
-                            style={s.riderSearch}
-                          />
-                          {assignment.data.riders.filter((rider) =>
-                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
-                          ).map((rider) => (
                             <Pressable
-                              key={rider.id}
-                              accessibilityRole="radio"
-                              accessibilityState={{
-                                checked: riderId === rider.id,
-                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel="Choose an active rider"
+                              accessibilityState={{ expanded: riderPickerOpen }}
                               disabled={locked}
-                              onPress={() => setRiderId(rider.id)}
-                              style={[
-                                s.riderChoice,
-                                riderId === rider.id && s.riderSelected,
-                              ]}
+                              onPress={() =>
+                                setRiderPickerOpen((open) => !open)
+                              }
+                              style={[s.riderChoice, s.riderSelect]}
                             >
-                              <View
-                                style={[
-                                  s.radio,
-                                  riderId === rider.id && s.radioSelected,
-                                ]}
-                              >
-                                {riderId === rider.id && (
-                                  <Icon name="check" size={12} color="#fff" />
+                              <Text style={[s.body, s.grow]}>
+                                {(assignment.data.riders ?? []).find(
+                                  (rider) => rider.id === riderId,
+                                )?.name || "Tap to choose an active rider"}
+                              </Text>
+                              <Icon
+                                name={riderPickerOpen ? "up" : "down"}
+                                size={17}
+                              />
+                            </Pressable>
+                            {riderPickerOpen && (
+                              <View style={s.riderPickerMenu}>
+                                <TextInput
+                                  accessibilityLabel="Search active riders"
+                                  placeholder="Search by rider name"
+                                  value={riderSearch}
+                                  onChangeText={setRiderSearch}
+                                  editable={!locked}
+                                  autoCapitalize="words"
+                                  style={s.riderSearch}
+                                />
+                                {(assignment.data.riders ?? [])
+                                  .filter((rider) =>
+                                    String(rider.name || "")
+                                      .toLowerCase()
+                                      .includes(
+                                        riderSearch.trim().toLowerCase(),
+                                      ),
+                                  )
+                                  .map((rider) => (
+                                    <Pressable
+                                      key={rider.id}
+                                      accessibilityRole="radio"
+                                      accessibilityState={{
+                                        checked: riderId === rider.id,
+                                      }}
+                                      disabled={locked}
+                                      onPress={() => {
+                                        setRiderId(rider.id);
+                                        setRiderPickerOpen(false);
+                                        setRiderSearch("");
+                                      }}
+                                      style={[
+                                        s.riderChoice,
+                                        riderId === rider.id && s.riderSelected,
+                                      ]}
+                                    >
+                                      <View
+                                        style={[
+                                          s.radio,
+                                          riderId === rider.id &&
+                                            s.radioSelected,
+                                        ]}
+                                      >
+                                        {riderId === rider.id && (
+                                          <Icon
+                                            name="check"
+                                            size={12}
+                                            color="#fff"
+                                          />
+                                        )}
+                                      </View>
+                                      <Text style={[s.body, s.grow]}>
+                                        {rider.name}
+                                      </Text>
+                                    </Pressable>
+                                  ))}
+                                {(assignment.data.riders ?? []).filter(
+                                  (rider) =>
+                                    String(rider.name || "")
+                                      .toLowerCase()
+                                      .includes(
+                                        riderSearch.trim().toLowerCase(),
+                                      ),
+                                ).length === 0 && (
+                                  <Text style={s.muted}>
+                                    No active rider matches that search.
+                                  </Text>
                                 )}
                               </View>
-                              <Text style={[s.body, s.grow]}>{rider.name}</Text>
-                            </Pressable>
-                          ))}
-                          {assignment.data.riders.filter((rider) =>
-                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
-                          ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
+                            )}
                           </>
                         ) : (
                           <Text style={s.muted}>
@@ -604,22 +693,39 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
               {(order.status === "PENDING" || order.status === "CONFIRMED") && (
                 <View style={s.card}>
                   <Text style={s.cardTitle}>Order actions</Text>
-                  {order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING" ? (
+                  {order.paymentMethod === "BANK_TRANSFER" &&
+                  order.paymentStatus === "PENDING" ? (
                     <>
-                      <Text style={s.muted}>Receipt is pending manual review. This demo does not connect to a bank.</Text>
-                      <Button title="Confirm receipt received" icon="check" disabled={locked} onPress={confirmBankTransferReceipt} />
+                      <Text style={s.muted}>
+                        Receipt is pending manual review. This demo does not
+                        connect to a bank.
+                      </Text>
+                      <Button
+                        title="Confirm receipt received"
+                        icon="check"
+                        disabled={locked}
+                        onPress={confirmBankTransferReceipt}
+                      />
                     </>
-                  ) : order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID" ? (
-                    <Text style={s.success}>Bank transfer received (admin confirmed).</Text>
+                  ) : order.paymentMethod === "BANK_TRANSFER" &&
+                    order.paymentStatus === "PAID" ? (
+                    <Text style={s.success}>
+                      Bank transfer received (admin confirmed).
+                    </Text>
                   ) : null}
                   {order.status === "PENDING" && (
                     <>
-                    {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING") && <Button
-                      title="Confirm order"
-                      icon="check"
-                      disabled={locked}
-                      onPress={() => changeStatus("CONFIRMED")}
-                    />}
+                      {!(
+                        order.paymentMethod === "BANK_TRANSFER" &&
+                        order.paymentStatus === "PENDING"
+                      ) && (
+                        <Button
+                          title="Confirm order"
+                          icon="check"
+                          disabled={locked}
+                          onPress={() => changeStatus("CONFIRMED")}
+                        />
+                      )}
                     </>
                   )}
                   {order.status === "CONFIRMED" && (
@@ -637,7 +743,10 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                       )}
                     </>
                   )}
-                  {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID") && (
+                  {!(
+                    order.paymentMethod === "BANK_TRANSFER" &&
+                    order.paymentStatus === "PAID"
+                  ) && (
                     <Button
                       title="Cancel order"
                       icon="close"
@@ -841,6 +950,134 @@ function OrdersModal({
   );
 }
 
+function WarehouseAddressSettings({ session }) {
+  const { theme } = useMobileAppearance();
+  const palette = {
+    ...theme.colors,
+    accent:
+      theme.accent === "violet"
+        ? theme.isDark
+          ? "#8db7ff"
+          : "#2864d8"
+        : theme.colors.accent,
+    accentSoft:
+      theme.accent === "violet"
+        ? theme.isDark
+          ? "#1d2d49"
+          : "#edf4ff"
+        : theme.colors.accentSoft,
+    warningSoft: theme.isDark ? "#3c3423" : "#fff6e2",
+  };
+  const [address, setAddress] = useState("");
+  const [savedAddress, setSavedAddress] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    adminRequest(session.accessToken, "/settings/warehouse-address", {
+      signal: controller.signal,
+    })
+      .then((value) => {
+        if (controller.signal.aborted) return;
+        const current = value.address || "";
+        setAddress(current);
+        setSavedAddress(current);
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted) setError(failure.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [session.accessToken]);
+
+  async function saveAddress() {
+    const value = address.trim();
+    if (value.length < 10) {
+      setError("Enter the full warehouse address, city, and contact details.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const saved = await adminRequest(
+        session.accessToken,
+        "/settings/warehouse-address",
+        { method: "PUT", values: { address: value } },
+      );
+      setAddress(saved.address || value);
+      setSavedAddress(saved.address || value);
+      setNotice("Warehouse return address saved for the store.");
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <View style={s.card}>
+      <View style={s.inline}>
+        <Icon name="home" />
+        <Text style={s.cardTitle}>Warehouse return address</Text>
+      </View>
+      <Text style={[s.muted, { marginTop: 8 }]}>
+        This address is included in return instructions sent to customers.
+      </Text>
+      <Text style={[s.body, { marginTop: 12, marginBottom: 6 }]}>
+        Full address, city, and contact number
+      </Text>
+      <TextInput
+        accessibilityLabel="Warehouse return address"
+        value={address}
+        onChangeText={(value) => {
+          setAddress(value);
+          setError("");
+          setNotice("");
+        }}
+        editable={!loading && !saving}
+        multiline
+        maxLength={1500}
+        textAlignVertical="top"
+        placeholder="Building and street, area, city, and warehouse phone number"
+        placeholderTextColor={palette.muted}
+        style={[
+          s.input,
+          {
+            minHeight: 110,
+            color: palette.text,
+            backgroundColor: palette.elevated,
+            borderColor: palette.border,
+          },
+        ]}
+      />
+      {error ? (
+        <Text accessibilityRole="alert" style={s.error}>
+          {error}
+        </Text>
+      ) : null}
+      {notice ? <Text style={s.success}>{notice}</Text> : null}
+      <Button
+        title={
+          loading
+            ? "Loading saved address…"
+            : saving
+              ? "Saving address…"
+              : "Save warehouse address"
+        }
+        icon="check"
+        disabled={loading || saving || address.trim() === savedAddress.trim()}
+        onPress={saveAddress}
+      />
+    </View>
+  );
+}
+
 export default function AdminScreen({
   session,
   onSignOut,
@@ -906,35 +1143,57 @@ export default function AdminScreen({
   return (
     <SafeAreaView style={[s.screen, { backgroundColor: palette.background }]}>
       <StatusBar style={theme.isDark ? "light" : "dark"} />
-      <View style={[s.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
-        <IconButton
-          icon="menu"
-          label="Open admin sidebar"
-          onPress={() => setSidebarOpen(true)}
-        />
-        <View style={s.grow}>
-          <Text style={s.eyebrow}>SHOPMART ADMIN</Text>
-          <Text style={s.title}>Dashboard</Text>
+      <View
+        style={[
+          s.header,
+          s.dashboardHeader,
+          {
+            backgroundColor: palette.surface,
+            borderBottomColor: palette.border,
+          },
+        ]}
+      >
+        <View style={s.dashboardHeaderMain}>
+          <IconButton
+            icon="menu"
+            label="Open admin sidebar"
+            compact
+            onPress={() => setSidebarOpen(true)}
+          />
+          <View style={s.grow}>
+            <Text style={s.eyebrow}>SHOPMART ADMIN</Text>
+            <Text numberOfLines={1} style={s.dashboardTitle}>
+              Dashboard
+            </Text>
+          </View>
         </View>
-        <NotificationBell
-          session={session}
-          onPress={() => setPanel("notifications")}
-        />
-        <IconButton
-          icon="palette"
-          label="Change app theme"
-          onPress={() => setAppearanceOpen(true)}
-        />
-        <IconButton
-          icon="user"
-          label="Admin profile and security"
-          onPress={() => setPanel("account")}
-        />
+        <View style={s.dashboardHeaderActions}>
+          <NotificationBell
+            session={session}
+            style={s.compactNotificationBell}
+            accentColor={palette.accent}
+            surfaceColor={palette.surface}
+            borderColor={palette.border}
+            onPress={() => setPanel("notifications")}
+          />
+          <IconButton
+            icon="palette"
+            label="Change app theme"
+            compact
+            onPress={() => setAppearanceOpen(true)}
+          />
+          <IconButton
+            icon="user"
+            label="Admin profile and security"
+            compact
+            onPress={() => setPanel("account")}
+          />
+        </View>
       </View>
       <ScrollView
         ref={overviewRef}
         style={{ flex: 1 }}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, s.dashboardContent]}
         refreshControl={
           <RefreshControl
             refreshing={dashboard.loading}
@@ -968,23 +1227,50 @@ export default function AdminScreen({
         {dashboard.error ? (
           <ErrorMessage message={dashboard.error} onRetry={refresh} />
         ) : dashboard.loading && !data ? (
-          <ActivityIndicator size="large" color={themePalette.accent} style={s.loader} />
+          <ActivityIndicator
+            size="large"
+            color={themePalette.accent}
+            style={s.loader}
+          />
         ) : (
           data && (
             <>
               <View style={s.revenue}>
-                <View style={s.inline}>
-                  <Icon name="wallet" color="#ded1ff" />
-                  <Text style={s.revenueLabel}>Net revenue</Text>
+                <View style={s.revenueTop}>
+                  <View style={s.inline}>
+                    <View style={s.revenueIcon}>
+                      <Icon
+                        name="wallet"
+                        color={themePalette.accent}
+                        size={18}
+                      />
+                    </View>
+                    <Text style={s.revenueLabel}>NET REVENUE</Text>
+                  </View>
+                  <View style={s.periodBadge}>
+                    <Text style={s.periodText}>ALL TIME</Text>
+                  </View>
                 </View>
                 <Text style={s.revenueAmount}>
                   {money(data.paidRevenue, data.currency)}
                 </Text>
+                <View style={s.revenueDivider} />
+                <View style={s.revenueStats}>
+                  <View style={s.revenueStat}>
+                    <Text style={s.revenueStatLabel}>Gross paid</Text>
+                    <Text style={s.revenueStatValue}>
+                      {money(data.grossPaidRevenue, data.currency)}
+                    </Text>
+                  </View>
+                  <View style={s.revenueStat}>
+                    <Text style={s.revenueStatLabel}>Refunds recorded</Text>
+                    <Text style={s.revenueStatValue}>
+                      -{money(data.refundedAmount, data.currency)}
+                    </Text>
+                  </View>
+                </View>
                 <Text style={s.revenueCaption}>
-                  Gross paid: {money(data.grossPaidRevenue, data.currency)}
-                  {"\n"}Refunds recorded: -
-                  {money(data.refundedAmount, data.currency)}
-                  {"\n"}All time · includes verified Safepay payments (sandbox)
+                  Includes verified Safepay sandbox payments.
                 </Text>
               </View>
               <Pressable
@@ -1025,20 +1311,20 @@ export default function AdminScreen({
                     label: "Pending orders",
                     value: data.pendingOrders,
                     icon: "clock",
-                    color: themePalette.warning,
+                    color: themePalette.warningSoft,
                     action: () => setOrders({ initialStatus: "PENDING" }),
                   },
                   {
                     label: "Active products",
                     value: data.activeProducts,
                     icon: "grid",
-                    color: themePalette.success,
+                    color: themePalette.successSoft,
                   },
                   {
                     label: "Active customers",
                     value: data.activeCustomers,
                     icon: "user",
-                    color: themePalette.accent,
+                    color: themePalette.accentSoft,
                   },
                 ].map((item) => (
                   <View key={item.label} style={s.metric}>
@@ -1064,16 +1350,18 @@ export default function AdminScreen({
                 ))}
               </View>
               <View style={s.riderSummary}>
-                <View style={s.inline}>
-                  <Icon name="truck" />
-                  <View style={s.grow}>
-                    <Text style={s.cardTitle}>
-                      {data.activeRiders} active riders
-                    </Text>
-                    <Text style={s.muted}>
-                      Assign a rider from confirmed order details.
-                    </Text>
-                  </View>
+                <View style={s.riderIcon}>
+                  <Icon name="truck" color={themePalette.accent} />
+                </View>
+                <View style={s.grow}>
+                  <Text style={s.cardTitle}>Rider team</Text>
+                  <Text style={s.muted}>
+                    Assign riders from confirmed order details.
+                  </Text>
+                </View>
+                <View style={s.riderCount}>
+                  <Text style={s.riderCountText}>{data.activeRiders}</Text>
+                  <Text style={s.riderCountLabel}>ACTIVE</Text>
                 </View>
               </View>
               <View style={s.sectionHeader}>
@@ -1238,7 +1526,12 @@ export default function AdminScreen({
                     selected: module === "deliveries",
                     action: () => setModule("deliveries"),
                   },
-                  { icon: "box", label: "Preview store", selected: false, action: () => onPreviewStore?.() },
+                  {
+                    icon: "box",
+                    label: "Preview store",
+                    selected: false,
+                    action: () => onPreviewStore?.(),
+                  },
                   {
                     icon: "returns",
                     label: "Returns & refunds",
@@ -1277,7 +1570,9 @@ export default function AdminScreen({
                     <Icon
                       name={item.icon}
                       size={21}
-                      color={item.selected ? themePalette.accent : themePalette.muted}
+                      color={
+                        item.selected ? themePalette.accent : themePalette.muted
+                      }
                     />
                     <Text
                       style={[
@@ -1423,6 +1718,7 @@ export default function AdminScreen({
                   <Text style={s.link}>Administrator</Text>
                 </View>
               </View>
+              <WarehouseAddressSettings session={session} />
               {[
                 {
                   icon: "user",
@@ -1488,11 +1784,17 @@ const baseS = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 18,
-    backgroundColor: "#fff4df",
-    borderColor: "#f3d296",
+    marginBottom: 16,
+    backgroundColor: "#fff6e2",
+    borderColor: "#f1dfb5",
     borderWidth: 1,
   },
-  dashboardWelcome: { paddingTop: 5, paddingBottom: 2 },
+  dashboardWelcome: {
+    padding: 16,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginBottom: 3,
+  },
   welcomeName: { color: "#493451", fontSize: 16, fontWeight: "700" },
   welcomeCaption: {
     color: "#9a86a8",
@@ -1595,6 +1897,38 @@ const baseS = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
+  dashboardHeader: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+    borderBottomWidth: 1,
+  },
+  dashboardHeaderMain: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dashboardHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  dashboardTitle: {
+    fontSize: 19,
+    lineHeight: 23,
+    fontWeight: "800",
+    color: "#29213b",
+    marginTop: 2,
+    letterSpacing: -0.35,
+  },
+  dashboardContent: { paddingTop: 18 },
   eyebrow: {
     fontSize: 9,
     fontWeight: "800",
@@ -1616,6 +1950,8 @@ const baseS = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  compactIconButton: { width: 40, height: 40, borderRadius: 13 },
+  compactNotificationBell: { width: 40, height: 40, borderRadius: 13 },
   content: { paddingHorizontal: 20, paddingBottom: 35 },
   hero: {
     backgroundColor: "#eee5fb",
@@ -1658,26 +1994,44 @@ const baseS = StyleSheet.create({
     marginTop: 22,
     marginBottom: 15,
   },
-  sectionTitle: { fontSize: 19, fontWeight: "800", color: "#3a2c4b" },
+  sectionTitle: { fontSize: 18, fontWeight: "800", color: "#25344c" },
   revenue: {
-    padding: 22,
-    backgroundColor: "#7137ca",
-    borderRadius: 22,
-    marginBottom: 15,
+    padding: 19,
+    borderRadius: 20,
+    marginBottom: 14,
+    borderWidth: 1,
   },
-  revenueLabel: { fontSize: 12, color: "#e6d9ff", fontWeight: "600" },
+  revenueTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  revenueIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  revenueLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  periodBadge: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 20 },
+  periodText: { fontSize: 8, fontWeight: "800", letterSpacing: 0.8 },
   revenueAmount: {
-    color: "#fff",
     fontWeight: "800",
-    fontSize: 29,
-    marginTop: 15,
-    letterSpacing: -0.8,
+    fontSize: 28,
+    marginTop: 13,
+    letterSpacing: -0.7,
   },
+  revenueDivider: { height: 1, marginTop: 14, marginBottom: 10 },
+  revenueStats: { flexDirection: "row", gap: 12 },
+  revenueStat: { flex: 1, minWidth: 0 },
+  revenueStatLabel: { fontSize: 9, fontWeight: "600" },
+  revenueStatValue: { fontSize: 11, fontWeight: "700", marginTop: 4 },
   revenueCaption: {
-    fontSize: 10,
-    color: "#e4d4ff",
-    lineHeight: 17,
-    marginTop: 8,
+    fontSize: 9,
+    lineHeight: 15,
+    marginTop: 10,
   },
   inline: { flexDirection: "row", alignItems: "center", gap: 9 },
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -1685,19 +2039,20 @@ const baseS = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 13,
+    gap: 12,
   },
   metric: {
-    width: "47%",
-    padding: 17,
-    borderRadius: 20,
+    width: "48%",
+    minHeight: 174,
+    padding: 15,
+    borderRadius: 18,
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#eae3f2",
   },
   metricIcon: {
-    width: 43,
-    height: 43,
+    width: 42,
+    height: 42,
     backgroundColor: "#f0eafa",
     borderRadius: 13,
     alignItems: "center",
@@ -1718,10 +2073,35 @@ const baseS = StyleSheet.create({
     marginTop: 4,
   },
   riderSummary: {
-    padding: 16,
-    borderRadius: 17,
-    backgroundColor: "#f0edf8",
-    marginTop: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 15,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 16,
+    marginBottom: 2,
+  },
+  riderIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  riderCount: {
+    minWidth: 54,
+    alignItems: "center",
+    paddingVertical: 7,
+    paddingHorizontal: 9,
+    borderRadius: 13,
+  },
+  riderCountText: { fontSize: 17, fontWeight: "800" },
+  riderCountLabel: {
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    marginTop: 2,
   },
   button: {
     backgroundColor: "#7c3aed",
@@ -1871,6 +2251,15 @@ const baseS = StyleSheet.create({
     marginTop: 10,
   },
   riderSelected: { borderColor: "#a477ee", backgroundColor: "#f1e9ff" },
+  riderSelect: { justifyContent: "space-between" },
+  riderPickerMenu: {
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#eae3f2",
+    backgroundColor: "#faf9fd",
+  },
   riderSearch: {
     borderWidth: 1,
     borderColor: "#eae3f2",
@@ -1949,6 +2338,7 @@ const baseS = StyleSheet.create({
 const screenStyles = {
   screen: (c) => ({ backgroundColor: c.background }),
   header: (c) => ({ backgroundColor: c.surface, borderBottomColor: c.border }),
+  dashboardTitle: (c) => ({ color: c.text }),
   drawerOverlay: (c) => ({ backgroundColor: c.background }),
   drawer: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
   drawerHeader: (c) => ({ borderBottomColor: c.border }),
@@ -1969,14 +2359,34 @@ const screenStyles = {
   avatarText: (c) => ({ color: c.accent }),
   adminBadge: (c) => ({ backgroundColor: c.accentSoft }),
   accountAction: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
-  riderSummary: (c) => ({ backgroundColor: c.soft }),
-  dashboardWelcome: (c) => ({ backgroundColor: c.background }),
+  dashboardWelcome: (c) => ({
+    backgroundColor: c.accentSoft,
+    borderColor: c.border,
+  }),
   hero: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.border }),
   heroIcon: (c) => ({ backgroundColor: c.soft }),
   heroEyebrow: (c) => ({ color: c.accent }),
   heroTitle: (c) => ({ color: c.text }),
   heroBody: (c) => ({ color: c.muted }),
-  cashAlert: (c) => ({ backgroundColor: c.warningSoft || c.accentSoft, borderColor: c.border }),
+  cashAlert: (c) => ({
+    backgroundColor: c.warningSoft || c.accentSoft,
+    borderColor: c.border,
+  }),
+  revenue: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.border }),
+  revenueIcon: (c) => ({ backgroundColor: c.surface }),
+  periodBadge: (c) => ({ backgroundColor: c.surface }),
+  periodText: (c) => ({ color: c.muted }),
+  revenueDivider: (c) => ({ backgroundColor: c.border }),
+  revenueLabel: (c) => ({ color: c.muted }),
+  revenueAmount: (c) => ({ color: c.accent }),
+  revenueStatLabel: (c) => ({ color: c.muted }),
+  revenueStatValue: (c) => ({ color: c.text }),
+  revenueCaption: (c) => ({ color: c.muted }),
+  riderSummary: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  riderIcon: (c) => ({ backgroundColor: c.accentSoft }),
+  riderCount: (c) => ({ backgroundColor: c.soft }),
+  riderCountText: (c) => ({ color: c.accent }),
+  riderCountLabel: (c) => ({ color: c.muted }),
   drawerItemActive: (c) => ({ backgroundColor: c.accentSoft }),
   drawerItemText: (c) => ({ color: c.muted }),
   drawerItemTextActive: (c) => ({ color: c.accent }),
@@ -1998,7 +2408,9 @@ const screenStyles = {
   metricLabel: (c) => ({ color: c.muted }),
   orderAmount: (c) => ({ color: c.accent }),
   itemName: (c) => ({ color: c.text }),
-  stockBadge: (c) => ({ backgroundColor: c.warning === "#fbbf24" ? "#3b3020" : "#fff5de" }),
+  stockBadge: (c) => ({
+    backgroundColor: c.warning === "#fbbf24" ? "#3b3020" : "#fff5de",
+  }),
   link: (c) => ({ color: c.accent }),
   drawerCount: (c) => ({ backgroundColor: c.accent }),
   iconButton: (c) => ({ backgroundColor: c.soft }),
@@ -2009,11 +2421,30 @@ const screenStyles = {
   error: (c) => ({ color: c.danger }),
   errorBox: (c) => ({ backgroundColor: c.dangerSoft, borderColor: c.border }),
   success: (c) => ({ color: c.success }),
-  input: (c) => ({ backgroundColor: c.elevated, borderColor: c.border, color: c.text }),
-  search: (c) => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
-  riderSearch: (c) => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
+  input: (c) => ({
+    backgroundColor: c.elevated,
+    borderColor: c.border,
+    color: c.text,
+  }),
+  search: (c) => ({
+    backgroundColor: c.surface,
+    borderColor: c.border,
+    color: c.text,
+  }),
+  riderSearch: (c) => ({
+    backgroundColor: c.surface,
+    borderColor: c.border,
+    color: c.text,
+  }),
   riderChoice: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
-  riderSelected: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
+  riderSelected: (c) => ({
+    backgroundColor: c.accentSoft,
+    borderColor: c.accent,
+  }),
+  riderPickerMenu: (c) => ({
+    backgroundColor: c.surface,
+    borderColor: c.border,
+  }),
   chip: (c) => ({ backgroundColor: c.soft, borderColor: c.border }),
   chipActive: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
   chipText: (c) => ({ color: c.text }),

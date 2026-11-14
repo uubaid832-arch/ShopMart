@@ -1,6 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const paths = {
   edit: "m16 3 5 5-12 12-6 1 1-6L16 3Zm-2 2 5 5",
@@ -35,49 +36,51 @@ export default function AccountModal({
   onClose,
 }) {
   const user = session.user;
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <SafeAreaView style={styles.overlay}>
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.eyebrow}>YOUR SHOPMART SPACE</Text>
-              <Text style={styles.title}>My account</Text>
+              <Text style={[styles.eyebrow, { color: palette.muted }]}>YOUR SHOPMART SPACE</Text>
+              <Text style={[styles.title, { color: palette.text }]}>My account</Text>
             </View>
 
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Close account"
               onPress={onClose}
-              style={styles.closeIcon}
+              style={[styles.closeIcon, { backgroundColor: palette.soft }]}
             >
-              <Icon name="close" color="#7c859b" />
+              <Icon name="close" color={palette.muted} />
             </Pressable>
           </View>
 
-          <View style={styles.profile}>
-            <View style={styles.avatar}>
-              <Text style={styles.initial}>
+          <View style={[styles.profile, { backgroundColor: palette.accentSoft }]}>
+            <View style={[styles.avatar, { backgroundColor: palette.surface, borderColor: palette.surface }]}>
+              <Text style={[styles.initial, { color: palette.accent }]}>
                 {user.name?.trim().charAt(0).toUpperCase() || "S"}
               </Text>
             </View>
 
-            <Text style={styles.name}>{user.name}</Text>
+            <Text style={[styles.name, { color: palette.text }]}>{user.name}</Text>
 
             <View style={styles.emailRow}>
-              <Icon name="mail" size={15} color="#8b83a5" />
-              <Text style={styles.email}>{user.email}</Text>
+              <Icon name="mail" size={15} color={palette.muted} />
+              <Text style={[styles.email, { color: palette.muted }]}>{user.email}</Text>
             </View>
 
-            <View style={styles.roleBadge}>
-              <Text style={styles.role}>
+            <View style={[styles.roleBadge, { backgroundColor: palette.surface }]}>
+              <Text style={[styles.role, { color: palette.accent }]}>
                 {String(user.role || "Customer").toLowerCase()}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.sectionLabel}>ACCOUNT SETTINGS</Text>
+          <Text style={[styles.sectionLabel, { color: palette.muted }]}>ACCOUNT SETTINGS</Text>
 
           <Pressable
             accessibilityRole="button"
@@ -85,22 +88,23 @@ export default function AccountModal({
             onPress={onEditProfile}
             style={({ pressed }) => [
               styles.action,
+              { backgroundColor: palette.surface, borderColor: palette.border },
               pressed && styles.pressed,
               busy && styles.dim,
             ]}
           >
-            <View style={styles.actionIcon}>
-              <Icon name="edit" />
+            <View style={[styles.actionIcon, { backgroundColor: palette.accentSoft }]}>
+              <Icon name="edit" color={palette.accent} />
             </View>
 
             <View style={styles.actionCopy}>
-              <Text style={styles.actionTitle}>Edit profile</Text>
-              <Text style={styles.actionDescription}>
+              <Text style={[styles.actionTitle, { color: palette.text }]}>Edit profile</Text>
+              <Text style={[styles.actionDescription, { color: palette.muted }]}>
                 Update your name and phone number
               </Text>
             </View>
 
-            <Icon name="arrow" size={17} color="#a49ab9" />
+            <Icon name="arrow" size={17} color={palette.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -108,22 +112,23 @@ export default function AccountModal({
             onPress={onChangePassword}
             style={({ pressed }) => [
               styles.action,
+              { backgroundColor: palette.surface, borderColor: palette.border },
               pressed && styles.pressed,
               busy && styles.dim,
             ]}
           >
-            <View style={styles.actionIcon}>
-              <Icon name="lock" />
+            <View style={[styles.actionIcon, { backgroundColor: palette.accentSoft }]}>
+              <Icon name="lock" color={palette.accent} />
             </View>
 
             <View style={styles.actionCopy}>
-              <Text style={styles.actionTitle}>Change password</Text>
-              <Text style={styles.actionDescription}>
+              <Text style={[styles.actionTitle, { color: palette.text }]}>Change password</Text>
+              <Text style={[styles.actionDescription, { color: palette.muted }]}>
                 Keep your account secure
               </Text>
             </View>
 
-            <Icon name="arrow" size={17} color="#a49ab9" />
+            <Icon name="arrow" size={17} color={palette.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -131,22 +136,23 @@ export default function AccountModal({
             onPress={onOpenBiometrics}
             style={({ pressed }) => [
               styles.action,
+              { backgroundColor: palette.surface, borderColor: palette.border },
               pressed && styles.pressed,
               busy && styles.dim,
             ]}
           >
-            <View style={styles.actionIcon}>
-              <Icon name="lock" />
+            <View style={[styles.actionIcon, { backgroundColor: palette.accentSoft }]}>
+              <Icon name="lock" color={palette.accent} />
             </View>
 
             <View style={styles.actionCopy}>
-              <Text style={styles.actionTitle}>Fingerprint & security</Text>
-              <Text style={styles.actionDescription}>
+              <Text style={[styles.actionTitle, { color: palette.text }]}>Fingerprint & security</Text>
+              <Text style={[styles.actionDescription, { color: palette.muted }]}>
                 Manage biometric app unlock
               </Text>
             </View>
 
-            <Icon name="arrow" size={17} color="#a49ab9" />
+            <Icon name="arrow" size={17} color={palette.muted} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -154,29 +160,29 @@ export default function AccountModal({
             onPress={onSignOut}
             style={({ pressed }) => [
               styles.action,
-              styles.logoutAction,
+              { backgroundColor: theme.isDark ? palette.surface : "#fffcfd", borderColor: theme.isDark ? palette.border : "#f8e8ec" },
               pressed && styles.pressed,
               busy && styles.dim,
             ]}
           >
-            <View style={[styles.actionIcon, styles.logoutIcon]}>
-              <Icon name="logout" color="#e05270" />
+            <View style={[styles.actionIcon, { backgroundColor: theme.isDark ? "#3b202b" : "#fff0f3" }]}>
+              <Icon name="logout" color={palette.danger} />
             </View>
 
             <View style={styles.actionCopy}>
-              <Text style={[styles.actionTitle, styles.logoutText]}>
+              <Text style={[styles.actionTitle, { color: palette.danger }]}>
                 {busy ? "Signing out..." : "Sign out"}
               </Text>
-              <Text style={styles.actionDescription}>
+              <Text style={[styles.actionDescription, { color: palette.muted }]}>
                 Sign out of ShopMart on this device
               </Text>
             </View>
 
-            <Icon name="arrow" size={17} color="#d7a1ad" />
+            <Icon name="arrow" size={17} color={palette.danger} />
           </Pressable>
 
           {error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
+            <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
               {error}
             </Text>
           ) : null}
@@ -184,7 +190,7 @@ export default function AccountModal({
           <Pressable
             accessibilityRole="button"
             onPress={onClose}
-            style={styles.closeButton}
+            style={[styles.closeButton, { backgroundColor: palette.accent }]}
           >
             <Text style={styles.closeText}>Continue shopping</Text>
           </Pressable>

@@ -11,12 +11,15 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
   .replace(/\/+$/, "");
 
 export default function ChangePasswordModal({ session, onChanged, onClose }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -119,9 +122,9 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={close}>
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <KeyboardAvoidingView
-          style={styles.screen}
+          style={[styles.screen, { backgroundColor: palette.background }]}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView
@@ -129,22 +132,22 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
-              <Text style={styles.title}>Change password</Text>
+              <Text style={[styles.title, { color: palette.text }]}>Change password</Text>
               <Pressable
                 accessibilityRole="button"
                 disabled={busy}
                 onPress={close}
-                style={styles.close}
+                style={[styles.close, { backgroundColor: palette.soft }]}
               >
-                <Text style={styles.link}>Close</Text>
+                <Text style={[styles.link, { color: palette.accent }]}>Close</Text>
               </Pressable>
             </View>
 
             {changed ? (
               <>
-                <View style={styles.success}>
-                  <Text style={styles.successTitle}>Password updated</Text>
-                  <Text style={styles.description}>
+                <View style={[styles.success, { backgroundColor: theme.isDark ? "#123b2e" : "#ecfdf5" }]}>
+                  <Text style={[styles.successTitle, { color: palette.success }]}>Password updated</Text>
+                  <Text style={[styles.description, { color: palette.muted }]}>
                     Sign in again using your new password.
                   </Text>
                 </View>
@@ -153,7 +156,7 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
                   accessibilityRole="button"
                   disabled={busy}
                   onPress={finish}
-                  style={styles.primary}
+                  style={[styles.primary, { backgroundColor: palette.accent }]}
                 >
                   <Text style={styles.primaryText}>
                     {busy ? "Please wait..." : "Sign in again"}
@@ -162,13 +165,13 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
               </>
             ) : (
               <>
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: palette.muted }]}>
                   Enter your current password and choose a new one.
                 </Text>
 
                 {fields.map(([label, value, change], index) => (
                   <View key={label} style={styles.field}>
-                    <Text style={styles.label}>{label}</Text>
+                    <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
                     <TextInput
                       accessibilityLabel={label}
                       value={value}
@@ -184,7 +187,7 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
                         index === 0 ? "current-password" : "new-password"
                       }
                       maxLength={72}
-                      style={styles.input}
+                      style={[styles.input, { color: palette.text, backgroundColor: palette.surface, borderColor: palette.border }]}
                     />
                   </View>
                 ))}
@@ -195,12 +198,12 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
                   onPress={() => setVisible((value) => !value)}
                   style={styles.visibility}
                 >
-                  <Text style={styles.link}>
+                  <Text style={[styles.link, { color: palette.accent }]}>
                     {visible ? "Hide passwords" : "Show passwords"}
                   </Text>
                 </Pressable>
 
-                <Text style={styles.hint}>
+                <Text style={[styles.hint, { color: palette.muted }]}>
                   Use 8–72 characters. Existing refresh sessions will be revoked
                   after the change.
                 </Text>
@@ -209,7 +212,7 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
                   accessibilityRole="button"
                   disabled={busy}
                   onPress={save}
-                  style={[styles.primary, busy && styles.disabled]}
+                  style={[styles.primary, { backgroundColor: palette.accent }, busy && styles.disabled]}
                 >
                   <Text style={styles.primaryText}>
                     {busy ? "Updating..." : "Update password"}
@@ -219,7 +222,7 @@ export default function ChangePasswordModal({ session, onChanged, onClose }) {
             )}
 
             {error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
                 {error}
               </Text>
             ) : null}

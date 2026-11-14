@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import SavedAddressesManager from "./SavedAddressesManager";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -44,6 +45,8 @@ async function profileRequest(token, values, signal) {
 }
 
 export default function ProfileModal({ session, onSaved, onClose }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const token = session.accessToken;
   const [profile, setProfile] = useState(null);
   const [name, setName] = useState("");
@@ -121,9 +124,9 @@ export default function ProfileModal({ session, onSaved, onClose }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={close}>
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <KeyboardAvoidingView
-          style={styles.screen}
+          style={[styles.screen, { backgroundColor: palette.background }]}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView
@@ -131,32 +134,32 @@ export default function ProfileModal({ session, onSaved, onClose }) {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
-              <Text style={styles.title}>My profile</Text>
+              <Text style={[styles.title, { color: palette.text }]}>My profile</Text>
               <Pressable
                 accessibilityRole="button"
                 disabled={busy}
                 onPress={close}
-                style={styles.close}
+                style={[styles.close, { backgroundColor: palette.soft }]}
               >
-                <Text style={styles.link}>Close</Text>
+                <Text style={[styles.link, { color: palette.accent }]}>Close</Text>
               </Pressable>
             </View>
 
             {loading ? (
-              <ActivityIndicator color="#7c3aed" />
+              <ActivityIndicator color={palette.accent} />
             ) : profile ? (
               <>
-                <View style={styles.profileCard}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.initial}>
+                <View style={[styles.profileCard, { backgroundColor: palette.accentSoft }]}>
+                  <View style={[styles.avatar, { backgroundColor: palette.surface }]}>
+                    <Text style={[styles.initial, { color: palette.accent }]}>
                       {profile.name?.charAt(0).toUpperCase()}
                     </Text>
                   </View>
-                  <Text style={styles.profileName}>{profile.name}</Text>
-                  <Text style={styles.email}>{profile.email}</Text>
+                  <Text style={[styles.profileName, { color: palette.text }]}>{profile.name}</Text>
+                  <Text style={[styles.email, { color: palette.muted }]}>{profile.email}</Text>
                 </View>
 
-                <Text style={styles.label}>Full name</Text>
+                <Text style={[styles.label, { color: palette.text }]}>Full name</Text>
                 <TextInput
                   accessibilityLabel="Full name"
                   value={name}
@@ -168,10 +171,10 @@ export default function ProfileModal({ session, onSaved, onClose }) {
                   maxLength={150}
                   autoCapitalize="words"
                   autoComplete="name"
-                  style={styles.input}
+                  style={[styles.input, { color: palette.text, backgroundColor: palette.surface, borderColor: palette.border }]}
                 />
 
-                <Text style={styles.label}>Phone number</Text>
+                <Text style={[styles.label, { color: palette.text }]}>Phone number</Text>
                 <TextInput
                   accessibilityLabel="Phone number"
                   value={phone}
@@ -184,11 +187,11 @@ export default function ProfileModal({ session, onSaved, onClose }) {
                   keyboardType="phone-pad"
                   autoComplete="tel"
                   placeholder="03XXXXXXXXX"
-                  placeholderTextColor="#94a3b8"
-                  style={styles.input}
+                  placeholderTextColor={palette.muted}
+                  style={[styles.input, { color: palette.text, backgroundColor: palette.surface, borderColor: palette.border }]}
                 />
 
-                <Text style={styles.hint}>
+                <Text style={[styles.hint, { color: palette.muted }]}>
                   Your email is used for sign-in and verification and cannot be
                   changed here.
                 </Text>
@@ -197,13 +200,13 @@ export default function ProfileModal({ session, onSaved, onClose }) {
                   accessibilityRole="button"
                   disabled={busy}
                   onPress={save}
-                  style={[styles.save, busy && styles.disabled]}
+                  style={[styles.save, { backgroundColor: palette.accent }, busy && styles.disabled]}
                 >
-                  <Text style={styles.saveText}>
+                  <Text style={[styles.saveText, { color: "#fff" }]}>
                     {busy ? "Saving..." : "Save changes"}
                   </Text>
                 </Pressable>
-                {session.user.role === "CUSTOMER" && (
+                {String(session.user?.role || "").toUpperCase() === "CUSTOMER" && (
                   <SavedAddressesManager token={token} />
                 )}
               </>
@@ -211,19 +214,19 @@ export default function ProfileModal({ session, onSaved, onClose }) {
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setReload((value) => value + 1)}
-                style={styles.close}
+                style={[styles.close, { backgroundColor: palette.soft }]}
               >
-                <Text style={styles.link}>Retry loading profile</Text>
+                <Text style={[styles.link, { color: palette.accent }]}>Retry loading profile</Text>
               </Pressable>
             )}
 
             {error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
                 {error}
               </Text>
             ) : null}
 
-            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+            {notice ? <Text style={[styles.notice, { color: palette.success }]}>{notice}</Text> : null}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

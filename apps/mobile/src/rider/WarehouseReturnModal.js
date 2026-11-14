@@ -48,7 +48,7 @@ export default function WarehouseReturnModal({ session, delivery, onClose, onUpd
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.order}>{delivery.orderNumber}</Text><Text style={styles.name}>{delivery.customerName}</Text>
       <Pressable accessibilityRole="button" disabled={busy || !current} onPress={() => setReload((value) => value + 1)} style={styles.button}><Text style={styles.link}>Check latest status</Text></Pressable>
-      {!current ? <ActivityIndicator color="#7c3aed" /> : result.error ? <Text style={styles.error}>{result.error}</Text> : !state.attemptId ? <Text style={styles.description}>Report an unsuccessful delivery attempt first.</Text> : <View style={styles.card}>
+      {!current ? <ActivityIndicator color={warehousePalette.accent} /> : result.error ? <Text style={styles.error}>{result.error}</Text> : !state.attemptId ? <Text style={styles.description}>Report an unsuccessful delivery attempt first.</Text> : <View style={styles.card}>
         <Text style={styles.label}>Last delivery attempt</Text><Text style={styles.name}>{readable(state.reason)}</Text>{state.note ? <Text style={styles.description}>{state.note}</Text> : null}
         <Text style={styles.label}>Warehouse progress</Text>
         <Text style={styles.description}>{state.resolvedAt ? `Resolved: ${readable(state.resolution)}` : state.receivedAt ? "Administrator confirmed receipt. Waiting for retry or cancellation decision." : state.reportedAt ? "Return reported. Waiting for the administrator to confirm receipt." : "Not yet reported as returned to the warehouse."}</Text>

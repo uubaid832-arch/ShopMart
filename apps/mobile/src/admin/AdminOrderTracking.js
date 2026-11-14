@@ -127,7 +127,7 @@ export default function AdminOrderTracking({ session, order, revision = 0 }) {
           </View>
         </View>
         {!current ? (
-          <ActivityIndicator color="#7c3aed" />
+          <ActivityIndicator color={trackingPalette.accent} />
         ) : (
           <>
             {result.error ? (

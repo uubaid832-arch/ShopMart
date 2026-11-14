@@ -124,15 +124,18 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="grid gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
+    <div className="grid gap-6 pb-4">
+      <header className="relative isolate overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-violet-950 to-violet-700 p-6 text-white shadow-xl sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-24 -z-10 size-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 right-1/3 -z-10 size-72 rounded-full bg-blue-400/20 blur-3xl" />
+        <div className="flex flex-wrap items-center justify-between gap-5">
         <div>
-          <p className="m-0 text-xs font-bold tracking-widest text-violet-600">
+          <p className="m-0 text-xs font-bold tracking-[0.22em] text-violet-200">
             STORE OVERVIEW
           </p>
-          <h1 className="mb-2 mt-2 text-3xl font-bold">Dashboard</h1>
-          <p className="m-0 text-sm text-slate-500">
-            Welcome back, {session.user.name}. Here’s your store overview.
+          <h1 className="mb-2 mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Good to see you, {session.user.name?.split(" ")[0] || "Admin"}</h1>
+          <p className="m-0 max-w-xl text-sm leading-6 text-violet-100/80">
+            Your ShopMart operations at a glance. Review sales, orders, and the next task that needs attention.
           </p>
         </div>
 
@@ -140,11 +143,12 @@ export default function AdminDashboard() {
           type="button"
           disabled={loading}
           onClick={() => setReload((current) => current + 1)}
-          className="flex items-center gap-2 rounded-xl border border-solid border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 enabled:hover:bg-violet-50 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-xl border border-solid border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20 disabled:opacity-50"
         >
           <RefreshCw size={17} aria-hidden="true" />
           Refresh
         </button>
+        </div>
       </header>
 
       {error && (
@@ -161,20 +165,20 @@ export default function AdminDashboard() {
           {metrics.map(({ label, value, Icon, color }) => (
             <article
               key={label}
-              className="rounded-2xl border border-solid border-slate-200 bg-white p-5"
+            className="group rounded-2xl border border-solid border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-lg"
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="m-0 text-sm font-medium text-slate-500">
                   {label}
                 </h2>
                 <span
-                  className={`grid size-10 shrink-0 place-items-center rounded-xl ${color}`}
+                  className={`grid size-11 shrink-0 place-items-center rounded-2xl ${color}`}
                 >
                   <Icon size={20} aria-hidden="true" />
                 </span>
               </div>
 
-              <p className="mb-0 mt-4 break-words text-2xl font-extrabold text-slate-900">
+              <p className="mb-0 mt-4 break-words text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
                 {loading ? "…" : (value ?? "—")}
               </p>
             </article>
@@ -194,15 +198,19 @@ export default function AdminDashboard() {
         )}
       </section>
       {codOpen && <AdminCodModal token={accessToken} onClose={() => { setCodOpen(false); setReload(v => v + 1); }} />}
-      {summary && <section className="rounded-2xl border border-solid border-slate-200 bg-white p-5">
-        <h2 className="mt-0 text-lg font-bold">Revenue & COD handovers</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <p>Gross paid <strong className="block">{formatPrice(summary.grossPaidRevenue)}</strong></p>
-          <p>Refunded <strong className="block">{formatPrice(summary.refundedAmount)}</strong></p>
-          <p>COD held by riders <strong className="block">{formatPrice(summary.codWithRiders)}</strong></p>
+      {summary && <section className="overflow-hidden rounded-3xl bg-slate-950 p-5 text-white shadow-lg sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Money overview</p><h2 className="mb-0 mt-2 text-xl font-extrabold">Revenue & COD handovers</h2><p className="mb-0 mt-1 text-xs text-slate-400">Refunds are subtracted from collected revenue.</p></div>
+          <Wallet className="text-violet-300" size={24} aria-hidden="true" />
         </div>
-        <button className="rounded-xl border-0 bg-violet-600 px-4 py-3 font-semibold text-white" onClick={() => setCodOpen(true)}>Review COD handovers ({summary.pendingCodHandovers ?? 0}) · {formatPrice(summary.pendingCodAmount)}</button>
-        <p className="text-xs text-slate-500">Confirm only after receiving cash. A handover does not add revenue again.</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {[["Gross paid", summary.grossPaidRevenue, "text-white"], ["Refunded", summary.refundedAmount, "text-rose-300"], ["COD with riders", summary.codWithRiders, "text-amber-200"]].map(([label, amount, tone]) => <div key={label} className="rounded-2xl border border-solid border-white/10 bg-white/[0.06] p-4"><p className="m-0 text-xs text-slate-400">{label}</p><strong className={`mt-2 block text-xl font-extrabold tracking-tight ${tone}`}>{formatPrice(amount)}</strong></div>)}
+        </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-violet-500/15 p-4">
+          <p className="m-0 text-sm text-violet-100">{summary.pendingCodHandovers ?? 0} cash handovers are waiting for review <span className="font-bold">· {formatPrice(summary.pendingCodAmount)}</span></p>
+          <button className="rounded-xl border-0 bg-violet-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-violet-400" onClick={() => setCodOpen(true)}>Review handovers</button>
+        </div>
+        <p className="mb-0 mt-3 text-xs text-slate-400">Confirm a COD handover only after receiving cash. This does not add revenue again.</p>
       </section>}
       <section
         aria-label="Active accounts"
@@ -213,7 +221,7 @@ export default function AdminDashboard() {
           <Link
             key={label}
             to="/admin/users"
-            className="flex items-center gap-4 rounded-2xl border border-solid border-slate-200 bg-white p-4 no-underline transition hover:border-violet-400"
+            className="flex items-center gap-4 rounded-2xl border border-solid border-slate-200 bg-white p-4 no-underline shadow-sm transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"
           >
             <span
               className={`grid size-11 shrink-0 place-items-center rounded-xl ${color}`}
@@ -242,7 +250,7 @@ export default function AdminDashboard() {
 
       {summary && (
         <div className="grid items-start gap-6 xl:grid-cols-[1.5fr_1fr]">
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-solid border-slate-200 bg-white">
+          <section className="min-w-0 overflow-hidden rounded-3xl border border-solid border-slate-200 bg-white shadow-sm">
             <header className="flex items-center justify-between gap-3 p-5">
               <h2 className="m-0 text-lg font-bold">Recent orders</h2>
               <Link
@@ -262,7 +270,7 @@ export default function AdminDashboard() {
                 <table className="w-full border-collapse text-left text-sm">
                   <caption className="sr-only">Five most recent orders</caption>
 
-                  <thead className="bg-slate-50 text-xs text-slate-500">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       {["Customer / Order", "Status", "Total"].map((label) => (
                         <th key={label} scope="col" className="p-4">
@@ -317,7 +325,7 @@ export default function AdminDashboard() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-solid border-slate-200 bg-white p-5">
+          <section className="rounded-3xl border border-solid border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <h2 className="m-0 text-lg font-bold">Low stock</h2>
               <Link
@@ -341,7 +349,7 @@ export default function AdminDashboard() {
                 {summary.lowStockProducts.map((product) => (
                   <li
                     key={product.id}
-                    className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-3"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-solid border-slate-100 bg-slate-50 p-3"
                   >
                     <span className="min-w-0 break-words text-sm font-semibold">
                       {product.name}
@@ -365,7 +373,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <section className="rounded-2xl border border-solid border-slate-200 bg-white p-5">
+      <section className="rounded-3xl border border-solid border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 mt-0 text-lg font-bold">Quick actions</h2>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
