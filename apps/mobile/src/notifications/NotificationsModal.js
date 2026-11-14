@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { notificationReadChanged } from "./NotificationBell";
 import {
   ActivityIndicator,
@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -37,13 +38,17 @@ async function request(token, path, method = "GET", signal) {
 }
 
 export default function NotificationsModal({ session, onClose, onOpenOrder }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const token = session.accessToken;
+  const isAdmin = session?.user?.role === "ADMIN";
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
   const pending = useRef(false);
+  const autoReadStarted = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -76,7 +81,7 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
 
   const data = current ? result.data : null;
 
-  async function markRead(id) {
+  const markRead = useCallback(async (id) => {
     if (pending.current) return;
 
     pending.current = true;
@@ -97,25 +102,31 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
       pending.current = false;
       setBusy(false);
     }
-  }
+  }, [token, session.user.id]);
+
+  useEffect(() => {
+    if (isAdmin || !current || !data || data.unreadCount < 1 || autoReadStarted.current) return;
+    autoReadStarted.current = true;
+    void markRead();
+  }, [current, data, isAdmin, markRead]);
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.header}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
           <View style={styles.grow}>
-            <Text style={styles.title}>Notifications</Text>
+            <Text style={[styles.title, { color: palette.text }]}>Notifications</Text>
             {data && (
-              <Text style={styles.muted}>{data.unreadCount} unread</Text>
+              <Text style={[styles.muted, { color: palette.muted }]}>{data.unreadCount} unread</Text>
             )}
           </View>
 
           <Pressable
             accessibilityRole="button"
             onPress={onClose}
-            style={styles.button}
+            style={[styles.button, { backgroundColor: palette.accentSoft }]}
           >
-            <Text style={styles.link}>Close</Text>
+            <Text style={[styles.link, { color: palette.accent }]}>Close</Text>
           </Pressable>
         </View>
 
@@ -125,27 +136,27 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
             disabled={busy || !current}
             onPress={() => {
               setActionError("");
+              autoReadStarted.current = false;
               setReload((value) => value + 1);
             }}
-            style={styles.button}
+            style={[styles.button, { backgroundColor: palette.accentSoft }]}
           >
-            <Text style={styles.link}>Refresh</Text>
+            <Text style={[styles.link, { color: palette.accent }]}>Refresh</Text>
           </Pressable>
-
-          <Pressable
-            accessibilityRole="button"
-            disabled={busy || !data || data.unreadCount === 0}
-            onPress={() => markRead()}
-            style={styles.button}
-          >
-            <Text style={styles.link}>
-              {busy ? "Updating..." : "Mark all read"}
-            </Text>
-          </Pressable>
+          {isAdmin && data?.unreadCount > 0 && (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => markRead()}
+              style={[styles.button, { backgroundColor: palette.accentSoft }]}
+            >
+              <Text style={[styles.link, { color: palette.accent }]}>Mark all read</Text>
+            </Pressable>
+          )}
         </View>
 
         {actionError ? (
-          <Text accessibilityRole="alert" style={styles.error}>
+          <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
             {actionError}
           </Text>
         ) : null}
@@ -153,11 +164,11 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
         {!current ? (
           <ActivityIndicator
             size="large"
-            color="#7c3aed"
+            color={palette.accent}
             style={styles.loader}
           />
         ) : result.error ? (
-          <Text accessibilityRole="alert" style={styles.error}>
+          <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
             {result.error}
           </Text>
         ) : (
@@ -167,18 +178,18 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
               keyExtractor={(item) => item.id}
               contentContainerStyle={styles.list}
               ListEmptyComponent={
-                <Text style={styles.empty}>No notifications yet.</Text>
+                <Text style={[styles.empty, { color: palette.muted }]}>No notifications yet.</Text>
               }
               renderItem={({ item }) => (
-                <View style={[styles.card, !item.readAt && styles.unread]}>
-                  <Text style={styles.cardTitle}>
+                <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }, !item.readAt && { backgroundColor: palette.accentSoft, borderColor: palette.accent }]}>
+                  <Text style={[styles.cardTitle, { color: palette.text }]}>
                     {!item.readAt ? "● " : ""}
                     {item.title}
                   </Text>
 
-                  <Text style={styles.message}>{item.message}</Text>
+                  <Text style={[styles.message, { color: palette.muted }]}>{item.message}</Text>
 
-                  <Text style={styles.muted}>
+                  <Text style={[styles.muted, { color: palette.muted }]}>
                     {new Date(item.createdAt).toLocaleString("en-PK")}
                   </Text>
 
@@ -188,19 +199,19 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
                       accessibilityLabel="Open this order"
                       disabled={busy}
                       onPress={() => onOpenOrder(item.orderId)}
-                      style={styles.readButton}
+                      style={[styles.readButton, { backgroundColor: palette.accentSoft }]}
                     >
-                      <Text style={styles.link}>Open order →</Text>
+                      <Text style={[styles.link, { color: palette.accent }]}>Open order →</Text>
                     </Pressable>
                   )}
-                  {!item.readAt && (
+                  {isAdmin && !item.readAt && (
                     <Pressable
                       accessibilityRole="button"
                       disabled={busy}
                       onPress={() => markRead(item.id)}
-                      style={styles.readButton}
+                      style={[styles.readButton, { backgroundColor: palette.accentSoft }]}
                     >
-                      <Text style={styles.link}>Mark as read</Text>
+                      <Text style={[styles.link, { color: palette.accent }]}>Mark as read</Text>
                     </Pressable>
                   )}
                 </View>
@@ -208,17 +219,17 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
             />
 
             {data.totalPages > 1 && (
-              <View style={styles.pagination}>
+              <View style={[styles.pagination, { backgroundColor: palette.background, borderTopColor: palette.border }]}>
                 <Pressable
                   accessibilityRole="button"
                   disabled={busy || page === 0}
                   onPress={() => setPage((value) => value - 1)}
-                  style={styles.button}
+                  style={[styles.button, { backgroundColor: palette.accentSoft }]}
                 >
-                  <Text style={styles.link}>Previous</Text>
+                  <Text style={[styles.link, { color: palette.accent }]}>Previous</Text>
                 </Pressable>
 
-                <Text style={styles.muted}>
+                <Text style={[styles.muted, { color: palette.muted }]}>
                   {page + 1} / {data.totalPages}
                 </Text>
 
@@ -226,9 +237,9 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
                   accessibilityRole="button"
                   disabled={busy || page + 1 >= data.totalPages}
                   onPress={() => setPage((value) => value + 1)}
-                  style={styles.button}
+                  style={[styles.button, { backgroundColor: palette.accentSoft }]}
                 >
-                  <Text style={styles.link}>Next</Text>
+                  <Text style={[styles.link, { color: palette.accent }]}>Next</Text>
                 </Pressable>
               </View>
             )}
@@ -245,6 +256,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 20,
+    borderBottomWidth: 1,
     backgroundColor: "#fff",
     gap: 12,
   },

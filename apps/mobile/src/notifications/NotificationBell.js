@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -10,7 +11,18 @@ export function notificationReadChanged(userId) {
   for (const listener of listeners.get(userId) || []) listener();
 }
 
-export default function NotificationBell({ session, onPress, style }) {
+export default function NotificationBell({
+  session,
+  onPress,
+  style,
+  accentColor,
+  surfaceColor,
+  borderColor,
+}) {
+  const { theme } = useMobileAppearance();
+  const accent = accentColor || theme.colors.accent;
+  const surface = surfaceColor || theme.colors.surface;
+  const border = borderColor || theme.colors.border;
   const [result, setResult] = useState(null);
   const userId = session?.user?.id;
   const token = session?.accessToken;
@@ -108,19 +120,24 @@ export default function NotificationBell({ session, onPress, style }) {
         count ? `Notifications, ${count} unread` : "Notifications"
       }
       onPress={onPress}
-      style={({ pressed }) => [styles.button, style, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.button,
+        { backgroundColor: surface, borderColor: border },
+        style,
+        pressed && styles.pressed,
+      ]}
     >
       <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
         <Path
           d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
-          stroke="#7c3aed"
+          stroke={accent}
           strokeWidth={1.8}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
       </Svg>
       {count > 0 && (
-        <View pointerEvents="none" style={styles.badge}>
+        <View pointerEvents="none" style={[styles.badge, { backgroundColor: "#dc2626", borderColor: surface }]}>
           <Text style={styles.count}>{count > 99 ? "99+" : count}</Text>
         </View>
       )}
@@ -132,7 +149,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#f0eafa",
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },

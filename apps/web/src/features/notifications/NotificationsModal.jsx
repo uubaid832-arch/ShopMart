@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Bell, CheckCheck, X } from "lucide-react";
 import Modal from "../../components/Modal";
@@ -32,6 +32,7 @@ export default function NotificationsModal({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
   const inFlight = useRef(false);
+  const autoReadStarted = useRef(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -85,7 +86,7 @@ export default function NotificationsModal({
         )
       : "";
 
-  async function updateRead(notification, openOrder = false) {
+  const updateRead = useCallback(async (notification, openOrder = false) => {
     if (inFlight.current) return;
 
     inFlight.current = true;
@@ -115,7 +116,13 @@ export default function NotificationsModal({
       inFlight.current = false;
       setBusy(false);
     }
-  }
+  }, [accessToken, isAdmin, onChanged, onClose, navigate]);
+
+  useEffect(() => {
+    if (isAdmin || !current || !data || data.unreadCount < 1 || autoReadStarted.current) return;
+    autoReadStarted.current = true;
+    void updateRead(null);
+  }, [current, data, isAdmin, updateRead]);
 
   return (
     <Modal
@@ -163,7 +170,7 @@ export default function NotificationsModal({
           </span>
 
           <div className="flex flex-wrap gap-2">
-            {data && data.unreadCount > 0 && (
+            {isAdmin && data && data.unreadCount > 0 && (
               <button
                 type="button"
                 disabled={busy || loading}
@@ -178,7 +185,10 @@ export default function NotificationsModal({
             <button
               type="button"
               disabled={loading || busy || !accessToken}
-              onClick={() => setReload((current) => current + 1)}
+              onClick={() => {
+                autoReadStarted.current = false;
+                setReload((current) => current + 1);
+              }}
               className={buttonStyle}
             >
               {text("Refresh", "ریفریش")}
@@ -228,7 +238,7 @@ export default function NotificationsModal({
                     <bdi>{notification.title}</bdi>
                   </h3>
 
-                  {!notification.readAt && (
+                  {isAdmin && !notification.readAt && (
                     <span className="shrink-0 rounded-full bg-violet-600 px-2 py-1 text-[10px] font-bold text-white">
                       {text("New", "نئی")}
                     </span>

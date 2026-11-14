@@ -36,6 +36,8 @@ import BiometricSettingsModal, {
   BiometricLockScreen,
   useBiometricLock,
 } from "./src/account/BiometricSecurity";
+import AppearanceModal from "./src/appearance/AppearanceModal";
+import { MobileAppearanceProvider, useMobileAppearance } from "./src/appearance/MobileAppearance";
 
 const paths = {
   grid: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
@@ -57,6 +59,7 @@ const paths = {
   close: "m6 6 12 12M6 18 18 6",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
   chat: "M21 11a9 9 0 0 1-9 9H5l-4 3 2-7a9 9 0 1 1 18-5Z",
+  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 
 function Icon({ name, size = 22, color = "#17203b", filled = false }) {
@@ -74,7 +77,7 @@ function Icon({ name, size = 22, color = "#17203b", filled = false }) {
   );
 }
 
-function IconButton({ name, label, onPress, disabled, children }) {
+function IconButton({ name, label, onPress, disabled, children, color, style }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -83,11 +86,12 @@ function IconButton({ name, label, onPress, disabled, children }) {
       disabled={disabled}
       style={({ pressed }) => [
         styles.iconButton,
+        style,
         disabled && styles.dim,
         pressed && styles.pressed,
       ]}
     >
-      <Icon name={name} />
+      <Icon name={name} color={color || "#17203b"} />
       {children}
     </Pressable>
   );
@@ -126,17 +130,15 @@ function ProductPhoto({ uri, name }) {
 }
 
 function ShopMart() {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const auth = useMobileSession();
   const [authOpen, setAuthOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [previewAdminId, setPreviewAdminId] = useState(null);
-  const isStorePreview = canPreviewStore(
-    auth.session?.user.role,
-    auth.session?.user.id,
-    previewAdminId,
-  );
+  const isStorePreview = canPreviewStore(auth.session?.user.role, auth.session?.user.id, previewAdminId);
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -160,6 +162,7 @@ function ShopMart() {
 
   const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
   const [chatOpen, setChatOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -206,18 +209,8 @@ function ShopMart() {
   function pop(value) {
     value.setValue(0.72);
     Animated.sequence([
-      Animated.spring(value, {
-        toValue: 1.24,
-        speed: 26,
-        bounciness: 9,
-        useNativeDriver: true,
-      }),
-      Animated.spring(value, {
-        toValue: 1,
-        speed: 22,
-        bounciness: 7,
-        useNativeDriver: true,
-      }),
+      Animated.spring(value, { toValue: 1.24, speed: 26, bounciness: 9, useNativeDriver: true }),
+      Animated.spring(value, { toValue: 1, speed: 22, bounciness: 7, useNativeDriver: true }),
     ]).start();
   }
 
@@ -232,24 +225,11 @@ function ShopMart() {
       cartToastScale.setValue(0.86);
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(cartToastOpacity, {
-            toValue: 1,
-            duration: 180,
-            useNativeDriver: true,
-          }),
-          Animated.spring(cartToastScale, {
-            toValue: 1,
-            speed: 22,
-            bounciness: 8,
-            useNativeDriver: true,
-          }),
+          Animated.timing(cartToastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+          Animated.spring(cartToastScale, { toValue: 1, speed: 22, bounciness: 8, useNativeDriver: true }),
         ]),
         Animated.delay(1500),
-        Animated.timing(cartToastOpacity, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }),
+        Animated.timing(cartToastOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
       ]).start(({ finished }) => {
         if (finished) setCartToast("");
       });
@@ -324,27 +304,27 @@ function ShopMart() {
 
   const header = (
     <View>
-      <View style={styles.hero}>
-        <View pointerEvents="none" style={styles.heroOrb} />
+      <View style={[styles.hero, { backgroundColor: theme.isDark ? palette.elevated : "#efe8fc", borderColor: palette.border }]}>
+        <View pointerEvents="none" style={[styles.heroOrb, { backgroundColor: theme.isDark ? palette.accentSoft : "#e7dcfa" }]} />
         <View style={styles.heroCopy}>
-          <Text style={styles.heroEyebrow}>YOUR EVERYDAY EDIT</Text>
-          <Text style={styles.greeting} numberOfLines={1}>
+          <Text style={[styles.heroEyebrow, { color: palette.accent }]}>YOUR EVERYDAY EDIT</Text>
+          <Text style={[styles.greeting, { color: palette.text }]} numberOfLines={1}>
             Hi, {auth.session?.user.name?.split(" ")[0] || "there"}
           </Text>
-          <Text style={styles.heroText}>
+          <Text style={[styles.heroText, { color: palette.muted }]}>
             Everyday finds. A little more you.
           </Text>
-          <Text style={styles.heroCaption}>Explore the things you love.</Text>
+          <Text style={[styles.heroCaption, { color: palette.muted }]}>Explore the things you love.</Text>
         </View>
-        <View style={styles.heroArt}>
-          <Icon name="bag" size={48} color="#7c3aed" />
+        <View style={[styles.heroArt, { backgroundColor: palette.accentSoft, borderColor: palette.border }]}>
+          <Icon name="bag" size={48} color={palette.accent} />
           <View style={styles.spark}>
-            <Icon name="plus" size={17} color="#a78bfa" />
+            <Icon name="plus" size={17} color={palette.accent} />
           </View>
         </View>
       </View>
-      <View style={styles.searchBox}>
-        <Icon name="search" color="#8b93a7" size={21} />
+      <View style={[styles.searchBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <Icon name="search" color={palette.muted} size={21} />
         <TextInput
           accessibilityLabel="Search products"
           value={search}
@@ -352,7 +332,7 @@ function ShopMart() {
           placeholder="What are you looking for?"
           placeholderTextColor="#9299ac"
           autoCorrect={false}
-          style={styles.search}
+          style={[styles.search, { color: palette.text }]}
         />
         {search ? (
           <IconButton
@@ -373,7 +353,7 @@ function ShopMart() {
             accessibilityRole="button"
             accessibilityState={{ selected: category === name }}
             onPress={() => setCategory(name)}
-            style={[styles.chip, category === name && styles.activeChip]}
+              style={[styles.chip, { backgroundColor: palette.soft, borderColor: palette.border }, category === name && { backgroundColor: palette.accent, borderColor: palette.accent }]}
           >
             <Icon
               name={
@@ -388,7 +368,7 @@ function ShopMart() {
                         : "box"
               }
               size={15}
-              color={category === name ? "#fff" : "#8d849f"}
+              color={category === name ? "#fff" : palette.muted}
             />
             <Text style={[styles.chipText, category === name && styles.white]}>
               {name}
@@ -398,10 +378,10 @@ function ShopMart() {
       </ScrollView>
       <View style={styles.section}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>
             {wishlistOnly ? "Your wishlist" : "Discover products"}
           </Text>
-          <Text style={styles.sectionCaption}>
+          <Text style={[styles.sectionCaption, { color: palette.muted }]}>
             {loading
               ? "Finding your favorites..."
               : `${products.length} ${products.length === 1 ? "find" : "finds"} for you`}
@@ -412,12 +392,12 @@ function ShopMart() {
           accessibilityLabel="Refresh products"
           disabled={loading}
           onPress={() => setReload((value) => value + 1)}
-          style={styles.refresh}
+          style={[styles.refresh, { backgroundColor: palette.accentSoft }]}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#7c3aed" />
+            <ActivityIndicator size="small" color={palette.accent} />
           ) : (
-            <Icon name="refresh" size={19} color="#7c3aed" />
+            <Icon name="refresh" size={19} color={palette.accent} />
           )}
         </Pressable>
       </View>
@@ -430,59 +410,45 @@ function ShopMart() {
   );
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <StatusBar style="dark" />
-      {isStorePreview && (
-        <View
-          style={{
-            backgroundColor: "#ede9fe",
-            padding: 12,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <Text style={{ color: "#6d28d9", fontWeight: "700" }}>
-            Store preview · Admin
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              setPreviewAdminId(null);
-              setCartOpen(false);
-              setAccountOpen(false);
-            }}
-          >
-            <Text style={{ color: "#6d28d9", fontWeight: "800" }}>
-              Back to Admin →
-            </Text>
-          </Pressable>
-        </View>
-      )}
-      <View style={styles.header}>
-        <Text style={styles.brand}>
-          Shop<Text style={styles.violet}>Mart</Text>
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
+      <StatusBar style={theme.isDark ? "light" : "dark"} />
+      {isStorePreview && <View style={{backgroundColor:"#ede9fe",padding:12,flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><Text style={{color:"#6d28d9",fontWeight:"700"}}>Store preview · Admin</Text><Pressable accessibilityRole="button" onPress={() => {setPreviewAdminId(null);setCartOpen(false);setAccountOpen(false);}}><Text style={{color:"#6d28d9",fontWeight:"800"}}>Back to Admin →</Text></Pressable></View>}
+      <View style={[styles.header, { backgroundColor: palette.background }]}>
+          <Text style={[styles.brand, { color: palette.text }]}>
+          Shop<Text style={[styles.violet, { color: palette.accent }]}>Mart</Text>
         </Text>
         <View style={styles.headerActions}>
           <IconButton
+            name="palette"
+            label="Change appearance"
+            color={palette.accent}
+            style={{ backgroundColor: palette.surface, borderColor: palette.border }}
+            onPress={() => setAppearanceOpen(true)}
+          />
+          <IconButton
             name="chat"
             label="Shopping assistant"
+            color={palette.text}
+            style={{ backgroundColor: palette.surface, borderColor: palette.border }}
             onPress={() => setChatOpen(true)}
           />
           <NotificationBell
             session={auth.session}
             onPress={() => openSignedIn(() => setNotificationsOpen(true))}
+            accentColor={palette.accent}
+            surfaceColor={palette.surface}
+            borderColor={palette.border}
           />
           <IconButton
             name="bag"
             label={`Cart, ${cart.count} items`}
             disabled={cart.loading}
+            color={palette.text}
+            style={{ backgroundColor: palette.surface, borderColor: palette.border }}
             onPress={() => setCartOpen(true)}
           >
             {cart.count > 0 && (
-              <Animated.View
-                style={[styles.badge, { transform: [{ scale: cartPulse }] }]}
-              >
+              <Animated.View style={[styles.badge, { backgroundColor: "#dc2626", transform: [{ scale: cartPulse }] }]}>
                 <Text style={styles.badgeText}>
                   {cart.count > 99 ? "99+" : cart.count}
                 </Text>
@@ -494,26 +460,12 @@ function ShopMart() {
 
       {cartToast ? (
         <Animated.View
-          style={[
-            styles.cartToast,
-            {
-              opacity: cartToastOpacity,
-              transform: [{ scale: cartToastScale }],
-            },
-          ]}
+          accessibilityLiveRegion="polite"
+          style={[styles.cartToast, { opacity: cartToastOpacity, transform: [{ scale: cartToastScale }] }]}
         >
           <Icon name="cart" size={20} color="#047857" />
-          <Text
-            accessibilityLiveRegion="polite"
-            style={styles.cartToastText}
-            numberOfLines={1}
-          >
-            {cartToast} added to cart ✓
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setCartOpen(true)}
-          >
+          <Text style={styles.cartToastText} numberOfLines={1}>{cartToast} added to cart ✓</Text>
+          <Pressable accessibilityRole="button" onPress={() => setCartOpen(true)}>
             <Text style={styles.cartToastLink}>View cart</Text>
           </Pressable>
         </Animated.View>
@@ -531,12 +483,12 @@ function ShopMart() {
         ListEmptyComponent={
           <View style={styles.empty}>
             {loading ? (
-              <ActivityIndicator color="#7c3aed" size="large" />
+              <ActivityIndicator color={palette.accent} size="large" />
             ) : (
               <Icon
                 name={wishlistOnly ? "heart" : "search"}
                 size={36}
-                color="#b7a6df"
+                color={palette.accent}
               />
             )}
             <Text style={styles.emptyText}>
@@ -555,7 +507,7 @@ function ShopMart() {
           const atLimit = quantity >= Math.min(item.stock, 999);
           const saved = wishlist.hasItem(item.id);
           return (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <View
                 style={[
                   styles.art,
@@ -603,19 +555,8 @@ function ShopMart() {
                   onPress={() => toggleProductWishlist(item.id, saved)}
                   style={styles.heart}
                 >
-                  <Animated.View
-                    style={
-                      heartPulseId === item.id
-                        ? { transform: [{ scale: heartPulse }] }
-                        : undefined
-                    }
-                  >
-                    <Icon
-                      name="heart"
-                      size={19}
-                      color={saved ? "#7c3aed" : "#454d66"}
-                      filled={saved}
-                    />
+                  <Animated.View style={heartPulseId === item.id ? { transform: [{ scale: heartPulse }] } : undefined}>
+                    <Icon name="heart" size={19} color={saved ? palette.accent : palette.muted} filled={saved} />
                   </Animated.View>
                 </Pressable>
               </View>
@@ -625,44 +566,53 @@ function ShopMart() {
                   accessibilityLabel={`View ${item.name}`}
                   onPress={() => setSelectedProduct(item)}
                 >
-                  <Text style={styles.productName} numberOfLines={2}>
+                  <Text style={[styles.productName, { color: palette.text }]} numberOfLines={2}>
                     {item.name}
                   </Text>
                 </Pressable>
-                <Text style={styles.category} numberOfLines={1}>
+                {item.reviewCount > 0 && (
+                  <Text
+                    accessibilityLabel={`Rated ${Number(item.averageRating).toFixed(1)} out of 5 from ${item.reviewCount} reviews`}
+                    style={[styles.category, { color: palette.accent, marginTop: 5 }]}
+                    numberOfLines={1}
+                  >
+                    ★ {Number(item.averageRating).toFixed(1)} · {item.reviewCount} {item.reviewCount === 1 ? "review" : "reviews"}
+                  </Text>
+                )}
+                  <Text style={[styles.category, { color: palette.muted }]} numberOfLines={1}>
                   {item.category}
                 </Text>
                 <Text
-                  style={styles.price}
+                  style={[styles.price, { color: palette.accent }]}
                   adjustsFontSizeToFit
                   numberOfLines={1}
                 >
                   {formatPrice(item.price)}
                 </Text>
                 {quantity > 0 && !unavailable ? (
-                  <View style={styles.stepper}>
+                  <View style={[styles.stepper, { backgroundColor: palette.accentSoft }]}>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Remove one ${item.name}`}
                       disabled={cart.loading}
-                      style={styles.stepButton}
+                      style={[styles.stepButton, { backgroundColor: palette.accentSoft }]}
                       onPress={() =>
                         quantity === 1
                           ? cart.removeItem(item.id)
                           : cart.changeQuantity(item.id, quantity - 1)
                       }
                     >
-                      <Icon name="minus" size={19} color="#7c3aed" />
+                      <Icon name="minus" size={19} color={palette.accent} />
                     </Pressable>
-                    <Text style={styles.quantity}>{quantity}</Text>
+                    <Text style={[styles.quantity, { color: palette.text }]}>{quantity}</Text>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Add one ${item.name}`}
                       disabled={cart.loading || atLimit}
                       onPress={() => addProduct(item.id)}
-                      style={[styles.stepButton, atLimit && styles.dim]}
+                      style={[styles.stepButton, { backgroundColor: palette.accentSoft }, atLimit && styles.dim]}
                     >
-                      <Icon name="plus" size={19} color="#7c3aed" />
+                      <Icon name="plus" size={19} color={palette.accent} />
                     </Pressable>
                   </View>
                 ) : (
@@ -673,22 +623,13 @@ function ShopMart() {
                     onPress={() => addProduct(item.id)}
                     style={[
                       styles.addButton,
+                      { backgroundColor: palette.accent },
                       (cart.loading || unavailable || atLimit) &&
                         styles.disabled,
                     ]}
                   >
-                    <Animated.View
-                      style={
-                        cartPulseId === item.id
-                          ? { transform: [{ scale: cartPulse }] }
-                          : undefined
-                      }
-                    >
-                      <Icon
-                        name="cart"
-                        color={unavailable ? "#7b8498" : "#fff"}
-                        size={17}
-                      />
+                    <Animated.View style={cartPulseId === item.id ? { transform: [{ scale: cartPulse }] } : undefined}>
+                      <Icon name="cart" color={unavailable ? "#7b8498" : "#fff"} size={17} />
                     </Animated.View>
                     <Text
                       style={[
@@ -706,7 +647,7 @@ function ShopMart() {
         }}
       />
 
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { backgroundColor: palette.surface, borderTopColor: palette.border }]}>
         {[
           {
             name: "home",
@@ -745,20 +686,20 @@ function ShopMart() {
             accessibilityState={{ selected: Boolean(item.active) }}
             accessibilityLabel={item.label}
             onPress={item.action}
-            style={[styles.bottomItem, item.active && styles.bottomItemActive]}
+            style={[styles.bottomItem, item.active && { backgroundColor: palette.accentSoft }]}
           >
             <Icon
               name={item.name}
               size={23}
-              color={item.active ? "#7c3aed" : "#69728b"}
+              color={item.active ? palette.accent : palette.muted}
             />
-            <Text style={[styles.bottomLabel, item.active && styles.violet]}>
+            <Text style={[styles.bottomLabel, { color: item.active ? palette.accent : palette.muted }]}>
               {item.label}
             </Text>
             <View
               style={[
                 styles.indicator,
-                !item.active && { backgroundColor: "transparent" },
+                { backgroundColor: item.active ? palette.accent : "transparent" },
               ]}
             />
           </Pressable>
@@ -839,6 +780,7 @@ function ShopMart() {
           }}
         />
       )}
+      <AppearanceModal visible={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
       {authOpen && (
         <AuthModal
           onSignIn={auth.signIn}
@@ -886,7 +828,9 @@ function ShopMart() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ShopMart />
+      <MobileAppearanceProvider>
+        <ShopMart />
+      </MobileAppearanceProvider>
     </SafeAreaProvider>
   );
 }
@@ -894,7 +838,7 @@ export default function App() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fbfafc" },
   header: {
-    paddingHorizontal: 22,
+    paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 20,
     flexDirection: "row",
@@ -922,16 +866,16 @@ const styles = StyleSheet.create({
   cartToastText: { color: "#065f46", fontSize: 13, fontWeight: "700", flex: 1 },
   cartToastLink: { color: "#047857", fontSize: 12, fontWeight: "900" },
   brand: {
-    fontSize: 29,
+    fontSize: 26,
     fontWeight: "900",
     letterSpacing: -1.3,
     color: "#20213a",
   },
   violet: { color: "#7c3aed" },
-  headerActions: { flexDirection: "row", gap: 10 },
+  headerActions: { flexDirection: "row", gap: 4 },
   iconButton: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 38,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 15,

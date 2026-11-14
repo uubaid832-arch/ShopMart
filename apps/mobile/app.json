@@ -5,6 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/shopsplash.jpeg",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b1733"
+    },
     "userInterfaceStyle": "light",
     "scheme": "shopmart",
     "ios": {
