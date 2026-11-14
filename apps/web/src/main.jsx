@@ -18,6 +18,7 @@ import SessionProvider from "./features/auth/SessionProvider";
 import LanguageProvider from "./features/language/LanguageProvider";
 import AdminUsers from "./features/admin/AdminUsers";
 import AdminVouchers from "./features/vouchers/AdminVouchers";
+import AdminAccount from "./features/admin/AdminAccount";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -36,6 +37,7 @@ createRoot(document.getElementById("root")).render(
               <Route path="deliveries" element={<AdminDeliveries />} />
               <Route path="reviews" element={<AdminReviews />} />
               <Route path="returns" element={<AdminReturns />} />
+              <Route path="account" element={<AdminAccount />} />
             </Route>
             <Route path="/rider" element={<RiderLayout />}>
               <Route index element={<RiderDeliveries />} />

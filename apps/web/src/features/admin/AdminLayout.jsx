@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Users,
   TicketPercent,
+  UserRound,
 } from "lucide-react";
 import { useSession } from "../auth/useSession";
 import NotificationBell from "../notifications/NotificationBell";
@@ -34,6 +35,7 @@ const links = [
   { to: "/admin/returns", label: "Returns & refunds", Icon: RotateCcw },
   { to: "/admin/reviews", label: "Reviews", Icon: Star },
   { to: "/admin/users", label: "Users & riders", Icon: Users },
+  { to: "/admin/account", label: "My account", Icon: UserRound },
 ];
 
 export default function AdminLayout() {
@@ -176,6 +178,15 @@ export default function AdminLayout() {
               <ArrowUpRight size={16} aria-hidden="true" />
             </NavLink>
             <AppearanceMenu />
+            <NavLink
+              to="/admin/account"
+              aria-label="Open my admin account settings"
+              title="My account"
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-violet-50 hover:text-violet-700"
+            >
+              <UserRound size={18} aria-hidden="true" />
+              <span className="hidden md:inline">My account</span>
+            </NavLink>
             <NotificationBell />
 
             <div className="ml-1 flex items-center gap-3 border-0 border-l border-solid border-slate-200 pl-3">
