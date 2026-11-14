@@ -52,15 +52,30 @@ export default function AdminLayout() {
       if (pending || document.hidden) return;
       pending = true;
       try {
-        const data = await getAdminDashboard(session.accessToken, controller.signal);
-        if (!controller.signal.aborted) setCounts({token: session.accessToken, orders: data.pendingOrders, returns: data.pendingReturnRequests});
-      } catch { /* Keep last confirmed counts until refresh succeeds. */ }
-      finally { pending = false; }
+        const data = await getAdminDashboard(
+          session.accessToken,
+          controller.signal,
+        );
+        if (!controller.signal.aborted)
+          setCounts({
+            token: session.accessToken,
+            orders: data.pendingOrders,
+            returns: data.pendingReturnRequests,
+          });
+      } catch {
+        /* Keep last confirmed counts until refresh succeeds. */
+      } finally {
+        pending = false;
+      }
     }
     refreshCounts();
     const timer = setInterval(refreshCounts, 15000);
     window.addEventListener("focus", refreshCounts);
-    return () => { controller.abort(); clearInterval(timer); window.removeEventListener("focus", refreshCounts); };
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshCounts);
+    };
   }, [session?.accessToken, session?.user.role, location.pathname]);
   const navCounts = counts?.token === session?.accessToken ? counts : null;
 
@@ -168,15 +183,6 @@ export default function AdminLayout() {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-3">
-            <NavLink
-              to="/"
-              title="Open storefront"
-              aria-label="Open storefront"
-              className="hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50 hover:text-violet-700 sm:flex"
-            >
-              Storefront
-              <ArrowUpRight size={16} aria-hidden="true" />
-            </NavLink>
             <AppearanceMenu />
             <NavLink
               to="/admin/account"
@@ -246,8 +252,20 @@ export default function AdminLayout() {
               >
                 <Icon size={18} strokeWidth={1.8} aria-hidden="true" />
                 {label}
-                {(to === "/admin/orders" ? navCounts?.orders : to === "/admin/returns" ? navCounts?.returns : 0) > 0 &&
-                  <span aria-label="Pending requests" className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">{to === "/admin/orders" ? navCounts.orders : navCounts.returns}</span>}
+                {(to === "/admin/orders"
+                  ? navCounts?.orders
+                  : to === "/admin/returns"
+                    ? navCounts?.returns
+                    : 0) > 0 && (
+                  <span
+                    aria-label="Pending requests"
+                    className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900"
+                  >
+                    {to === "/admin/orders"
+                      ? navCounts.orders
+                      : navCounts.returns}
+                  </span>
+                )}
               </NavLink>
             ))}
           </nav>

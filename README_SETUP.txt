@@ -1,16 +1,5 @@
-ShopMart rider/admin warehouse address update
+ShopMart web admin account update
 
-Included changes:
-- Active riders are selected from a searchable dropdown in mobile admin order assignment.
-- Saved customer addresses are hidden in rider/admin profile views; customers retain their saved-address feature.
-- Admin mobile My account has a Warehouse return address editor.
-- Return instruction drafts on web and mobile read the same administrator-configured address from the backend.
+This package adds an Admin > My account page for editing account name/phone, changing the password, and saving the shared warehouse return address. Web return instructions read the same saved warehouse setting. It also includes the backend controller/service, security allow-list entries, and Neon migration 021 required by the address setting.
 
-Setup:
-1. Copy included files into the matching project paths.
-2. Run the SQL in backend/shopmart-api/database/021_admin_warehouse_address.sql once in the deployed Neon database.
-3. Build/deploy the backend and web app.
-4. Open the mobile Admin app: My account > Warehouse return address, enter the full address/city/contact, and save.
-5. Build/install the updated mobile app.
-
-No new package or environment variable is required.
+Install: Extract into the project root and preserve the included apps/ and backend/ paths. Run database/021_admin_warehouse_address.sql once in the Neon database used by Render (skip if already applied). Push and deploy the backend and web app. Then open Admin > My account and save the actual warehouse address.
