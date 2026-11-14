@@ -104,6 +104,7 @@ export default function ProductDetails({
   quantity = 0,
   formatPrice,
   onAdd,
+  onRatingSummaryChange,
   onClose,
   children,
 }) {
@@ -224,7 +225,11 @@ export default function ProductDetails({
         </div>
       </div>
 
-      <ProductReviews key={product.id} productId={product.id} />
+      <ProductReviews
+        key={product.id}
+        productId={product.id}
+        onRatingSummaryChange={onRatingSummaryChange}
+      />
     </Modal>
   );
 }

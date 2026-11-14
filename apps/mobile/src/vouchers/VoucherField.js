@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 export default function VoucherField({ voucher, disabled }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   return (
-    <View style={s.card}>
-      <Text style={s.title}>Have a voucher?</Text>
+    <View style={[s.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+      <Text style={[s.title, { color: palette.text }]}>Have a voucher?</Text>
       <View style={s.row}>
         <TextInput
           accessibilityLabel="Voucher code"
@@ -14,13 +17,14 @@ export default function VoucherField({ voucher, disabled }) {
           autoCorrect={false}
           maxLength={40}
           editable={!disabled && !voucher.busy}
-          style={s.input}
+          placeholderTextColor={palette.muted}
+          style={[s.input, { backgroundColor: palette.elevated, borderColor: palette.border, color: palette.text }]}
         />
         <Pressable
           accessibilityRole="button"
           disabled={disabled || voucher.busy || !voucher.code.trim()}
           onPress={voucher.quote ? voucher.remove : voucher.apply}
-          style={[s.button, (disabled || voucher.busy) && s.dim]}
+          style={[s.button, { backgroundColor: palette.accent }, (disabled || voucher.busy) && s.dim]}
         >
           <Text style={s.white}>
             {voucher.busy ? "Checking..." : voucher.quote ? "Remove" : "Apply"}
@@ -28,17 +32,17 @@ export default function VoucherField({ voucher, disabled }) {
         </Pressable>
       </View>
       {voucher.quote && (
-        <Text style={s.success}>
+        <Text style={[s.success, { color: palette.success }]}>
           {voucher.quote.code} applied · Save PKR{" "}
           {Number(voucher.quote.discountAmount).toLocaleString("en-PK")}
         </Text>
       )}
       {voucher.error ? (
-        <Text accessibilityRole="alert" style={s.error}>
+        <Text accessibilityRole="alert" style={[s.error, { color: palette.danger }]}>
           {voucher.error}
         </Text>
       ) : null}
-      <Text style={s.note}>
+      <Text style={[s.note, { color: palette.muted }]}>
         One voucher per order. Final eligibility is checked when placing the
         order.
       </Text>

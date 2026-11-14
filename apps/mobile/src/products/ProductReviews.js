@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -49,7 +50,9 @@ function stars(rating) {
   return "★".repeat(rating) + "☆".repeat(5 - rating);
 }
 
-export default function ProductReviews({ productId, session }) {
+export default function ProductReviews({ productId, session, onRatingSummaryChange }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const token = session?.accessToken;
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
@@ -125,6 +128,18 @@ export default function ProductReviews({ productId, session }) {
     result?.page === page &&
     result?.reload === reload;
 
+  const averageRating = current && !result.error
+    ? Number(result.reviews.averageRating) || 0
+    : null;
+  const reviewCount = current && !result.error
+    ? Number(result.reviews.totalItems) || 0
+    : null;
+
+  useEffect(() => {
+    if (averageRating === null || reviewCount === null) return;
+    onRatingSummaryChange?.(productId, { averageRating, reviewCount });
+  }, [averageRating, onRatingSummaryChange, productId, reviewCount]);
+
   async function submit() {
     if (pending.current || !current || !result.eligibility?.canReview) return;
 
@@ -160,49 +175,49 @@ export default function ProductReviews({ productId, session }) {
   }
 
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, { borderTopColor: palette.border }]}>
       <View style={styles.headingRow}>
-        <Text style={styles.heading}>Ratings & reviews</Text>
+        <Text style={[styles.heading, { color: palette.text }]}>Ratings & reviews</Text>
 
         <Pressable
           accessibilityRole="button"
           disabled={busy || !current}
           onPress={() => setReload((value) => value + 1)}
-          style={styles.refresh}
+          style={[styles.refresh, { backgroundColor: palette.accentSoft }]}
         >
-          <Text style={styles.link}>Refresh</Text>
+          <Text style={[styles.link, { color: palette.accent }]}>Refresh</Text>
         </Pressable>
       </View>
 
-      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+      {notice ? <Text style={[styles.notice, { color: palette.success }]}>{notice}</Text> : null}
 
       {error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
+        <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
           {error}
         </Text>
       ) : null}
 
       {!current ? (
-        <ActivityIndicator color="#7c3aed" style={styles.loader} />
+        <ActivityIndicator color={palette.accent} style={styles.loader} />
       ) : result.error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
+        <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
           {result.error}
         </Text>
       ) : (
         <>
-          <View style={styles.summary}>
-            <Text style={styles.average}>
+          <View style={[styles.summary, { backgroundColor: palette.accentSoft }]}>
+            <Text style={[styles.average, { color: palette.accent }]}>
               {Number(result.reviews.averageRating || 0).toFixed(1)}
-              <Text style={styles.outOf}> / 5</Text>
+              <Text style={[styles.outOf, { color: palette.muted }]}> / 5</Text>
             </Text>
-            <Text style={styles.muted}>
+            <Text style={[styles.muted, { color: palette.muted }]}>
               {result.reviews.totalItems} review(s)
             </Text>
           </View>
 
           {result.eligibility.canReview ? (
-            <View style={styles.form}>
-              <Text style={styles.formTitle}>Share your experience</Text>
+            <View style={[styles.form, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+              <Text style={[styles.formTitle, { color: palette.text }]}>Share your experience</Text>
 
               <View style={styles.stars}>
                 {[1, 2, 3, 4, 5].map((value) => (
@@ -215,7 +230,7 @@ export default function ProductReviews({ productId, session }) {
                     onPress={() => setRating(value)}
                     style={styles.starButton}
                   >
-                    <Text style={styles.star}>
+                    <Text style={[styles.star, { color: value <= rating ? palette.warning : palette.muted }]}>
                       {value <= rating ? "★" : "☆"}
                     </Text>
                   </Pressable>
@@ -225,23 +240,23 @@ export default function ProductReviews({ productId, session }) {
               <TextInput
                 accessibilityLabel="Your product review"
                 placeholder="What did you like about this product?"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={palette.muted}
                 value={comment}
                 onChangeText={setComment}
                 editable={!busy}
                 multiline
                 maxLength={2000}
                 textAlignVertical="top"
-                style={styles.input}
+                style={[styles.input, { color: palette.text, backgroundColor: palette.soft, borderColor: palette.border }]}
               />
 
-              <Text style={styles.counter}>{comment.length}/2000</Text>
+              <Text style={[styles.counter, { color: palette.muted }]}>{comment.length}/2000</Text>
 
               <Pressable
                 accessibilityRole="button"
                 disabled={busy}
                 onPress={submit}
-                style={[styles.submit, busy && styles.disabled]}
+                style={[styles.submit, { backgroundColor: palette.accent }, busy && styles.disabled]}
               >
                 <Text style={styles.submitText}>
                   {busy ? "Submitting..." : "Submit review"}
@@ -249,15 +264,15 @@ export default function ProductReviews({ productId, session }) {
               </Pressable>
             </View>
           ) : (
-            <Text style={styles.reason}>{result.eligibility.reason}</Text>
+            <Text style={[styles.reason, { color: palette.muted }]}>{result.eligibility.reason}</Text>
           )}
 
           {result.reviews.items.length === 0 ? (
-            <Text style={styles.muted}>No reviews yet.</Text>
+            <Text style={[styles.muted, { color: palette.muted }]}>No reviews yet.</Text>
           ) : (
             result.reviews.items.map((review) => (
-              <View key={review.id} style={styles.review}>
-                <Text style={styles.author}>{review.authorName}</Text>
+              <View key={review.id} style={[styles.review, { borderBottomColor: palette.border }]}>
+                <Text style={[styles.author, { color: palette.text }]}>{review.authorName}</Text>
                 <Text
                   accessibilityLabel={`${review.rating} out of 5 stars`}
                   style={styles.reviewStars}
@@ -266,11 +281,11 @@ export default function ProductReviews({ productId, session }) {
                 </Text>
 
                 {review.verifiedPurchase && (
-                  <Text style={styles.verified}>✓ Verified purchase</Text>
+                  <Text style={[styles.verified, { color: palette.success }]}>✓ Verified purchase</Text>
                 )}
 
-                <Text style={styles.comment}>{review.comment}</Text>
-                <Text style={styles.muted}>
+                <Text style={[styles.comment, { color: palette.muted }]}>{review.comment}</Text>
+                <Text style={[styles.muted, { color: palette.muted }]}>
                   {new Date(review.createdAt).toLocaleDateString("en-PK")}
                 </Text>
               </View>
@@ -283,12 +298,12 @@ export default function ProductReviews({ productId, session }) {
                 accessibilityRole="button"
                 disabled={busy || page === 0}
                 onPress={() => setPage((value) => value - 1)}
-                style={styles.refresh}
+                style={[styles.refresh, { backgroundColor: palette.accentSoft }]}
               >
-                <Text style={styles.link}>Previous</Text>
+                <Text style={[styles.link, { color: palette.accent }]}>Previous</Text>
               </Pressable>
 
-              <Text style={styles.muted}>
+              <Text style={[styles.muted, { color: palette.muted }]}>
                 {page + 1} / {result.reviews.totalPages}
               </Text>
 
@@ -296,9 +311,9 @@ export default function ProductReviews({ productId, session }) {
                 accessibilityRole="button"
                 disabled={busy || page + 1 >= result.reviews.totalPages}
                 onPress={() => setPage((value) => value + 1)}
-                style={styles.refresh}
+                style={[styles.refresh, { backgroundColor: palette.accentSoft }]}
               >
-                <Text style={styles.link}>Next</Text>
+                <Text style={[styles.link, { color: palette.accent }]}>Next</Text>
               </Pressable>
             </View>
           )}

@@ -11,7 +11,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { useSafepay } from "./useSafepay";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 export default function SafepayCheckout({ session, request, onPaid, onBack }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const pay = useSafepay(session, onPaid);
   const [show, setShow] = useState(false);
   const started = useRef(false);
@@ -55,7 +58,7 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
       accessibilityRole="button"
       onPress={fn}
       disabled={disabled}
-      style={[s.button, disabled && { opacity: 0.4 }]}
+      style={[s.button, { backgroundColor: palette.accent }, disabled && { opacity: 0.4 }]}
     >
       <Text style={s.buttonText}>{title}</Text>
     </Pressable>
@@ -76,9 +79,9 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
           );
       }}
     >
-      <SafeAreaView style={s.screen}>
-        <View style={s.header}>
-          <Text style={s.title}>Safepay</Text>
+      <SafeAreaView style={[s.screen, { backgroundColor: palette.background }]}>
+        <View style={[s.header, { borderBottomColor: palette.border }]}>
+          <Text style={[s.title, { color: palette.text }]}>Safepay</Text>
           {button(
             show ? "Back" : "Close",
             () => {
@@ -111,18 +114,18 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
               sharedCookiesEnabled
               setSupportMultipleWindows={false}
               startInLoadingState
-              renderLoading={() => <ActivityIndicator color="#7c3aed" />}
+              renderLoading={() => <ActivityIndicator color={palette.accent} />}
               style={{ flex: 1 }}
             />
-            {webError ? <Text style={s.error}>{webError}</Text> : null}
+            {webError ? <Text style={[s.error, { color: palette.danger }]}>{webError}</Text> : null}
           </>
         ) : (
           <ScrollView contentContainerStyle={s.content}>
-            <Text style={s.notice}>
+            <Text style={[s.notice, { color: theme.isDark ? "#fbbf24" : "#875a00", backgroundColor: theme.isDark ? "#392d18" : "#fff2d5" }]}>
               Test mode — no real money is charged. Use Safepay test cards only.
             </Text>
             {!pay.ready ? (
-              <ActivityIndicator color="#7c3aed" />
+              <ActivityIndicator color={palette.accent} />
             ) : !pay.data ? (
               button(
                 pay.busy ? "Preparing checkout…" : "Pay with Safepay",
@@ -131,14 +134,14 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
               )
             ) : (
               <>
-                <Text style={s.amount}>
+                <Text style={[s.amount, { color: palette.accent }]}>
                   PKR{" "}
                   {Number(pay.data.total).toLocaleString("en-PK", {
                     minimumFractionDigits: 2,
                   })}
                 </Text>
-                <Text style={s.body}>{pay.data.message}</Text>
-                <Text selectable style={s.reference}>
+                <Text style={[s.body, { color: palette.muted }]}>{pay.data.message}</Text>
+                <Text selectable style={[s.reference, { color: palette.muted }]}>
                   Checkout reference: {pay.data.id}
                 </Text>
                 {pay.data.state === "PENDING" &&
@@ -165,11 +168,11 @@ export default function SafepayCheckout({ session, request, onPaid, onBack }) {
               </>
             )}
             {pay.error ? (
-              <Text accessibilityRole="alert" style={s.error}>
+              <Text accessibilityRole="alert" style={[s.error, { color: palette.danger }]}>
                 {pay.error}
               </Text>
             ) : null}
-            <Text style={s.body}>
+            <Text style={[s.body, { color: palette.muted }]}>
               After payment, return here. ShopMart verifies the status with
               Safepay before placing your order. Closing a window alone does not
               cancel a payment.
@@ -188,6 +191,7 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     gap: 10,
+    borderBottomWidth: 1,
   },
   title: { fontSize: 20, fontWeight: "800", color: "#38214d" },
   content: { padding: 20, gap: 16 },

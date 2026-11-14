@@ -10,7 +10,7 @@ import {
 const buttonStyle =
   "rounded-xl border-0 bg-violet-100 px-3 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40";
 
-export default function ProductReviews({ productId }) {
+export default function ProductReviews({ productId, onRatingSummaryChange }) {
   const { session } = useSession();
   const { language, direction } = useLanguage();
   const urdu = language === "ur";
@@ -88,6 +88,14 @@ export default function ProductReviews({ productId }) {
   const data = current ? result.data : null;
   const eligibility = current ? result.eligibility : null;
   const error = current ? result.error : "";
+
+  const averageRating = data ? Number(data.averageRating) || 0 : null;
+  const reviewCount = data ? Number(data.totalItems) || 0 : null;
+
+  useEffect(() => {
+    if (!current || error || averageRating === null || reviewCount === null) return;
+    onRatingSummaryChange?.(productId, { averageRating, reviewCount });
+  }, [averageRating, current, error, onRatingSummaryChange, productId, reviewCount]);
 
   async function handleSubmit(event) {
     event.preventDefault();

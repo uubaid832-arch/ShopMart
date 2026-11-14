@@ -21,6 +21,7 @@ import SavedAddresses from "./SavedAddresses";
 import { useVoucher } from "../vouchers/useVoucher";
 import VoucherField from "../vouchers/VoucherField";
 import BankTransferDetails from "./BankTransferDetails";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 const fields = [
   ["name", "Recipient name", 150],
   ["email", "Email address", 254],
@@ -36,6 +37,8 @@ const formatPrice = (amount, currency = "PKR") =>
   }).format(Number(amount));
 
 export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [details, setDetails] = useState({
     name: session?.user.name ?? "",
     email: session?.user.email ?? "",
@@ -277,9 +280,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
       animationType="slide"
       onRequestClose={confirmation ? finish : close}
     >
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <KeyboardAvoidingView
-          style={styles.screen}
+          style={[styles.screen, { backgroundColor: palette.background }]}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView
@@ -288,8 +291,8 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
           >
             <View style={styles.header}>
               <View>
-                <Text style={styles.eyebrow}>SHOPMART CHECKOUT</Text>
-                <Text style={styles.title}>
+                <Text style={[styles.eyebrow, { color: palette.accent }]}>SHOPMART CHECKOUT</Text>
+                <Text style={[styles.title, { color: palette.text }]}>
                   {confirmation ? "Order placed" : "Delivery details"}
                 </Text>
               </View>
@@ -299,22 +302,22 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                 accessibilityLabel="Close checkout"
                 disabled={saving}
                 onPress={confirmation ? finish : close}
-                style={styles.close}
+                style={[styles.close, { backgroundColor: palette.soft }]}
               >
-                <Text style={styles.closeText}>×</Text>
+                <Text style={[styles.closeText, { color: palette.muted }]}>×</Text>
               </Pressable>
             </View>
 
             {confirmation ? (
               <>
-                <View style={styles.success}>
+                <View style={[styles.success, { backgroundColor: theme.isDark ? "#123b2e" : "#ecfdf5" }]}>
                   <Animated.View style={[styles.successMark, { transform: [{ scale: successScale }] }]}>
                     <Text style={styles.successCheck}>✓</Text>
                   </Animated.View>
-                  <Text style={styles.successTitle}>
+                  <Text style={[styles.successTitle, { color: palette.success }]}>
                     Thank you for your order!
                   </Text>
-                  <Text style={styles.description}>
+                  <Text style={[styles.description, { color: palette.muted }]}>
                     {confirmation.paymentMethod === "DEMO"
                       ? "Your Safepay sandbox order has been placed. No real money was charged."
                       : confirmation.paymentMethod === "BANK_TRANSFER"
@@ -323,22 +326,22 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   </Text>
                 </View>
 
-                <Text style={styles.reference}>{confirmation.orderNumber}</Text>
+                <Text style={[styles.reference, { color: palette.muted }]}>{confirmation.orderNumber}</Text>
 
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: palette.muted }]}>
                   Status: {confirmation.status}
                 </Text>
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: palette.muted }]}>
                   Payment: {confirmation.paymentProvider === "SAFEPAY" && confirmation.paymentStatus === "DEMO_PAID" ? "Paid via Safepay (Sandbox)" : confirmation.paymentStatus}
                 </Text>
 
-                <View style={styles.summary}>
+                <View style={[styles.summary, { backgroundColor: palette.surface, borderColor: palette.border }]}>
                   {confirmation.items.map((item) => (
                     <View key={item.productId} style={styles.line}>
-                      <Text style={styles.itemName}>
+                      <Text style={[styles.itemName, { color: palette.text }]}>
                         {item.name} × {item.quantity}
                       </Text>
-                      <Text style={styles.itemPrice}>
+                      <Text style={[styles.itemPrice, { color: palette.text }]}>
                         {formatPrice(
                           Number(item.price) * item.quantity,
                           confirmation.currency,
@@ -348,7 +351,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   ))}
 
                   {Number(confirmation.discountAmount) > 0 && (
-                    <Text style={styles.description}>
+                    <Text style={[styles.description, { color: palette.muted }]}>
                       Voucher {confirmation.voucherCode}: -
                       {formatPrice(
                         confirmation.discountAmount,
@@ -356,7 +359,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       )}
                     </Text>
                   )}
-                  <Text style={styles.total}>
+                  <Text style={[styles.total, { color: palette.accent }]}>
                     {formatPrice(confirmation.total, confirmation.currency)}
                   </Text>
                 </View>
@@ -364,14 +367,14 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                 <Pressable
                   accessibilityRole="button"
                   onPress={finish}
-                  style={styles.primary}
+                  style={[styles.primary, { backgroundColor: palette.accent }]}
                 >
                   <Text style={styles.primaryText}>Continue shopping</Text>
                 </Pressable>
               </>
             ) : (
               <>
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: palette.muted }]}>
                   Choose Cash on Delivery or test card checkout with Safepay.
                   Final prices and stock are checked before the order is
                   accepted.
@@ -394,7 +397,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                 )}
                 {fields.map(([name, label, maxLength]) => (
                   <View key={name} style={styles.field}>
-                    <Text style={styles.label}>{label}</Text>
+                    <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
                     <TextInput
                       accessibilityLabel={label}
                       value={details[name]}
@@ -411,13 +414,16 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       autoCapitalize={name === "email" ? "none" : "words"}
                       autoCorrect={false}
                       multiline={name === "address"}
-                      style={styles.input}
+                      placeholder={label}
+                      placeholderTextColor={palette.muted}
+                      selectionColor={palette.accent}
+                      style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }]}
                     />
                   </View>
                 ))}
 
-                <View style={styles.summary}>
-                  <Text style={styles.summaryTitle}>Payment method</Text>
+                <View style={[styles.summary, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                  <Text style={[styles.summaryTitle, { color: palette.text }]}>Payment method</Text>
                   {[
                     { id: "COD", label: "Cash on Delivery" },
                     { id: "DEMO", label: "Card — Safepay" },
@@ -433,41 +439,41 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       onPress={() => setPaymentMethod(method.id)}
                       style={[styles.line, { paddingVertical: 12 }]}
                     >
-                      <Text style={styles.description}>
+                      <Text style={[styles.description, { color: palette.text }]}>
                         {paymentMethod === method.id ? "●" : "○"} {method.label}
                       </Text>
                     </Pressable>
                   ))}
                 </View>
                 <VoucherField voucher={voucher} disabled={saving || locked} />
-                <View style={styles.summary}>
-                  <Text style={styles.summaryTitle}>Order summary</Text>
+                <View style={[styles.summary, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                  <Text style={[styles.summaryTitle, { color: palette.text }]}>Order summary</Text>
 
                   {summaryItems.map((item) => (
                     <View key={item.id} style={styles.line}>
-                      <Text style={styles.itemName}>
+                      <Text style={[styles.itemName, { color: palette.text }]}>
                         {item.name} × {item.quantity}
                       </Text>
-                      <Text style={styles.itemPrice}>
+                      <Text style={[styles.itemPrice, { color: palette.text }]}>
                         {formatPrice(item.price * item.quantity)}
                       </Text>
                     </View>
                   ))}
 
-                  <Text style={styles.description}>
+                  <Text style={[styles.description, { color: palette.muted }]}>
                     Product subtotal: {formatPrice(summarySubtotal)}
                   </Text>
                   {Number(summaryDiscount) > 0 && (
-                    <Text style={styles.description}>
+                    <Text style={[styles.description, { color: palette.muted }]}>
                       Voucher discount: -{formatPrice(summaryDiscount)}
                     </Text>
                   )}
-                  <Text style={styles.description}>Shipping: PKR 0</Text>
-                  <Text style={styles.total}>{formatPrice(summaryTotal)}</Text>
+                  <Text style={[styles.description, { color: palette.muted }]}>Shipping: PKR 0</Text>
+                  <Text style={[styles.total, { color: palette.accent }]}>{formatPrice(summaryTotal)}</Text>
                 </View>
 
                 {error ? (
-                  <Text accessibilityRole="alert" style={styles.error}>
+                  <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
                     {error}
                   </Text>
                 ) : null}
@@ -476,7 +482,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   accessibilityRole="button"
                   disabled={saving || voucher.busy}
                   onPress={submit}
-                  style={[styles.primary, saving && styles.disabled]}
+                  style={[styles.primary, { backgroundColor: palette.accent }, saving && styles.disabled]}
                 >
                   <Text style={styles.primaryText}>
                     {saving
@@ -538,6 +544,8 @@ const styles = StyleSheet.create({
   },
   summary: {
     backgroundColor: "#f5f3ff",
+    borderWidth: 1,
+    borderColor: "transparent",
     borderRadius: 18,
     padding: 16,
     marginVertical: 24,

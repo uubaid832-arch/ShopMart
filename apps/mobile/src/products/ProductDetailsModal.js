@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ProductReviews from "./ProductReviews";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -23,7 +24,7 @@ function absoluteUrl(url) {
     : `${baseUrl}/${url.replace(/^\/+/, "")}`;
 }
 
-function Photo({ uri, name }) {
+function Photo({ uri, name, surfaceColor, textColor }) {
   const [failed, setFailed] = useState(false);
 
   return uri && !failed ? (
@@ -31,16 +32,18 @@ function Photo({ uri, name }) {
       source={{ uri }}
       accessibilityLabel={name}
       resizeMode="contain"
-      style={styles.photo}
+      style={[styles.photo, { backgroundColor: surfaceColor }]}
       onError={() => setFailed(true)}
     />
   ) : (
-    <View style={[styles.photo, styles.placeholder]}>
-      <Text>Photo unavailable</Text>
+    <View style={[styles.photo, styles.placeholder, { backgroundColor: surfaceColor }]}>
+      <Text style={{ color: textColor }}>Photo unavailable</Text>
     </View>
   );
 }
-export default function ProductDetailsModal({ product, session, onClose }) {
+export default function ProductDetailsModal({ product, session, onClose, onRatingSummaryChange }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -86,23 +89,23 @@ export default function ProductDetailsModal({ product, session, onClose }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.header}>
-          <Text style={styles.heading}>Product details</Text>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
+        <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
+          <Text style={[styles.heading, { color: palette.text }]}>Product details</Text>
           <Pressable
             accessibilityRole="button"
             onPress={onClose}
-            style={styles.close}
+            style={[styles.close, { backgroundColor: palette.soft }]}
           >
-            <Text style={styles.link}>Close</Text>
+            <Text style={[styles.link, { color: palette.accent }]}>Close</Text>
           </Pressable>
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
-          {loading && <ActivityIndicator color="#7c3aed" />}
+          {loading && <ActivityIndicator color={palette.accent} />}
 
           {error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
+            <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
               {error}
             </Text>
           ) : null}
@@ -115,39 +118,40 @@ export default function ProductDetailsModal({ product, session, onClose }) {
                 contentContainerStyle={styles.gallery}
               >
                 {gallery.map((uri) => (
-                  <Photo key={uri} uri={uri} name={product.name} />
+                  <Photo key={uri} uri={uri} name={product.name} surfaceColor={palette.surface} textColor={palette.muted} />
                 ))}
               </ScrollView>
-              <Text style={styles.muted}>
+              <Text style={[styles.muted, { color: palette.muted }]}>
                 {gallery.length} photo(s) — swipe to browse
               </Text>
             </>
           ) : !loading ? (
-            <Text style={styles.muted}>No photos available.</Text>
+            <Text style={[styles.muted, { color: palette.muted }]}>No photos available.</Text>
           ) : null}
 
-          <Text style={styles.category}>{product.category}</Text>
-          <Text style={styles.name}>{product.name}</Text>
-          <Text style={styles.price}>
+          <Text style={[styles.category, { color: palette.accent }]}>{product.category}</Text>
+          <Text style={[styles.name, { color: palette.text }]}>{product.name}</Text>
+          <Text style={[styles.price, { color: palette.accent }]}>
             PKR {Number(product.price).toLocaleString("en-PK")}
           </Text>
 
-          <View style={styles.stock}>
-            <Text>
+          <View style={[styles.stock, { backgroundColor: palette.soft }]}>
+            <Text style={{ color: palette.text }}>
               {product.stock > 0
                 ? `In stock · ${product.stock} available`
                 : "Out of stock"}
             </Text>
           </View>
 
-          <Text style={styles.heading}>Description</Text>
-          <Text style={styles.description}>
+          <Text style={[styles.heading, { color: palette.text }]}>Description</Text>
+          <Text style={[styles.description, { color: palette.muted }]}>
             {product.description || "No description available."}
           </Text>
           <ProductReviews
             key={`${product.id}:${session?.user.id || "guest"}`}
             productId={product.id}
             session={session}
+            onRatingSummaryChange={onRatingSummaryChange}
           />
         </ScrollView>
       </SafeAreaView>

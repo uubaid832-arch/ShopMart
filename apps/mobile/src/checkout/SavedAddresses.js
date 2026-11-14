@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -18,6 +19,8 @@ export default function SavedAddresses({
   onSelect,
   disabled = false,
 }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const token = session.accessToken;
   const [result, setResult] = useState(null);
   const [reload, setReload] = useState(0);
@@ -97,17 +100,17 @@ export default function SavedAddresses({
   }
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, { backgroundColor: palette.surface, borderColor: palette.border }]}>
       <View style={styles.header}>
-        <Text style={styles.heading}>Delivery address</Text>
+        <Text style={[styles.heading, { color: palette.text }]}>Delivery address</Text>
 
         <Pressable
           accessibilityRole="button"
           disabled={disabled || !current}
           onPress={() => setReload((value) => value + 1)}
-          style={styles.reload}
+          style={[styles.reload, { backgroundColor: palette.accentSoft }]}
         >
-          <Text style={styles.link}>Reload</Text>
+          <Text style={[styles.link, { color: palette.accent }]}>Reload</Text>
         </Pressable>
       </View>
 
@@ -118,7 +121,7 @@ export default function SavedAddresses({
           {result.error}
         </Text>
       ) : result.items.length === 0 ? (
-        <Text style={styles.muted}>No saved addresses available.</Text>
+        <Text style={[styles.muted, { color: palette.muted }]}>No saved addresses available.</Text>
       ) : (
         <>
           <Pressable
@@ -129,27 +132,28 @@ export default function SavedAddresses({
             onPress={() => setOpen((value) => !value)}
             style={[
               styles.picker,
-              selected && styles.selected,
+              { backgroundColor: palette.elevated, borderColor: palette.border },
+              selected && { borderColor: palette.accent, backgroundColor: palette.accentSoft },
               disabled && styles.dim,
             ]}
           >
             <View style={styles.grow}>
-              <Text style={styles.name}>
+              <Text style={[styles.name, { color: palette.accent }]}>
                 {selected ? `✓ ${selected.label}` : "Choose a saved address"}
               </Text>
 
               {selected && (
-                <Text style={styles.muted} numberOfLines={2}>
+                <Text style={[styles.muted, { color: palette.muted }]} numberOfLines={2}>
                   {selected.addressLine}, {selected.city}
                 </Text>
               )}
             </View>
 
-            <Text style={styles.arrow}>{open ? "▴" : "▾"}</Text>
+            <Text style={[styles.arrow, { color: palette.accent }]}>{open ? "▴" : "▾"}</Text>
           </Pressable>
 
           {open && (
-            <View style={styles.dropdown}>
+            <View style={[styles.dropdown, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               <TextInput
                 accessibilityLabel="Search saved addresses"
                 placeholder="Search by label, name, phone, city or street"
@@ -157,10 +161,11 @@ export default function SavedAddresses({
                 onChangeText={setSearch}
                 editable={!disabled}
                 autoCorrect={false}
-                style={styles.search}
+                placeholderTextColor={palette.muted}
+                style={[styles.search, { backgroundColor: palette.elevated, borderColor: palette.border, color: palette.text }]}
               />
               {filteredItems.length === 0 ? (
-                <Text style={styles.muted}>No saved address matches that search.</Text>
+                <Text style={[styles.muted, { color: palette.muted }]}>No saved address matches that search.</Text>
               ) : filteredItems.map((item) => {
                 const active = selected?.id === item.id;
 
@@ -182,24 +187,24 @@ export default function SavedAddresses({
                       setOpen(false);
                       setSearch("");
                     }}
-                    style={[styles.address, active && styles.selected]}
+                    style={[styles.address, { borderColor: palette.border }, active && { borderColor: palette.accent, backgroundColor: palette.accentSoft }]}
                   >
                     <View style={styles.header}>
-                      <Text style={[styles.name, styles.grow]}>
+                      <Text style={[styles.name, { color: palette.accent }, styles.grow]}>
                         {active ? "✓ " : ""}
                         {item.label}
                       </Text>
 
                       {item.isDefault && (
-                        <Text style={styles.defaultBadge}>Default</Text>
+                        <Text style={[styles.defaultBadge, { color: palette.success }]}>Default</Text>
                       )}
                     </View>
 
-                    <Text style={styles.recipient}>{item.recipientName}</Text>
-                    <Text style={styles.muted}>
+                    <Text style={[styles.recipient, { color: palette.text }]}>{item.recipientName}</Text>
+                    <Text style={[styles.muted, { color: palette.muted }]}>
                       {item.addressLine}, {item.city}
                     </Text>
-                    <Text style={styles.muted}>{item.phone}</Text>
+                    <Text style={[styles.muted, { color: palette.muted }]}>{item.phone}</Text>
                   </Pressable>
                 );
               })}
@@ -212,13 +217,13 @@ export default function SavedAddresses({
         accessibilityRole="button"
         disabled={disabled}
         onPress={enterManually}
-        style={[styles.manualButton, disabled && styles.dim]}
+        style={[styles.manualButton, { backgroundColor: palette.accentSoft }, disabled && styles.dim]}
       >
-        <Text style={styles.link}>+ Enter address manually</Text>
+        <Text style={[styles.link, { color: palette.accent }]}>+ Enter address manually</Text>
       </Pressable>
 
       {manual && (
-        <Text style={styles.muted}>
+        <Text style={[styles.muted, { color: palette.muted }]}>
           Enter delivery details below. This address will only be used for this
           order and will not be added to your saved addresses.
         </Text>
