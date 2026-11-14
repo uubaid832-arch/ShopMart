@@ -15,17 +15,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 
-let failurePalette = null;
+let failureTheme = null;
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
   .replace(/\/+$/, "");
 const reasons = [
-  ["CUSTOMER_REFUSED", "Customer refused the parcel"],
-  ["CUSTOMER_UNAVAILABLE", "Customer unavailable"],
-  ["UNREACHABLE", "Customer could not be contacted"],
-  ["INCORRECT_ADDRESS", "Incorrect delivery address"],
-  ["DAMAGED_PACKAGE", "Package damaged"],
+  ["CUSTOMER_REFUSED", "Customer did not accept it"],
+  ["CUSTOMER_UNAVAILABLE", "Customer was not home"],
+  ["UNREACHABLE", "Customer did not answer"],
+  ["INCORRECT_ADDRESS", "Address was wrong or missing"],
+  ["DAMAGED_PACKAGE", "Parcel was damaged"],
   ["OTHER", "Other problem"],
 ];
 
@@ -36,7 +36,7 @@ export default function DeliveryFailureModal({
   onRecorded,
 }) {
   const { theme } = useMobileAppearance();
-  failurePalette = theme.colors;
+  failureTheme = theme.colors;
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -142,8 +142,8 @@ export default function DeliveryFailureModal({
           >
             <View style={styles.header}>
               <View style={styles.grow}>
-                <Text style={styles.eyebrow}>DELIVERY SUPPORT</Text>
-                <Text style={styles.title}>Report a problem</Text>
+                <Text style={styles.eyebrow}>DELIVERY HELP</Text>
+                <Text style={styles.title}>Could not deliver</Text>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -159,7 +159,7 @@ export default function DeliveryFailureModal({
               <Text style={styles.customer}>{delivery.customerName}</Text>
               <Text style={styles.muted}>{delivery.address}</Text>
             </View>
-            <Text style={styles.heading}>What happened?</Text>
+            <Text style={styles.heading}>Choose what happened</Text>
             {reasons.map(([value, label]) => (
               <Pressable
                 key={value}
@@ -179,9 +179,7 @@ export default function DeliveryFailureModal({
               </Pressable>
             ))}
             <Text style={styles.heading}>
-              {reason === "OTHER"
-                ? "Explanation (required)"
-                : "Additional note (optional)"}
+              {reason === "OTHER" ? "Tell us why" : "Add a note (optional)"}
             </Text>
             <TextInput
               accessibilityLabel="Delivery failure note"
@@ -191,14 +189,14 @@ export default function DeliveryFailureModal({
               multiline
               maxLength={500}
               textAlignVertical="top"
-              placeholder="Describe what happened..."
-              placeholderTextColor="#a397af"
+              placeholder="Write a short note..."
+              placeholderTextColor={theme.colors.muted}
               style={styles.input}
             />
             <Text style={styles.counter}>{note.length}/500</Text>
             <Text style={styles.muted}>
-              This records an unsuccessful attempt. It does not mark the order
-              as delivered, collect payment, or automatically cancel it.
+              This tells the shop you could not deliver the order. It does not
+              mark it as delivered or take payment.
             </Text>
             {error ? (
               <Text accessibilityRole="alert" style={styles.error}>
@@ -215,8 +213,8 @@ export default function DeliveryFailureModal({
                 {busy
                   ? "Submitting..."
                   : locked
-                    ? "Retry confirmation"
-                    : "Submit failure report"}
+                    ? "Check report again"
+                    : "Send to the shop"}
               </Text>
             </Pressable>
           </ScrollView>
@@ -227,101 +225,105 @@ export default function DeliveryFailureModal({
 }
 
 const baseStyles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  content: { padding: 22, paddingBottom: 40 },
+  screen: { flex: 1, backgroundColor: "#f4f6fb" },
+  content: { padding: 16, paddingBottom: 32 },
   grow: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 23,
+    marginBottom: 16,
   },
   eyebrow: {
-    color: "#a28cb8",
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    fontSize: 8,
+    color: "#514190",
+    fontWeight: "900",
+    letterSpacing: 1,
+    fontSize: 11,
   },
-  title: { color: "#342842", fontSize: 24, fontWeight: "800", marginTop: 6 },
+  title: { color: "#182235", fontSize: 25, fontWeight: "900", marginTop: 5 },
   close: { backgroundColor: "#f3edfb", borderRadius: 13, padding: 13 },
   link: { color: "#7c3aed", fontWeight: "700", fontSize: 12 },
   order: {
-    padding: 18,
-    borderRadius: 19,
-    backgroundColor: "#f6f0fc",
-    marginBottom: 22,
+    padding: 16,
+    borderRadius: 17,
+    backgroundColor: "#e9e5fb",
+    marginBottom: 18,
   },
-  orderNumber: { color: "#9985ad", fontSize: 11 },
-  customer: { color: "#4f3b62", fontSize: 18, fontWeight: "800", marginTop: 8 },
-  muted: { color: "#9a8aa7", fontSize: 12, lineHeight: 21, marginTop: 8 },
+  orderNumber: { color: "#3f2e91", fontSize: 13, fontWeight: "800" },
+  customer: { color: "#182235", fontSize: 19, fontWeight: "900", marginTop: 8 },
+  muted: { color: "#344156", fontSize: 14, lineHeight: 22, marginTop: 8 },
   heading: {
-    color: "#55425f",
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 13,
+    color: "#182235",
+    fontSize: 17,
+    fontWeight: "900",
+    marginBottom: 12,
     marginTop: 10,
   },
   reason: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    minHeight: 51,
+    minHeight: 58,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#eee5f4",
-    borderRadius: 13,
+    borderColor: "#dfe4ed",
+    backgroundColor: "#fff",
+    borderRadius: 14,
     marginBottom: 9,
   },
-  selected: { borderColor: "#9b6cde", backgroundColor: "#f5effe" },
+  selected: { borderColor: "#553bb5", backgroundColor: "#ece9fb" },
   radio: {
     width: 17,
     height: 17,
     borderRadius: 9,
     borderWidth: 1.5,
-    borderColor: "#d5c7e3",
+    borderColor: "#5b6474",
   },
   activeRadio: {
     borderWidth: 5,
-    borderColor: "#8b52d4",
+    borderColor: "#553bb5",
     backgroundColor: "#fff",
   },
-  reasonText: { flex: 1, color: "#796587", fontSize: 12, lineHeight: 19 },
+  reasonText: { flex: 1, color: "#182235", fontSize: 15, lineHeight: 21, fontWeight: "700" },
   input: {
     minHeight: 105,
     backgroundColor: "#fcfaff",
     borderWidth: 1,
-    borderColor: "#e8dcf2",
+    borderColor: "#cfd5df",
     borderRadius: 13,
     padding: 14,
-    color: "#5c466d",
+    color: "#182235",
     fontSize: 13,
   },
-  counter: { color: "#b1a3bd", textAlign: "right", fontSize: 10, marginTop: 6 },
+  counter: { color: "#475569", textAlign: "right", fontSize: 12, marginTop: 6 },
   submit: {
-    backgroundColor: "#7c3aed",
-    padding: 17,
+    minHeight: 56,
+    justifyContent: "center",
+    backgroundColor: "#4c32a5",
+    padding: 16,
     borderRadius: 14,
-    marginTop: 22,
+    marginTop: 18,
   },
   white: {
     color: "#fff",
     textAlign: "center",
-    fontWeight: "700",
-    fontSize: 13,
+    fontWeight: "900",
+    fontSize: 15,
   },
   dim: { opacity: 0.5 },
-  error: { color: "#be123c", fontSize: 12, lineHeight: 21, marginTop: 15 },
+  error: { color: "#8a2020", backgroundColor: "#fde9e9", padding: 13, borderRadius: 12, fontSize: 14, lineHeight: 21, marginTop: 15 },
 });
+const styleColors = {
+  screen: c => ({ backgroundColor: c.background }), header: c => ({ backgroundColor: c.background }), eyebrow: c => ({ color: c.accent }), title: c => ({ color: c.text }),
+  close: c => ({ backgroundColor: c.soft }), link: c => ({ color: c.accent }), order: c => ({ backgroundColor: c.accentSoft }), orderNumber: c => ({ color: c.accent }),
+  customer: c => ({ color: c.text }), muted: c => ({ color: c.muted }), heading: c => ({ color: c.text }), reason: c => ({ backgroundColor: c.surface, borderColor: c.border }),
+  selected: c => ({ backgroundColor: c.accentSoft, borderColor: c.accent }), radio: c => ({ borderColor: c.border }),
+  activeRadio: c => ({ backgroundColor: c.surface, borderColor: c.accent }), reasonText: c => ({ color: c.text }),
+  input: c => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }), counter: c => ({ color: c.muted }),
+  submit: c => ({ backgroundColor: c.accent }), error: c => ({ color: c.danger, backgroundColor: c.dangerSoft }),
+};
 const styles = new Proxy(baseStyles, { get(target, key) {
   if (typeof key !== "string") return target[key];
-  const c = failurePalette;
-  const colors = c && ({
-    screen: { backgroundColor: c.background }, header: { backgroundColor: c.background }, eyebrow: { color: c.accent }, title: { color: c.text },
-    close: { backgroundColor: c.soft }, link: { color: c.accent }, order: { backgroundColor: c.accentSoft }, orderNumber: { color: c.muted },
-    customer: { color: c.text }, muted: { color: c.muted }, heading: { color: c.text }, reason: { borderColor: c.border },
-    selected: { backgroundColor: c.accentSoft, borderColor: c.accent }, radio: { borderColor: c.border }, activeRadio: { backgroundColor: c.surface, borderColor: c.accent },
-    reasonText: { color: c.text }, input: { backgroundColor: c.surface, borderColor: c.border, color: c.text }, counter: { color: c.muted },
-    submit: { backgroundColor: c.accent }, error: { color: c.danger },
-  })[key];
-  return [target[key], colors];
+  const override = styleColors[key]?.(failureTheme);
+  return override ? [target[key], override] : target[key];
 }});

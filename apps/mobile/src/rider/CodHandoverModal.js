@@ -17,11 +17,11 @@ import * as Crypto from "expo-crypto";
 import { codRequest, money } from "./codApi";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 
-let handoverPalette = null;
+let cashTheme = null;
 
 export default function CodHandoverModal({ session, onClose, onChanged }) {
   const { theme } = useMobileAppearance();
-  handoverPalette = theme.colors;
+  cashTheme = theme.colors;
   const token = session.accessToken;
   const [tab, setTab] = useState("report");
   const [page, setPage] = useState(0);
@@ -198,7 +198,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
         >
           <View style={styles.header}>
             <Text style={styles.title}>
-              {detailId ? "Handover details" : "COD cash handovers"}
+              {detailId ? "Cash report" : "Cash for the shop"}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -212,8 +212,8 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
           {!detailId && (
             <View style={styles.tabs}>
               {[
-                ["report", "Report handover"],
-                ["history", "History"],
+                ["report", "Give cash"],
+                ["history", "Past reports"],
               ].map(([value, label]) => (
                 <Pressable
                   key={value}
@@ -242,7 +242,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
             ) : null}
             {detailId ? (
               !detailCurrent ? (
-                <ActivityIndicator color="#7c3aed" />
+                <ActivityIndicator color={theme.colors.accent} />
               ) : detail.error ? (
                 <Text style={styles.error}>{detail.error}</Text>
               ) : (
@@ -274,7 +274,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                       Administrator note: {detail.data.handover.decisionNote}
                     </Text>
                   ) : null}
-                  <Text style={styles.heading}>Included collections</Text>
+                    <Text style={styles.heading}>Orders in this report</Text>
                   {detail.data.collections.map((item) => (
                     <View key={item.id} style={styles.card}>
                       <Text style={styles.name}>{item.orderNumber}</Text>
@@ -298,13 +298,12 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                 </Pressable>
                 {tab === "report" && (
                   <Text style={styles.muted}>
-                    Select the completed COD orders whose cash you physically
-                    handed over. Each collection is reported in full. Select up
-                    to 100 orders across pages. This does not transfer money.
+                    Choose the orders whose cash you gave to the shop. Choose
+                    each order in full. You can choose up to 100 orders.
                   </Text>
                 )}
                 {!current ? (
-                  <ActivityIndicator color="#7c3aed" style={styles.loader} />
+                  <ActivityIndicator color={theme.colors.accent} style={styles.loader} />
                 ) : result.error ? (
                   <Text style={styles.error}>{result.error}</Text>
                 ) : (
@@ -312,8 +311,8 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                     {!data.items.length && (
                       <Text style={styles.muted}>
                         {tab === "report"
-                          ? "No unreported COD collections on this page."
-                          : "No handover reports yet."}
+                          ? "No cash to report on this page."
+                          : "No past cash reports yet."}
                       </Text>
                     )}
                     {data.items.map((item) =>
@@ -391,7 +390,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                 {tab === "report" && (
                   <View style={styles.summary}>
                     <Text style={styles.heading}>
-                      {choices.length} order(s) selected
+                      {choices.length} orders selected
                     </Text>
                     <Text style={styles.amount}>{money(total)}</Text>
                     <TextInput
@@ -402,7 +401,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                       multiline
                       maxLength={500}
                       placeholder="Optional handover note"
-                      placeholderTextColor="#ad9bbb"
+                      placeholderTextColor={theme.colors.muted}
                       style={styles.input}
                     />
                     <Pressable
@@ -416,7 +415,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                           ? "Reporting..."
                           : locked
                             ? "Retry confirmation"
-                            : "Report cash handed over"}
+                          : "Report cash given to the shop"}
                       </Text>
                     </Pressable>
                     {!locked && choices.length > 0 && (
@@ -429,8 +428,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                       </Pressable>
                     )}
                     <Text style={styles.muted}>
-                      Your outstanding balance changes only when the
-                      administrator confirms receipt.
+                      The amount is updated after the shop checks the cash.
                     </Text>
                   </View>
                 )}
@@ -443,59 +441,66 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
   );
 }
 const baseStyles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  header: { padding: 20, flexDirection: "row", alignItems: "center", gap: 10 },
-  title: { flex: 1, fontSize: 22, fontWeight: "800", color: "#473050" },
+  screen: { flex: 1, backgroundColor: "#f4f6fb" },
+  header: { padding: 18, flexDirection: "row", alignItems: "center", gap: 10 },
+  title: { flex: 1, fontSize: 23, fontWeight: "900", color: "#182235" },
   button: {
-    padding: 13,
-    backgroundColor: "#f3ecfb",
-    borderRadius: 12,
+    minHeight: 48,
+    minWidth: 78,
+    paddingHorizontal: 13,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ece9fb",
+    borderRadius: 13,
     alignSelf: "flex-start",
   },
-  link: { color: "#8b55cc", fontWeight: "700", fontSize: 12 },
-  tabs: { flexDirection: "row", paddingHorizontal: 20, gap: 10 },
+  link: { color: "#3f2e91", fontWeight: "900", fontSize: 14 },
+  tabs: { flexDirection: "row", paddingHorizontal: 16, gap: 10 },
   tab: {
     flex: 1,
+    minHeight: 50,
     alignItems: "center",
-    padding: 14,
-    backgroundColor: "#f3ecfb",
-    borderRadius: 13,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    backgroundColor: "#e7e9f0",
+    borderRadius: 14,
   },
-  activeTab: { backgroundColor: "#7c3aed" },
+  activeTab: { backgroundColor: "#553bb5" },
   white: {
     color: "#fff",
-    fontWeight: "700",
-    fontSize: 12,
+    fontWeight: "900",
+    fontSize: 15,
     textAlign: "center",
   },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 32 },
   refresh: { alignSelf: "flex-end", marginBottom: 12 },
-  muted: { color: "#a28eac", fontSize: 11, lineHeight: 21, marginTop: 8 },
+  muted: { color: "#344156", fontSize: 14, lineHeight: 22, marginTop: 8 },
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: "#eae1f3",
+    borderColor: "#dfe4ed",
     borderRadius: 16,
     marginTop: 12,
+    backgroundColor: "#fff",
   },
-  selected: { borderColor: "#9868d8", backgroundColor: "#f5effd" },
-  name: { color: "#7c6590", fontWeight: "700", fontSize: 12 },
-  value: { color: "#8c52cb", fontWeight: "800", fontSize: 20, marginTop: 8 },
+  selected: { borderColor: "#553bb5", backgroundColor: "#f0edfb" },
+  name: { color: "#182235", fontWeight: "900", fontSize: 15 },
+  value: { color: "#5036ae", fontWeight: "900", fontSize: 21, marginTop: 8 },
   status: {
-    color: "#a083b7",
-    fontWeight: "700",
-    fontSize: 11,
+    color: "#3f2e91",
+    fontWeight: "900",
+    fontSize: 13,
     marginVertical: 10,
   },
-  heading: { color: "#7e618e", fontSize: 14, fontWeight: "700", marginTop: 15 },
+  heading: { color: "#182235", fontSize: 16, fontWeight: "900", marginTop: 15 },
   amount: {
-    color: "#7c3aed",
+    color: "#5036ae",
     fontSize: 29,
-    fontWeight: "800",
+    fontWeight: "900",
     marginVertical: 12,
   },
   summary: {
-    backgroundColor: "#faf6ff",
+    backgroundColor: "#f0edfb",
     padding: 17,
     borderRadius: 18,
     marginTop: 20,
@@ -503,18 +508,20 @@ const baseStyles = StyleSheet.create({
   input: {
     minHeight: 80,
     borderWidth: 1,
-    borderColor: "#e7daf1",
+    borderColor: "#cfd5df",
     borderRadius: 12,
     padding: 12,
-    color: "#725781",
+    color: "#182235",
     backgroundColor: "#fff",
     marginTop: 10,
     textAlignVertical: "top",
   },
   primary: {
     padding: 16,
-    backgroundColor: "#7c3aed",
-    borderRadius: 13,
+    minHeight: 54,
+    justifyContent: "center",
+    backgroundColor: "#4c32a5",
+    borderRadius: 14,
     marginVertical: 15,
   },
   dim: { opacity: 0.5 },
@@ -524,20 +531,21 @@ const baseStyles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 16,
   },
-  notice: { color: "#398d5e", lineHeight: 21, marginBottom: 12, fontSize: 12 },
-  error: { color: "#be123c", lineHeight: 21, marginBottom: 12, fontSize: 12 },
+  notice: { color: "#145b38", backgroundColor: "#e5f4e9", padding: 13, borderRadius: 12, lineHeight: 21, marginBottom: 12, fontSize: 14 },
+  error: { color: "#8a2020", backgroundColor: "#fde9e9", padding: 13, borderRadius: 12, lineHeight: 21, marginBottom: 12, fontSize: 14 },
   loader: { marginVertical: 25 },
 });
+const styleColors = {
+  screen: c => ({ backgroundColor: c.background }), header: c => ({ backgroundColor: c.surface, borderBottomColor: c.border }),
+  title: c => ({ color: c.text }), button: c => ({ backgroundColor: c.soft }), link: c => ({ color: c.accent }),
+  tab: c => ({ backgroundColor: c.soft }), activeTab: c => ({ backgroundColor: c.accent }), muted: c => ({ color: c.muted }),
+  card: c => ({ backgroundColor: c.surface, borderColor: c.border }), selected: c => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
+  name: c => ({ color: c.text }), value: c => ({ color: c.accent }), status: c => ({ color: c.muted }), heading: c => ({ color: c.text }), amount: c => ({ color: c.accent }),
+  summary: c => ({ backgroundColor: c.accentSoft }), input: c => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
+  primary: c => ({ backgroundColor: c.accent }), notice: c => ({ color: c.success, backgroundColor: c.successSoft }), error: c => ({ color: c.danger, backgroundColor: c.dangerSoft }),
+};
 const styles = new Proxy(baseStyles, { get(target, key) {
   if (typeof key !== "string") return target[key];
-  const c = handoverPalette;
-  const colors = c && ({
-    screen: { backgroundColor: c.background }, title: { color: c.text }, button: { backgroundColor: c.soft }, link: { color: c.accent },
-    tab: { backgroundColor: c.soft }, activeTab: { backgroundColor: c.accent }, muted: { color: c.muted },
-    card: { backgroundColor: c.surface, borderColor: c.border }, selected: { backgroundColor: c.accentSoft, borderColor: c.accent },
-    name: { color: c.text }, value: { color: c.accent }, status: { color: c.muted }, heading: { color: c.text }, amount: { color: c.accent },
-    summary: { backgroundColor: c.accentSoft }, input: { backgroundColor: c.surface, borderColor: c.border, color: c.text },
-    primary: { backgroundColor: c.accent }, notice: { color: c.success }, error: { color: c.danger },
-  })[key];
-  return [target[key], colors];
+  const override = styleColors[key]?.(cashTheme);
+  return override ? [target[key], override] : target[key];
 }});
