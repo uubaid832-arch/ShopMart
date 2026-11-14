@@ -184,15 +184,7 @@ export default function AdminLayout() {
 
           <div className="flex items-center gap-1 sm:gap-3">
             <AppearanceMenu />
-            <NavLink
-              to="/admin/account"
-              aria-label="Open my admin account settings"
-              title="My account"
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-            >
-              <UserRound size={18} aria-hidden="true" />
-              <span className="hidden md:inline">My account</span>
-            </NavLink>
+
             <NotificationBell />
 
             <div className="ml-1 flex items-center gap-3 border-0 border-l border-solid border-slate-200 pl-3">
@@ -211,6 +203,14 @@ export default function AdminLayout() {
                   Administrator
                 </p>
               </div>
+              <NavLink
+                to="/admin/account"
+                aria-label="Open my admin account settings"
+                title="My account"
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-violet-50 hover:text-violet-700"
+              >
+                <UserRound size={18} aria-hidden="true" />
+              </NavLink>
 
               <button
                 type="button"
