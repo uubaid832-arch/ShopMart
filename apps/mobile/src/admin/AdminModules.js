@@ -6,6 +6,9 @@ import { ReturnsModule, ReviewsModule } from "./AdminAfterSales";
 import CashModule from "./AdminCash";
 import VouchersModule from "./AdminVouchers";
 import { Icon } from "./adminUi";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+
+let modulePalette = null;
 
 const modules = [
   {
@@ -66,6 +69,8 @@ const modules = [
   },
 ];
 export function AdminModuleMenu({ onOpen }) {
+  const { theme } = useMobileAppearance();
+  modulePalette = theme.colors;
   return (
     <View style={s.section}>
       <Text style={s.heading}>Manage your store</Text>
@@ -83,7 +88,7 @@ export function AdminModuleMenu({ onOpen }) {
               item.id === "cash" && s.cash,
             ]}
           >
-            <View style={[s.icon, { backgroundColor: item.color }]}>
+            <View style={[s.icon, { backgroundColor: modulePalette.accentSoft }]}>
               <Icon name={item.icon} />
             </View>
             <Text style={s.title}>{item.title}</Text>
@@ -107,7 +112,7 @@ export function AdminModule({ name, ...props }) {
   }[name];
   return Component ? <Component {...props} /> : null;
 }
-const s = StyleSheet.create({
+const baseS = StyleSheet.create({
   section: { marginTop: 21 },
   heading: { fontSize: 19, fontWeight: "800", color: "#3a2c4b" },
   caption: { fontSize: 10, lineHeight: 17, color: "#8b789e", marginTop: 5 },
@@ -138,3 +143,12 @@ const s = StyleSheet.create({
   cash: { width: "100%", backgroundColor: "#f4edfd", borderColor: "#d9c6f4" },
   pressed: { opacity: 0.65 },
 });
+const s = new Proxy(baseS, { get(target, key) {
+  if (typeof key !== "string") return target[key];
+  const c = modulePalette;
+  const colors = c && ({
+    heading: { color: c.text }, caption: { color: c.muted }, tile: { backgroundColor: c.surface, borderColor: c.border },
+    icon: { backgroundColor: c.accentSoft }, title: { color: c.text }, cash: { backgroundColor: c.accentSoft, borderColor: c.border },
+  })[key];
+  return [target[key], colors];
+}});

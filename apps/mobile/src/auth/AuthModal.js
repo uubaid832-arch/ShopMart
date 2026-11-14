@@ -14,10 +14,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { registerMobileAccount, resendMobileSignIn, verifyMobileRegistration, resendMobileRegistration } from "./useMobileSession";
 import { isRegistrationChallenge } from "./registrationRules";
 import ForgotPasswordModal from "./ForgotPasswordModal";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 export default function AuthModal({ onSignIn, onVerify, onClose }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [registering, setRegistering] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [values, setValues] = useState({
     name: "",
     email: "",
@@ -61,7 +63,6 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
     if (pending.current) return;
     setChallenge(null);
     setRegistering(false);
-    setShowPassword(false);
     setError("");
     setNotice("");
     setValues((current) => ({
@@ -129,7 +130,6 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
           password: values.password,
         });
         if (!isRegistrationChallenge(result)) throw new Error("Email verification is unavailable. Check that the latest backend is deployed.");
-        setShowPassword(false);
         setChallenge(result);
         setNow(Date.now());
         setValues((current) => ({
@@ -141,7 +141,6 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
       } else {
         const result = await onSignIn({ email, password: values.password });
         if (result?.requiresOtp) {
-          setShowPassword(false);
           setChallenge(result);
           setNow(Date.now());
           setValues((current) => ({
@@ -215,9 +214,9 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={close}>
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <KeyboardAvoidingView
-          style={styles.screen}
+          style={[styles.screen, { backgroundColor: palette.background }]}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView
@@ -225,25 +224,25 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
             keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
-              <Text style={styles.brand}>ShopMart account</Text>
+              <Text style={[styles.brand, { color: palette.accent }]}>ShopMart account</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close sign-in"
                 disabled={saving}
                 onPress={close}
-                style={styles.close}
+                style={[styles.close, { backgroundColor: palette.soft }]}
               >
-                <Text style={styles.closeText}>×</Text>
+                <Text style={[styles.closeText, { color: palette.muted }]}>×</Text>
               </Pressable>
             </View>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: palette.text }]}>
               {challenge
                 ? (registering ? "Verify your email" : "Verify your sign-in")
                 : registering
                   ? "Create your account"
                   : "Welcome back"}
             </Text>
-            <Text style={styles.description}>
+            <Text style={[styles.description, { color: palette.muted }]}>
               {challenge
                 ? `Enter the code sent to ${values.email.trim()}. ${registering ? "Verify your email to create your account." : "Rider and admin sign-in requires verification."}`
                 : registering
@@ -254,13 +253,13 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
               const password = name === "password" || name === "confirmation";
               return (
                 <View key={name} style={styles.field}>
-                  <Text style={styles.label}>{label}</Text>
+                  <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
                   <TextInput
                     accessibilityLabel={label}
                     value={values[name]}
                     onChangeText={(value) => update(name, value)}
                     editable={!saving}
-                    secureTextEntry={password && !showPassword}
+                    secureTextEntry={password}
                     autoCapitalize={name === "name" ? "words" : "none"}
                     autoCorrect={false}
                     keyboardType={
@@ -290,49 +289,30 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                             ? 254
                             : 72
                     }
-                    style={styles.input}
+                    placeholder={label}
+                    placeholderTextColor={palette.muted}
+                    selectionColor={palette.accent}
+                    style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }]}
                   />
                 </View>
               );
             })}
-            {!challenge && (
-              <Pressable
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: showPassword }}
-                accessibilityLabel="Show password"
-                disabled={saving}
-                onPress={() => setShowPassword((visible) => !visible)}
-                style={[styles.showPassword, saving && styles.disabled]}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    showPassword && styles.checkboxChecked,
-                  ]}
-                >
-                  {showPassword ? (
-                    <Text style={styles.checkmark}>✓</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.showPasswordText}>Show password</Text>
-              </Pressable>
-            )}
             {expired && (
-              <Text style={styles.error}>
+              <Text style={[styles.error, { color: palette.danger }]}>
                 Code expired. Start a new sign-in below.
               </Text>
             )}
             {error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
                 {error}
               </Text>
             ) : null}
-            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+            {notice ? <Text style={[styles.notice, { color: palette.success }]}>{notice}</Text> : null}
             <Pressable
               accessibilityRole="button"
               disabled={saving || Boolean(expired)}
               onPress={submit}
-              style={[styles.primary, (saving || expired) && styles.disabled]}
+              style={[styles.primary, { backgroundColor: palette.accent }, (saving || expired) && styles.disabled]}
             >
               <Text style={styles.primaryText}>
                 {saving
@@ -350,9 +330,9 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                   accessibilityRole="button"
                   disabled={saving || wait > 0 || Boolean(expired)}
                   onPress={resend}
-                  style={styles.switch}
+                  style={[styles.switch, { borderColor: palette.border }]}
                 >
-                  <Text style={styles.switchText}>
+                  <Text style={[styles.switchText, { color: palette.accent }]}>
                     {expired
                       ? "Code expired"
                       : wait > 0
@@ -364,9 +344,9 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                   accessibilityRole="button"
                   disabled={saving}
                   onPress={restart}
-                  style={styles.switch}
+                  style={[styles.switch, { borderColor: palette.border }]}
                 >
-                  <Text style={styles.switchText}>Start a new sign-in</Text>
+                  <Text style={[styles.switchText, { color: palette.accent }]}>Start a new sign-in</Text>
                 </Pressable>
               </>
             ) : (
@@ -376,9 +356,9 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                     accessibilityRole="button"
                     disabled={saving}
                     onPress={() => setForgotOpen(true)}
-                    style={styles.switch}
+                    style={[styles.switch, { borderColor: palette.border }]}
                   >
-                    <Text style={styles.switchText}>Forgot password?</Text>
+                    <Text style={[styles.switchText, { color: palette.accent }]}>Forgot password?</Text>
                   </Pressable>
                 )}
                 <Pressable
@@ -386,7 +366,6 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                   disabled={saving}
                   onPress={() => {
                     setRegistering((value) => !value);
-                    setShowPassword(false);
                     setError("");
                     setNotice("");
                     setValues((current) => ({
@@ -395,9 +374,9 @@ export default function AuthModal({ onSignIn, onVerify, onClose }) {
                       confirmation: "",
                     }));
                   }}
-                  style={styles.switch}
+                  style={[styles.switch, { borderColor: palette.border }]}
                 >
-                  <Text style={styles.switchText}>
+                  <Text style={[styles.switchText, { color: palette.accent }]}>
                     {registering
                       ? "Already registered? Sign in"
                       : "New to ShopMart? Create an account"}
@@ -457,26 +436,6 @@ const styles = StyleSheet.create({
   primaryText: { color: "#fff", fontWeight: "800", textAlign: "center" },
   switch: { paddingVertical: 20 },
   switchText: { color: "#7c3aed", textAlign: "center", fontWeight: "600" },
-  showPassword: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 9,
-    paddingVertical: 2,
-  },
-  checkbox: {
-    width: 19,
-    height: 19,
-    borderWidth: 1,
-    borderColor: "#94a3b8",
-    borderRadius: 4,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  checkboxChecked: { borderColor: "#7c3aed", backgroundColor: "#7c3aed" },
-  checkmark: { color: "#fff", fontSize: 14, lineHeight: 17, fontWeight: "800" },
-  showPasswordText: { color: "#64748b", fontSize: 13, fontWeight: "500" },
   disabled: { opacity: 0.5 },
   error: { color: "#be123c", marginBottom: 14, lineHeight: 21 },
   notice: { color: "#047857", marginBottom: 14, lineHeight: 21 },

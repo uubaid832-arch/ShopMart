@@ -16,6 +16,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { readable } from "./adminApi";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+
+let activePalette = null;
+export function setAdminPalette(palette) {
+  activePalette = palette;
+}
 
 const icons = {
   mail: "M3 5h18v14H3V5Zm0 0 9 7 9-7",
@@ -44,12 +50,14 @@ const icons = {
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2",
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
 };
-export function Icon({ name, size = 21, color = "#7c3aed" }) {
+export function Icon({ name, size = 21, color }) {
+  const { theme } = useMobileAppearance();
+  setAdminPalette(theme.colors);
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d={icons[name] || icons.box}
-        stroke={color}
+        stroke={color || theme.colors.accent}
         strokeWidth={1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -66,6 +74,9 @@ export function Button({
   secondary = false,
   compact = false,
 }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   return (
     <Pressable
       accessibilityRole="button"
@@ -73,9 +84,8 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         ui.button,
+        { backgroundColor: danger ? (theme.isDark ? "#442330" : "#fff0f3") : secondary ? palette.accentSoft : palette.accent },
         compact && ui.compactButton,
-        secondary && ui.secondary,
-        danger && ui.danger,
         (disabled || pressed) && ui.dim,
       ]}
     >
@@ -83,11 +93,11 @@ export function Button({
         <Icon
           name={icon}
           size={18}
-          color={danger ? "#be3153" : secondary ? "#7c3aed" : "#fff"}
+          color={danger ? palette.danger : secondary ? palette.accent : "#fff"}
         />
       )}
       <Text
-        style={[ui.buttonText, secondary && ui.link, danger && ui.dangerText]}
+        style={[ui.buttonText, secondary && { color: palette.accent }, danger && { color: palette.danger }]}
       >
         {title}
       </Text>
@@ -95,6 +105,9 @@ export function Button({
   );
 }
 export function Badge({ value }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   const bad = ["CANCELLED", "REJECTED", "DISABLED", "OUT OF STOCK"].includes(
     String(value).toUpperCase(),
   );
@@ -107,18 +120,21 @@ export function Badge({ value }) {
     "VISIBLE",
   ].includes(String(value).toUpperCase());
   return (
-    <View style={[ui.badge, bad && ui.danger, good && ui.good]}>
-      <Text style={[ui.badgeText, bad && ui.dangerText, good && ui.goodText]}>
+    <View style={[ui.badge, { backgroundColor: bad ? (theme.isDark ? "#442330" : "#fff0f3") : good ? (theme.isDark ? "#173a2c" : "#e9f6ee") : palette.accentSoft }]}>
+      <Text style={[ui.badgeText, { color: bad ? palette.danger : good ? palette.success : palette.accent }]}>
         {readable(value)}
       </Text>
     </View>
   );
 }
 export function Card({ title, subtitle, children }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   return (
-    <View style={ui.card}>
-      {title && <Text style={ui.title}>{title}</Text>}
-      {subtitle && <Text style={ui.muted}>{subtitle}</Text>}
+    <View style={[ui.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+      {title && <Text style={[ui.title, { color: palette.text }]}>{title}</Text>}
+      {subtitle && <Text style={[ui.muted, { color: palette.muted }]}>{subtitle}</Text>}
       {children}
     </View>
   );
@@ -130,16 +146,20 @@ export function Field({
   multiline = false,
   ...props
 }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   return (
     <View style={ui.field}>
-      <Text style={ui.label}>{label}</Text>
+      <Text style={[ui.label, { color: palette.text }]}>{label}</Text>
       <TextInput
         accessibilityLabel={label}
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
-        placeholderTextColor="#9b8eac"
-        style={[ui.input, multiline && ui.multiline]}
+        placeholderTextColor={palette.muted}
+        selectionColor={palette.accent}
+        style={[ui.input, { backgroundColor: palette.elevated, borderColor: palette.border, color: palette.text }, multiline && ui.multiline]}
         {...props}
       />
     </View>
@@ -153,18 +173,21 @@ export function Choice({
   disabled,
   compact = false,
 }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   const [open, setOpen] = useState(false);
   const selected = options.find((o) => o.value === value);
   return (
     <View style={compact ? ui.compactFilter : ui.field}>
-      {!compact && <Text style={ui.label}>{label}</Text>}
+      {!compact && <Text style={[ui.label, { color: palette.text }]}>{label}</Text>}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${selected?.label || "Choose an option"}`}
         accessibilityState={{ expanded: open }}
         disabled={disabled}
         onPress={() => setOpen((v) => !v)}
-        style={[ui.select, compact && { minHeight: 44, paddingVertical: 10 }]}
+        style={[ui.select, { backgroundColor: palette.surface, borderColor: palette.border }, compact && { minHeight: 44, paddingVertical: 10 }]}
       >
         {compact && (
           <Icon
@@ -178,13 +201,13 @@ export function Choice({
             size={18}
           />
         )}
-        <Text style={[ui.body, ui.grow]}>
+        <Text style={[ui.body, ui.grow, { color: palette.text }]}>
           {selected?.label || "Choose an option"}
         </Text>
         <Icon name="down" size={16} />
       </Pressable>
       {open && (
-        <View style={ui.options}>
+        <View style={[ui.options, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           {options.length ? (
             options.map((option) => (
               <Pressable
@@ -196,9 +219,9 @@ export function Choice({
                   onChange(option.value);
                   setOpen(false);
                 }}
-                style={[ui.option, option.value === value && ui.chosen]}
+                style={[ui.option, { backgroundColor: palette.surface, borderBottomColor: palette.border }, option.value === value && { backgroundColor: palette.accentSoft }]}
               >
-                <Text style={[ui.body, ui.grow]}>{option.label}</Text>
+                <Text style={[ui.body, ui.grow, { color: palette.text }]}>{option.label}</Text>
                 {option.value === value && <Icon name="check" size={17} />}
               </Pressable>
             ))
@@ -211,22 +234,25 @@ export function Choice({
   );
 }
 export function Notice({ op }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   return (
     <>
       {op.busy && (
         <View style={ui.row}>
-          <ActivityIndicator color="#7c3aed" />
-          <Text style={ui.muted}>Working...</Text>
+          <ActivityIndicator color={palette.accent} />
+          <Text style={[ui.muted, { color: palette.muted }]}>Working...</Text>
         </View>
       )}
       {op.error ? (
-        <Text accessibilityRole="alert" style={ui.error}>
+        <Text accessibilityRole="alert" style={[ui.error, { color: palette.danger }]}>
           {op.error}
         </Text>
       ) : null}
-      {op.notice ? <Text style={ui.success}>{op.notice}</Text> : null}
+      {op.notice ? <Text style={[ui.success, { color: palette.success }]}>{op.notice}</Text> : null}
       {op.uncertain && (
-        <Text style={ui.error}>
+        <Text style={[ui.error, { color: palette.danger }]}>
           The result is uncertain. Close this editor, refresh the list and check
           the current record before trying again.
         </Text>
@@ -245,6 +271,9 @@ export function Page({
   primaryAction,
   footerAction,
 }) {
+  const { theme } = useMobileAppearance();
+  setAdminPalette(theme.colors);
+  const palette = theme.colors;
   return (
     <Modal
       visible
@@ -253,14 +282,14 @@ export function Page({
         if (!busy) (onBack || onClose)();
       }}
     >
-      <SafeAreaView style={ui.screen}>
+      <SafeAreaView style={[ui.screen, { backgroundColor: palette.background }]}>
         <View style={ui.topActions}>
           {onBack && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back"
               disabled={busy}
-              style={[ui.iconButton, { marginRight: "auto" }]}
+              style={[ui.iconButton, { backgroundColor: palette.soft, marginRight: "auto" }]}
               onPress={onBack}
             >
               <Icon name="back" />
@@ -271,7 +300,7 @@ export function Page({
               accessibilityRole="button"
               accessibilityLabel="Refresh"
               disabled={busy}
-              style={ui.iconButton}
+              style={[ui.iconButton, { backgroundColor: palette.soft }]}
               onPress={onRefresh}
             >
               <Icon name="refresh" />
@@ -281,7 +310,7 @@ export function Page({
             accessibilityRole="button"
             accessibilityLabel="Close module"
             disabled={busy}
-            style={ui.iconButton}
+            style={[ui.iconButton, { backgroundColor: palette.soft }]}
             onPress={onClose}
           >
             <Icon name="close" />
@@ -289,8 +318,8 @@ export function Page({
         </View>
         <View style={ui.header}>
           <View style={ui.grow}>
-            <Text style={ui.eyebrow}>SHOPMART ADMIN</Text>
-            <Text style={ui.heading}>{title}</Text>
+            <Text style={[ui.eyebrow, { color: palette.accent }]}>SHOPMART ADMIN</Text>
+            <Text style={[ui.heading, { color: palette.text }]}>{title}</Text>
           </View>
           {footerAction ? (
             cloneElement(footerAction, {
@@ -310,14 +339,15 @@ export function Page({
   );
 }
 export function Form({ children }) {
+  const { theme } = useMobileAppearance();
   return (
     <KeyboardAvoidingView
-      style={ui.grow}
+      style={[ui.grow, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={ui.content}
+        contentContainerStyle={[ui.content, { backgroundColor: theme.colors.background }]}
       >
         {children}
       </ScrollView>
@@ -335,6 +365,9 @@ export function PagedList({
   toolbar,
   serverSearch = false,
 }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  setAdminPalette(palette);
   const data = result.data;
   const items = Array.isArray(data) ? data : data?.items || [];
   const query = search.trim().toLowerCase();
@@ -348,7 +381,7 @@ export function PagedList({
   return (
     <>
       {onSearch && (
-        <View style={ui.searchBox}>
+        <View style={[ui.searchBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
           <Icon name="search" size={18} />
           <TextInput
             accessibilityLabel={
@@ -357,24 +390,24 @@ export function PagedList({
             placeholder={
               serverSearch ? "Search name or email" : "Search this page"
             }
-            placeholderTextColor="#9b8eac"
+            placeholderTextColor={palette.muted}
             value={search}
             onChangeText={onSearch}
-            style={ui.searchInput}
+            style={[ui.searchInput, { color: palette.text }]}
           />
         </View>
       )}
       {toolbar}
-      <Text style={ui.listCaption}>
+      <Text style={[ui.listCaption, { color: palette.muted }]}>
         {Array.isArray(data)
           ? `${items.length} records`
           : `${data?.totalItems ?? 0} records in total`}
         {onSearch && !serverSearch ? " · Search applies to this page" : ""}
       </Text>
       {result.loading ? (
-        <ActivityIndicator size="large" color="#7c3aed" style={ui.loader} />
+        <ActivityIndicator size="large" color={palette.accent} style={ui.loader} />
       ) : result.error ? (
-        <Text accessibilityRole="alert" style={[ui.error, ui.content]}>
+        <Text accessibilityRole="alert" style={[ui.error, { color: palette.danger }, ui.content]}>
           {result.error}
         </Text>
       ) : (
@@ -382,18 +415,18 @@ export function PagedList({
           data={filtered}
           keyExtractor={(item) => String(item.id || item.orderId)}
           renderItem={({ item }) => renderItem(item)}
-          contentContainerStyle={ui.content}
+          contentContainerStyle={[ui.content, { backgroundColor: palette.background }]}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
             <View style={ui.empty}>
               <Icon name="box" size={40} />
-              <Text style={ui.title}>No records to show</Text>
-              <Text style={ui.muted}>Try another page or filter.</Text>
+              <Text style={[ui.title, { color: palette.text }]}>No records to show</Text>
+              <Text style={[ui.muted, { color: palette.muted }]}>Try another page or filter.</Text>
             </View>
           }
         />
       )}
-      <View style={ui.pagination}>
+      <View style={[ui.pagination, { backgroundColor: palette.background, borderTopColor: palette.border }]}>
         <Button
           title="Previous"
           icon="back"
@@ -401,7 +434,7 @@ export function PagedList({
           disabled={result.loading || page === 0}
           onPress={() => onPage(page - 1)}
         />
-        <Text style={ui.muted}>
+        <Text style={[ui.muted, { color: palette.muted }]}>
           Page {page + 1} / {Math.max(1, data?.totalPages || 1)}
         </Text>
         <Button
@@ -496,7 +529,7 @@ export function useMutation(onChanged) {
     },
   };
 }
-export const ui = StyleSheet.create({
+const baseUi = StyleSheet.create({
   topActions: {
     flexDirection: "row",
     justifyContent: "flex-end",
@@ -720,5 +753,52 @@ export const ui = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: 16,
+  },
+});
+
+const themedUi = {
+  screen: (c) => ({ backgroundColor: c.background }),
+  actionDock: (c) => ({ backgroundColor: c.surface, borderTopColor: c.border }),
+  header: (c) => ({ backgroundColor: c.background }),
+  eyebrow: (c) => ({ color: c.accent }),
+  heading: (c) => ({ color: c.text }),
+  iconButton: (c) => ({ backgroundColor: c.soft }),
+  card: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  title: (c) => ({ color: c.text }),
+  body: (c) => ({ color: c.text }),
+  muted: (c) => ({ color: c.muted }),
+  secondary: (c) => ({ backgroundColor: c.accentSoft }),
+  link: (c) => ({ color: c.accent }),
+  danger: (c) => ({ backgroundColor: c.dangerSoft }),
+  dangerText: (c) => ({ color: c.danger }),
+  good: (c) => ({ backgroundColor: c.successSoft }),
+  goodText: (c) => ({ color: c.success }),
+  badge: (c) => ({ backgroundColor: c.accentSoft }),
+  badgeText: (c) => ({ color: c.accent }),
+  error: (c) => ({ color: c.danger }),
+  success: (c) => ({ color: c.success }),
+  label: (c) => ({ color: c.text }),
+  input: (c) => ({ backgroundColor: c.elevated, borderColor: c.border, color: c.text }),
+  select: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  options: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  option: (c) => ({ backgroundColor: c.surface, borderBottomColor: c.border }),
+  chosen: (c) => ({ backgroundColor: c.accentSoft }),
+  pagination: (c) => ({ backgroundColor: c.background, borderTopColor: c.border }),
+  searchBox: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  searchInput: (c) => ({ color: c.text }),
+  listCaption: (c) => ({ color: c.muted }),
+  amount: (c) => ({ color: c.accent }),
+  info: (c) => ({ backgroundColor: c.accentSoft }),
+  photo: (c) => ({ backgroundColor: c.elevated }),
+  divider: (c) => ({ borderBottomColor: c.border }),
+};
+
+export const ui = new Proxy(baseUi, {
+  get(target, property) {
+    const style = Reflect.get(target, property);
+    const override = themedUi[property];
+    return activePalette && override
+      ? [style, override(activePalette)]
+      : style;
   },
 });

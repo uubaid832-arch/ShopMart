@@ -8,6 +8,9 @@ import {
 } from "react-native";
 import { adminRequest, dateLabel, readable } from "./adminApi";
 import RiderLocation from "../orders/RiderLocation";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+
+let trackingPalette = null;
 
 const messages = {
   PENDING: "Order placed and awaiting confirmation.",
@@ -22,6 +25,8 @@ const messages = {
     "Administrator confirmed physical warehouse receipt.",
 };
 export default function AdminOrderTracking({ session, order, revision = 0 }) {
+  const { theme } = useMobileAppearance();
+  trackingPalette = theme.colors;
   const [result, setResult] = useState(null);
   const token = session.accessToken;
   const orderId = order.id;
@@ -162,7 +167,7 @@ export default function AdminOrderTracking({ session, order, revision = 0 }) {
     </View>
   );
 }
-const s = StyleSheet.create({
+const baseS = StyleSheet.create({
   section: { gap: 14 },
   card: {
     backgroundColor: "#fff",
@@ -217,3 +222,14 @@ const s = StyleSheet.create({
   time: { fontSize: 10, color: "#a191ac", marginTop: 5 },
   error: { fontSize: 12, color: "#bc3457", marginBottom: 12 },
 });
+const s = new Proxy(baseS, { get(target, key) {
+  if (typeof key !== "string") return target[key];
+  const c = trackingPalette;
+  const colors = c && ({
+    card: { backgroundColor: c.surface, borderColor: c.border }, title: { color: c.text }, caption: { color: c.muted },
+    badge: { backgroundColor: c.accentSoft }, badgeText: { color: c.accent }, dot: { backgroundColor: c.accent },
+    latest: { backgroundColor: c.accent, borderColor: c.accentSoft }, line: { backgroundColor: c.border },
+    eventTitle: { color: c.text }, message: { color: c.muted }, time: { color: c.muted }, error: { color: c.danger },
+  })[key];
+  return [target[key], colors];
+}});

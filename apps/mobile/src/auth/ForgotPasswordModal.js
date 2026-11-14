@@ -10,6 +10,7 @@ import {
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -47,6 +48,8 @@ async function request(action, values) {
 }
 
 export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [email, setEmail] = useState(initialEmail);
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState("");
@@ -149,7 +152,7 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
   function field(label, value, change, options = {}) {
     return (
       <>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
         <TextInput
           accessibilityLabel={label}
           value={value}
@@ -157,7 +160,9 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
           editable={!busy}
           autoCapitalize="none"
           autoCorrect={false}
-          style={styles.input}
+          placeholderTextColor={palette.muted}
+          selectionColor={palette.accent}
+          style={[styles.input, { color: palette.text, backgroundColor: palette.surface, borderColor: palette.border }]}
           {...options}
         />
       </>
@@ -166,27 +171,27 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={close}>
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <KeyboardAvoidingView
-          style={styles.screen}
+          style={[styles.screen, { backgroundColor: palette.background }]}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: palette.text }]}>
               {done ? "Password updated" : "Reset your password"}
             </Text>
 
             {done ? (
-              <Text style={styles.notice}>
+                <Text style={[styles.notice, { color: palette.success }]}>
                 Your password has changed. Return to sign-in and use your new
                 password.
               </Text>
             ) : (
               <>
-                <Text style={styles.description}>
+                <Text style={[styles.description, { color: palette.muted }]}>
                   {challenge
                     ? `Enter the code sent to ${email.trim()} and choose a new password.`
                     : "Enter your ShopMart account email to request a verification code."}
@@ -230,16 +235,16 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
                   </>
                 )}
 
-                {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+                {notice ? <Text style={[styles.notice, { color: palette.success }]}>{notice}</Text> : null}
 
                 {expired ? (
-                  <Text style={styles.error}>
+                  <Text style={[styles.error, { color: palette.danger }]}>
                     Code expired. Use “Change email / request a new code” below.
                   </Text>
                 ) : null}
 
                 {error ? (
-                  <Text accessibilityRole="alert" style={styles.error}>
+                  <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>
                     {error}
                   </Text>
                 ) : null}
@@ -248,7 +253,7 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
                   accessibilityRole="button"
                   disabled={busy || Boolean(expired)}
                   onPress={() => submit(challenge ? "reset" : "forgot")}
-                  style={[styles.primary, (busy || expired) && styles.disabled]}
+                  style={[styles.primary, { backgroundColor: palette.accent }, (busy || expired) && styles.disabled]}
                 >
                   <Text style={styles.primaryText}>
                     {busy
@@ -265,9 +270,9 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
                       accessibilityRole="button"
                       disabled={busy || wait > 0 || Boolean(expired)}
                       onPress={() => submit("resend")}
-                      style={styles.linkButton}
+                      style={[styles.linkButton, { backgroundColor: palette.soft }]}
                     >
-                      <Text style={styles.link}>
+                      <Text style={[styles.link, { color: palette.accent }]}>
                         {expired
                           ? "Code expired"
                           : wait > 0
@@ -287,9 +292,9 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
                         setError("");
                         setNotice("");
                       }}
-                      style={styles.linkButton}
+                      style={[styles.linkButton, { backgroundColor: palette.soft }]}
                     >
-                      <Text style={styles.link}>
+                      <Text style={[styles.link, { color: palette.accent }]}>
                         Change email / request a new code
                       </Text>
                     </Pressable>
@@ -302,9 +307,9 @@ export default function ForgotPasswordModal({ initialEmail = "", onClose }) {
               accessibilityRole="button"
               disabled={busy}
               onPress={close}
-              style={styles.linkButton}
+              style={[styles.linkButton, { backgroundColor: palette.soft }]}
             >
-              <Text style={styles.link}>Back to sign-in</Text>
+              <Text style={[styles.link, { color: palette.accent }]}>Back to sign-in</Text>
             </Pressable>
           </ScrollView>
         </KeyboardAvoidingView>

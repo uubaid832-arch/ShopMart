@@ -4,6 +4,9 @@ import Svg, { Path } from "react-native-svg";
 import ProfileModal from "../account/ProfileModal";
 import ChangePasswordModal from "../account/ChangePasswordModal";
 import BiometricSettingsModal from "../account/BiometricSecurity";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+
+let profilePalette = null;
 
 const paths = {
   user: "M20 21v-2a8 8 0 0 0-16 0v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0",
@@ -31,6 +34,8 @@ export default function RiderProfile({
   onPasswordChanged,
   security,
 }) {
+  const { theme } = useMobileAppearance();
+  profilePalette = theme.colors;
   const [profileOpen, setProfileOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [biometricOpen, setBiometricOpen] = useState(false);
@@ -38,24 +43,24 @@ export default function RiderProfile({
   const actions = [
     {
       icon: "user",
-      title: "My name and phone",
-      description: "Change your contact details",
+      title: "Personal details",
+      description: "Update your name and phone number",
       action: () => setProfileOpen(true),
       disabled: typeof onUpdateUser !== "function",
     },
     {
       icon: "lock",
-      title: "Change my password",
-      description: "Use a new password to sign in",
+      title: "Change password",
+      description: "Protect your rider account",
       action: () => setPasswordOpen(true),
       disabled: typeof onPasswordChanged !== "function",
     },
     {
       icon: "fingerprint",
-      title: "Fingerprint lock",
+      title: "Fingerprint & security",
       description: security?.enabled
-        ? "On for this phone"
-        : "Turn on fingerprint sign-in",
+        ? "Biometric unlock is enabled on this device"
+        : "Enable biometric unlock on this device",
       action: () => setBiometricOpen(true),
       disabled: !security,
     },
@@ -69,14 +74,16 @@ export default function RiderProfile({
               {user.name?.trim().charAt(0).toUpperCase() || "R"}
             </Text>
           </View>
-        <Text style={styles.name}>{user.name || "Rider"}</Text>
+          <Text style={styles.name}>{user.name}</Text>
           <Text style={styles.email}>{user.email}</Text>
           <View style={styles.role}>
             <Text style={styles.roleText}>RIDER ACCOUNT</Text>
           </View>
         </View>
-        <Text style={styles.sectionTitle}>My account</Text>
-        <Text style={styles.sectionCaption}>Choose what you want to change.</Text>
+        <Text style={styles.sectionTitle}>Account settings</Text>
+        <Text style={styles.sectionCaption}>
+          Your details and security, in one place.
+        </Text>
         {actions.map((item) => (
           <Pressable
             key={item.icon}
@@ -102,7 +109,9 @@ export default function RiderProfile({
         <View style={styles.info}>
           <Text style={styles.infoTitle}>Keep your account safe</Text>
           <Text style={styles.description}>
-            Do not tell anyone your password or email code. Keep your phone with you.
+            Never share your password or email verification code. Changing your
+            password requires signing in again. Your phone handles biometric
+            verification.
           </Text>
         </View>
       </ScrollView>
@@ -134,57 +143,57 @@ export default function RiderProfile({
     </>
   );
 }
-const styles = StyleSheet.create({
-  content: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 32 },
+const baseStyles = StyleSheet.create({
+  content: { padding: 20, paddingBottom: 35 },
   profileCard: {
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: "#e9e5fb",
+    padding: 23,
+    borderRadius: 24,
+    backgroundColor: "#f3ebfc",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#d8cff5",
+    borderColor: "#e9dcf7",
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: "#d8cff5",
+    width: 76,
+    height: 76,
+    borderRadius: 26,
+    backgroundColor: "#e2d2f4",
     borderWidth: 3,
     borderColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
   },
-  initial: { fontSize: 32, fontWeight: "900", color: "#3f2e91" },
+  initial: { fontSize: 32, fontWeight: "800", color: "#8f54c5" },
   name: {
-    fontSize: 23,
-    fontWeight: "900",
-    color: "#182235",
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#49314f",
     textAlign: "center",
     marginTop: 15,
   },
-  email: { fontSize: 14, color: "#334155", marginTop: 7, textAlign: "center" },
+  email: { fontSize: 12, color: "#82718b", marginTop: 7, textAlign: "center" },
   role: {
-    backgroundColor: "#d8cff5",
+    backgroundColor: "#eaddf9",
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 20,
     marginTop: 14,
   },
   roleText: {
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1,
-    color: "#3f2e91",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    color: "#a17bb8",
   },
   sectionTitle: {
-    fontSize: 21,
-    fontWeight: "900",
-    color: "#182235",
+    fontSize: 19,
+    fontWeight: "800",
+    color: "#49314f",
     marginTop: 27,
   },
   sectionCaption: {
-    fontSize: 14,
-    color: "#3d485a",
+    fontSize: 11,
+    color: "#82718b",
     marginTop: 5,
     marginBottom: 17,
   },
@@ -192,11 +201,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    minHeight: 76,
-    padding: 16,
+    padding: 15,
     borderWidth: 1,
-    borderColor: "#dfe4ed",
-    borderRadius: 16,
+    borderColor: "#eee3f5",
+    borderRadius: 18,
     backgroundColor: "#fff",
     marginBottom: 12,
   },
@@ -204,20 +212,32 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 15,
-    backgroundColor: "#ece9fb",
+    backgroundColor: "#f5edfc",
     alignItems: "center",
     justifyContent: "center",
   },
   copy: { flex: 1 },
-  actionTitle: { color: "#182235", fontSize: 15, fontWeight: "900" },
-  description: { color: "#3d485a", fontSize: 13, lineHeight: 20, marginTop: 5 },
+  actionTitle: { color: "#5e466c", fontSize: 13, fontWeight: "700" },
+  description: { color: "#82718b", fontSize: 11, lineHeight: 19, marginTop: 5 },
   info: {
     padding: 18,
-    backgroundColor: "#eef0f4",
+    backgroundColor: "#f7f3fb",
     borderRadius: 18,
     marginTop: 12,
   },
-  infoTitle: { color: "#182235", fontSize: 15, fontWeight: "900" },
+  infoTitle: { color: "#725481", fontSize: 12, fontWeight: "700" },
   pressed: { opacity: 0.7 },
   dim: { opacity: 0.45 },
 });
+const styles = new Proxy(baseStyles, { get(target, key) {
+  if (typeof key !== "string") return target[key];
+  const c = profilePalette;
+  const colors = c && ({
+    content: { backgroundColor: c.background }, profileCard: { backgroundColor: c.accentSoft, borderColor: c.border },
+    avatar: { backgroundColor: c.soft, borderColor: c.surface }, initial: { color: c.accent }, name: { color: c.text }, email: { color: c.muted },
+    role: { backgroundColor: c.soft }, roleText: { color: c.accent }, sectionTitle: { color: c.text }, sectionCaption: { color: c.muted },
+    action: { backgroundColor: c.surface, borderColor: c.border }, icon: { backgroundColor: c.accentSoft },
+    actionTitle: { color: c.text }, description: { color: c.muted }, info: { backgroundColor: c.soft }, infoTitle: { color: c.text },
+  })[key];
+  return [target[key], colors];
+}});

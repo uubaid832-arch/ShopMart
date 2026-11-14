@@ -1,235 +1,60 @@
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { codRequest, money } from "./codApi";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
-export default function RiderDashboard({
-  session,
-  revision,
-  onOpenCash,
-  onOpenDeliveries,
-}) {
-  const token = session.accessToken;
-  const [reload, setReload] = useState(0);
-  const [result, setResult] = useState(null);
+let dashboardPalette = null;
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    codRequest(token, "/dashboard", undefined, controller.signal)
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          setResult({ token, reload, revision, data, error: "" });
-        }
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) {
-          setResult({ token, reload, revision, error: error.message });
-        }
-      });
-
-    return () => controller.abort();
-  }, [token, reload, revision]);
-
-  const current =
-    result?.token === token &&
-    result?.reload === reload &&
-    result?.revision === revision;
-  const data = current ? result.data : null;
-  const stats = data
-    ? [
-        ["Delivered", data.successfulDeliveries, "#e5f4e9", "#145b38"],
-        ["Not delivered", data.failedAttempts, "#fff0e8", "#84350d"],
-        ["Waiting for you", data.assignedDeliveries, "#ece9fb", "#3f2e91"],
-        ["Cancelled", data.cancelledOrders, "#eef0f4", "#334155"],
-      ]
-    : [];
-
-  return (
-    <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.titleRow}>
-        <View style={styles.grow}>
-          <Text style={styles.heading}>Your work</Text>
-          <Text style={styles.caption}>A simple look at your orders and cash.</Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Refresh rider activity"
-          disabled={!current}
-          onPress={() => setReload((value) => value + 1)}
-          style={styles.refresh}
-        >
-          <Text style={styles.refreshText}>Refresh</Text>
-        </Pressable>
+export default function RiderDashboard({ session, revision, onOpenCash, onOpenDeliveries }) {
+  const { theme } = useMobileAppearance();
+  dashboardPalette = theme.colors;
+  const token=session.accessToken;
+  const [reload,setReload]=useState(0);
+  const [result,setResult]=useState(null);
+  useEffect(()=>{
+    const controller=new AbortController();
+    codRequest(token,"/dashboard",undefined,controller.signal)
+      .then(data=>{if(!controller.signal.aborted)setResult({token,reload,revision,data,error:""});})
+      .catch(error=>{if(!controller.signal.aborted)setResult({token,reload,revision,error:error.message});});
+    return ()=>controller.abort();
+  },[token,reload,revision]);
+  const current=result?.token===token&&result?.reload===reload&&result?.revision===revision;
+  const data=current?result.data:null;
+  return <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.headingRow}><View><Text style={styles.heading}>Your activity</Text><Text style={styles.muted}>All-time totals · your rider account</Text></View><Pressable accessibilityRole="button" disabled={!current} onPress={()=>setReload(v=>v+1)} style={styles.refresh}><Text style={styles.link}>Refresh</Text></Pressable></View>
+    {!current?<ActivityIndicator color={theme.colors.accent} style={styles.loader}/>:result.error?<Text accessibilityRole="alert" style={styles.error}>{result.error}</Text>:<>
+      <View style={styles.grid}>
+        {[["Successful deliveries",data.successfulDeliveries,theme.isDark?"#173a2c":"#effaf4",theme.isDark?theme.colors.success:"#3a9c65"],["Failed attempts",data.failedAttempts,theme.isDark?"#3b202b":"#fff3f2",theme.isDark?theme.colors.danger:"#ca7481"],["Assigned",data.assignedDeliveries,theme.colors.accentSoft,theme.colors.accent],["Cancelled",data.cancelledOrders,theme.colors.soft,theme.colors.muted]].map(([title,value,backgroundColor,color])=><View key={title} style={[styles.stat,{backgroundColor}]}><Text style={[styles.value,{color}]}>{value}</Text><Text style={styles.statLabel}>{title}</Text></View>)}
       </View>
-
-      {!current ? (
-        <ActivityIndicator color="#553bb5" size="large" style={styles.loader} />
-      ) : result.error ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {result.error}
-        </Text>
-      ) : (
-        <>
-          <View style={styles.stats}>
-            {stats.map(([label, value, backgroundColor, color]) => (
-              <View key={label} style={[styles.stat, { backgroundColor }]}>
-                <Text style={[styles.value, { color }]}>{value}</Text>
-                <Text style={[styles.statLabel, { color }]}>{label}</Text>
-              </View>
-            ))}
-          </View>
-
-          {data.warehousePending > 0 ? (
-            <View style={styles.alert}>
-              <Text style={styles.alertTitle}>Parcel returned to the shop</Text>
-              <Text style={styles.alertCopy}>
-                {data.warehousePending} order(s) are waiting for the shop to check them.
-              </Text>
-            </View>
-          ) : null}
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={onOpenDeliveries}
-            style={styles.deliveriesButton}
-          >
-            <Text style={styles.deliveriesTitle}>See my deliveries</Text>
-            <Text style={styles.deliveriesCopy}>
-              Open your order list and delivery steps.
-            </Text>
-          </Pressable>
-
-          <View style={styles.cashCard}>
-            <Text style={styles.cashEyebrow}>CASH ON DELIVERY</Text>
-            <Text style={styles.cashHeading}>Cash to give to the shop</Text>
-            <Text style={styles.balance}>{money(data.outstandingBalance)}</Text>
-            <Text style={styles.balanceLabel}>
-              This is shop cash you collected. It is not your pay.
-            </Text>
-            <View style={styles.cashRows}>
-              {[
-                ["Cash collected", data.totalCollected],
-                ["Given to the shop", data.confirmedHandovers],
-                ["Waiting for shop check", data.pendingHandovers],
-                ["Ready to report", data.unreportedBalance],
-              ].map(([label, value]) => (
-                <View key={label} style={styles.cashRow}>
-                  <Text style={styles.cashLabel}>{label}</Text>
-                  <Text style={styles.cashValue}>{money(value)}</Text>
-                </View>
-              ))}
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onOpenCash}
-              style={styles.primary}
-            >
-              <Text style={styles.primaryText}>Report cash to the shop</Text>
-            </Pressable>
-            <Text style={styles.note}>
-              The shop must check and confirm the cash after you hand it over.
-            </Text>
-          </View>
-        </>
-      )}
-    </ScrollView>
-  );
+      <View style={styles.warehouse}><Text style={styles.warehouseText}>{data.warehousePending} warehouse return(s) awaiting resolution</Text></View>
+      <Pressable accessibilityRole="button" onPress={onOpenDeliveries} style={styles.deliveries}><Text style={styles.link}>Open deliveries →</Text></Pressable>
+      <View style={styles.cashCard}>
+        <Text style={styles.eyebrow}>COD CASH ACCOUNT</Text>
+        <Text style={styles.balance}>{money(data.outstandingBalance)}</Text><Text style={styles.balanceLabel}>Outstanding until admin confirmation</Text>
+        <View style={styles.cashRows}>
+          {[["Total collected",data.totalCollected],["Admin-confirmed handovers",data.confirmedHandovers],["Pending confirmation",data.pendingHandovers],["Available to report",data.unreportedBalance]].map(([label,value])=><View key={label} style={styles.cashRow}><Text style={styles.cashLabel}>{label}</Text><Text style={styles.cashValue}>{money(value)}</Text></View>)}
+        </View>
+        <Pressable accessibilityRole="button" onPress={onOpenCash} style={styles.primary}><Text style={styles.white}>Manage cash handovers</Text></Pressable>
+        <Text style={styles.note}>COD collections are store cash, not your earnings. Pending reports remain outstanding until the administrator confirms receipt.</Text>
+      </View>
+    </>}
+  </ScrollView>;
 }
-
-const styles = StyleSheet.create({
-  content: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 30 },
-  grow: { flex: 1, minWidth: 0 },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  heading: { color: "#182235", fontSize: 22, fontWeight: "900" },
-  caption: { color: "#3d485a", fontSize: 14, lineHeight: 21, marginTop: 5 },
-  refresh: {
-    minHeight: 48,
-    paddingHorizontal: 14,
-    justifyContent: "center",
-    backgroundColor: "#553bb5",
-    borderRadius: 13,
-  },
-  refreshText: { color: "#fff", fontSize: 13, fontWeight: "900" },
-  loader: { marginTop: 36 },
-  error: {
-    color: "#8a2020",
-    backgroundColor: "#fde9e9",
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 18,
-  },
-  stats: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 18,
-  },
-  stat: { width: "48%", minHeight: 104, padding: 16, borderRadius: 17 },
-  value: { fontSize: 32, fontWeight: "900" },
-  statLabel: { fontSize: 14, fontWeight: "900", marginTop: 8 },
-  alert: {
-    padding: 15,
-    borderRadius: 15,
-    backgroundColor: "#fff4dd",
-    marginTop: 14,
-  },
-  alertTitle: { color: "#684b13", fontSize: 15, fontWeight: "900" },
-  alertCopy: { color: "#684b13", fontSize: 13, lineHeight: 20, marginTop: 5 },
-  deliveriesButton: {
-    padding: 17,
-    borderRadius: 16,
-    backgroundColor: "#e9e5fb",
-    marginTop: 14,
-  },
-  deliveriesTitle: { color: "#34266f", fontSize: 17, fontWeight: "900" },
-  deliveriesCopy: { color: "#40365f", fontSize: 13, lineHeight: 20, marginTop: 4 },
-  cashCard: {
-    padding: 18,
-    borderRadius: 20,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#dfe4ed",
-    marginTop: 15,
-  },
-  cashEyebrow: { color: "#514190", fontSize: 11, fontWeight: "900", letterSpacing: 1 },
-  cashHeading: { color: "#182235", fontSize: 18, fontWeight: "900", marginTop: 8 },
-  balance: { fontSize: 29, fontWeight: "900", color: "#5036ae", marginTop: 8 },
-  balanceLabel: { color: "#3d485a", fontSize: 13, lineHeight: 20, marginTop: 4 },
-  cashRows: { marginTop: 15 },
-  cashRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
-  },
-  cashLabel: { flex: 1, color: "#334155", fontSize: 13, lineHeight: 19 },
-  cashValue: { color: "#182235", fontSize: 14, fontWeight: "900", maxWidth: "48%", textAlign: "right" },
-  primary: {
-    minHeight: 54,
-    padding: 15,
-    backgroundColor: "#4c32a5",
-    borderRadius: 14,
-    marginTop: 16,
-    justifyContent: "center",
-  },
-  primaryText: { color: "#fff", fontWeight: "900", fontSize: 15, textAlign: "center" },
-  note: { color: "#3d485a", fontSize: 13, lineHeight: 20, marginTop: 12 },
+const baseStyles=StyleSheet.create({
+  content:{padding:20,paddingBottom:35},headingRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:10},heading:{fontSize:20,fontWeight:"800",color:"#45324f"},muted:{color:"#a896b1",fontSize:10,lineHeight:18,marginTop:5},refresh:{padding:13,backgroundColor:"#eee5fa",borderRadius:12},link:{color:"#8c52cb",fontWeight:"700",fontSize:12},loader:{marginTop:30},error:{color:"#be123c",lineHeight:22,marginTop:20},
+  grid:{flexDirection:"row",flexWrap:"wrap",justifyContent:"space-between",gap:12,marginTop:20},stat:{width:"48%",padding:18,borderRadius:20,minHeight:108},value:{fontSize:32,fontWeight:"800"},statLabel:{color:"#99849f",fontSize:11,fontWeight:"600",marginTop:8},warehouse:{padding:14,backgroundColor:"#fff6e7",borderRadius:13,marginTop:13},warehouseText:{color:"#af8d56",fontSize:11,lineHeight:18},deliveries:{paddingVertical:17,alignSelf:"flex-end"},
+  cashCard:{padding:21,borderRadius:23,backgroundColor:"#f3ecfc",borderWidth:1,borderColor:"#e8dbf6"},eyebrow:{fontSize:9,fontWeight:"800",letterSpacing:1.7,color:"#aa8dc0"},balance:{fontSize:32,fontWeight:"800",color:"#7c3aed",marginTop:15,letterSpacing:-0.8},balanceLabel:{color:"#ab91ba",fontSize:11,lineHeight:18,marginTop:6},cashRows:{marginTop:20},cashRow:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:12,paddingVertical:11,borderTopWidth:1,borderTopColor:"#e8dcf3"},cashLabel:{flex:1,color:"#a18bad",fontSize:11},cashValue:{color:"#786089",fontSize:12,fontWeight:"700",maxWidth:"48%",textAlign:"right"},primary:{padding:16,backgroundColor:"#7c3aed",borderRadius:13,marginTop:17},white:{color:"#fff",fontWeight:"700",fontSize:12,textAlign:"center"},note:{color:"#b09cbe",fontSize:10,lineHeight:18,marginTop:14},
 });
+const styles = new Proxy(baseStyles, { get(target, key) {
+  if (typeof key !== "string") return target[key];
+  const c = dashboardPalette;
+  const colors = c && ({
+    content: { backgroundColor: c.background }, heading: { color: c.text }, muted: { color: c.muted },
+    refresh: { backgroundColor: c.soft }, link: { color: c.accent }, error: { color: c.danger }, statLabel: { color: c.muted },
+    stat: { borderColor: c.border }, warehouse: { backgroundColor: c.warning === "#fbbf24" ? "#3b3020" : "#fff6e7" }, warehouseText: { color: c.warning },
+    cashCard: { backgroundColor: c.accentSoft, borderColor: c.border }, eyebrow: { color: c.accent }, balance: { color: c.accent },
+    balanceLabel: { color: c.muted }, cashRow: { borderTopColor: c.border }, cashLabel: { color: c.muted }, cashValue: { color: c.text },
+    note: { color: c.muted }, primary: { backgroundColor: c.accent },
+  })[key];
+  return [target[key], colors];
+}});

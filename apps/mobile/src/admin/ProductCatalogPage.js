@@ -14,6 +14,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { apiBaseUrl, imageUrl } from "./adminApi";
 import { Notice } from "./adminUi";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+
+let catalogPalette = null;
 
 const paths = {
   refresh:
@@ -103,6 +106,8 @@ export default function ProductCatalogPage({
   op,
   revision,
 }) {
+  const { theme } = useMobileAppearance();
+  catalogPalette = theme.colors;
   const [picker, setPicker] = useState("");
   const [photos, setPhotos] = useState({ key: "", values: {} });
   const items = result.data?.items || [];
@@ -428,7 +433,7 @@ export default function ProductCatalogPage({
     </Modal>
   );
 }
-const s = StyleSheet.create({
+const baseS = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#faf8ff" },
   grow: { flex: 1 },
   topActions: {
@@ -626,3 +631,18 @@ const s = StyleSheet.create({
   },
   selected: { backgroundColor: "#f2ebfc" },
 });
+const s = new Proxy(baseS, { get(target, key) {
+  if (typeof key !== "string") return target[key];
+  const c = catalogPalette;
+  const colors = c && ({
+    screen: { backgroundColor: c.background }, overlay: { backgroundColor: "rgba(0,0,0,0.55)" }, sheet: { backgroundColor: c.surface, borderColor: c.border },
+    iconButton: { backgroundColor: c.soft }, heading: { color: c.text }, eyebrow: { color: c.accent }, search: { backgroundColor: c.surface, borderColor: c.border },
+    searchInput: { color: c.text }, filter: { backgroundColor: c.surface, borderColor: c.border }, filterLabel: { color: c.text }, count: { color: c.muted },
+    card: { backgroundColor: c.surface, borderColor: c.border }, thumbnail: { backgroundColor: c.soft }, name: { color: c.text }, category: { color: c.muted },
+    price: { color: c.accent }, stockText: { color: c.muted }, badge: { backgroundColor: c.accentSoft }, badgeText: { color: c.accent },
+    pagination: { backgroundColor: c.background }, pageNumber: { color: c.muted }, pageButton: { backgroundColor: c.soft },
+    selected: { backgroundColor: c.accentSoft, borderColor: c.accent }, option: { borderBottomColor: c.border }, emptyTitle: { color: c.text },
+    error: { color: c.danger }, divider: { backgroundColor: c.border }, actionText: { color: c.text },
+  })[key];
+  return [target[key], colors];
+}});

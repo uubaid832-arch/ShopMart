@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+let warehousePalette = null;
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "").trim().replace(/\/+$/, "");
 const readable = (value = "") => value.replace(/_/g, " ").toLowerCase();
 
 export default function WarehouseReturnModal({ session, delivery, onClose, onUpdated }) {
+  const { theme } = useMobileAppearance();
+  warehousePalette = theme.colors;
   const token = session.accessToken;
   const [result, setResult] = useState(null);
   const [reload, setReload] = useState(0);
@@ -55,7 +59,7 @@ export default function WarehouseReturnModal({ session, delivery, onClose, onUpd
     </ScrollView>
   </SafeAreaView></Modal>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#fff" }, header: { padding: 20, flexDirection: "row", alignItems: "center", gap: 10 },
   title: { flex: 1, fontSize: 22, fontWeight: "800", color: "#3b2c50" }, content: { padding: 20 },
   button: { padding: 13, borderRadius: 12, backgroundColor: "#f2ecfc", alignSelf: "flex-start", marginVertical: 12 }, link: { color: "#7c3aed", fontSize: 12, fontWeight: "700" },
@@ -64,3 +68,12 @@ const styles = StyleSheet.create({
   description: { color: "#9a89a8", fontSize: 12, lineHeight: 22, marginTop: 10 }, primary: { backgroundColor: "#7c3aed", padding: 16, borderRadius: 13, marginTop: 23 }, white: { color: "#fff", fontWeight: "700", fontSize: 12, textAlign: "center" },
   error: { color: "#be123c", fontSize: 12, lineHeight: 21, marginVertical: 15 },
 });
+const styles = new Proxy(baseStyles, { get(target, key) {
+  if (typeof key !== "string") return target[key];
+  const c = warehousePalette;
+  const colors = c && ({ screen: { backgroundColor: c.background }, header: { backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border },
+    title: { color: c.text }, button: { backgroundColor: c.soft }, link: { color: c.accent }, order: { color: c.muted }, name: { color: c.text },
+    card: { backgroundColor: c.surface, borderColor: c.border }, label: { color: c.accent }, description: { color: c.muted },
+    primary: { backgroundColor: c.accent }, error: { color: c.danger } })[key];
+  return [target[key], colors];
+}});

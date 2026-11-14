@@ -32,7 +32,14 @@ import NotificationBell from "../notifications/NotificationBell";
 import ProfileModal from "../account/ProfileModal";
 import ChangePasswordModal from "../account/ChangePasswordModal";
 import BiometricSettingsModal from "../account/BiometricSecurity";
-import AdminWarehouseAddress from "./AdminWarehouseAddress";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
+import { setAdminPalette } from "./adminUi";
+
+let themePalette = {
+  background: "#f8f7fc", surface: "#fff", elevated: "#fff", soft: "#f5f3fa",
+  text: "#17203c", muted: "#71798c", border: "#e7e2ee", accent: "#7c3aed",
+  accentSoft: "#f0eafa", danger: "#be123c", dangerSoft: "#fff1f2", success: "#15803d",
+};
 
 const paths = {
   ticket: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v2m0 3v2m0 3v2",
@@ -54,7 +61,6 @@ const paths = {
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2",
   bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
   arrow: "m9 5 7 7-7 7",
-  down: "m5 9 7 7 7-7",
   back: "m15 5-7 7 7 7",
   close: "m6 6 12 12M6 18 18 6",
   wallet: "M3 5h16v15H3V5Zm0 0 13-3v3m-1 5h6v6h-6v-6m3 3h.01",
@@ -196,7 +202,6 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
   const [riderSearch, setRiderSearch] = useState("");
-  const [riderDropdownOpen, setRiderDropdownOpen] = useState(false);
   const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -496,60 +501,47 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                         </Text>
                         {assignment.data?.riders.length ? (
                           <>
+                          <TextInput
+                            accessibilityLabel="Search active riders"
+                            placeholder="Search active riders by name"
+                            value={riderSearch}
+                            onChangeText={setRiderSearch}
+                            editable={!locked}
+                            autoCapitalize="words"
+                            style={s.riderSearch}
+                          />
+                          {assignment.data.riders.filter((rider) =>
+                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                          ).map((rider) => (
                             <Pressable
-                              accessibilityRole="button"
-                              accessibilityLabel={`Select active rider. ${assignment.data.riders.find((rider) => rider.id === riderId)?.name || "No rider selected"}`}
-                              accessibilityState={{ expanded: riderDropdownOpen }}
+                              key={rider.id}
+                              accessibilityRole="radio"
+                              accessibilityState={{
+                                checked: riderId === rider.id,
+                              }}
                               disabled={locked}
-                              onPress={() => setRiderDropdownOpen((open) => !open)}
-                              style={s.riderDropdown}
+                              onPress={() => setRiderId(rider.id)}
+                              style={[
+                                s.riderChoice,
+                                riderId === rider.id && s.riderSelected,
+                              ]}
                             >
-                              <Text style={[s.body, s.grow]}>
-                                {assignment.data.riders.find((rider) => rider.id === riderId)?.name || "Choose an active rider"}
-                              </Text>
-                              <Icon name="down" size={17} />
-                            </Pressable>
-                            {riderDropdownOpen && (
-                              <View style={s.riderDropdownMenu}>
-                                <TextInput
-                                  accessibilityLabel="Search active riders"
-                                  placeholder="Type rider name to search"
-                                  value={riderSearch}
-                                  onChangeText={setRiderSearch}
-                                  editable={!locked}
-                                  autoCapitalize="words"
-                                  style={s.riderSearch}
-                                />
-                                <ScrollView
-                                  style={s.riderDropdownList}
-                                  nestedScrollEnabled
-                                  keyboardShouldPersistTaps="handled"
-                                >
-                                  {assignment.data.riders.filter((rider) =>
-                                    rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
-                                  ).map((rider) => (
-                                    <Pressable
-                                      key={rider.id}
-                                      accessibilityRole="radio"
-                                      accessibilityState={{ checked: riderId === rider.id }}
-                                      disabled={locked}
-                                      onPress={() => {
-                                        setRiderId(rider.id);
-                                        setRiderSearch("");
-                                        setRiderDropdownOpen(false);
-                                      }}
-                                      style={[s.riderChoice, riderId === rider.id && s.riderSelected]}
-                                    >
-                                      <Text style={[s.body, s.grow]}>{rider.name}</Text>
-                                      {riderId === rider.id && <Icon name="check" size={16} />}
-                                    </Pressable>
-                                  ))}
-                                  {assignment.data.riders.filter((rider) =>
-                                    rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
-                                  ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
-                                </ScrollView>
+                              <View
+                                style={[
+                                  s.radio,
+                                  riderId === rider.id && s.radioSelected,
+                                ]}
+                              >
+                                {riderId === rider.id && (
+                                  <Icon name="check" size={12} color="#fff" />
+                                )}
                               </View>
-                            )}
+                              <Text style={[s.body, s.grow]}>{rider.name}</Text>
+                            </Pressable>
+                          ))}
+                          {assignment.data.riders.filter((rider) =>
+                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                          ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
                           </>
                         ) : (
                           <Text style={s.muted}>
@@ -854,6 +846,10 @@ export default function AdminScreen({
   onPasswordChanged,
   security,
 }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
+  themePalette = palette;
+  setAdminPalette(palette);
   const [revision, setRevision] = useState(0);
   const [orders, setOrders] = useState(null);
   const [panel, setPanel] = useState("");
@@ -902,9 +898,9 @@ export default function AdminScreen({
     );
   }
   return (
-    <SafeAreaView style={s.screen}>
-      <StatusBar style="dark" />
-      <View style={s.header}>
+    <SafeAreaView style={[s.screen, { backgroundColor: palette.background }]}>
+      <StatusBar style={theme.isDark ? "light" : "dark"} />
+      <View style={[s.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
         <IconButton
           icon="menu"
           label="Open admin sidebar"
@@ -1359,12 +1355,6 @@ export default function AdminScreen({
           onClose={() => setPanel("")}
         />
       )}
-      {panel === "warehouse-address" && (
-        <AdminWarehouseAddress
-          session={session}
-          onClose={() => setPanel("account")}
-        />
-      )}
       {panel === "password" && (
         <ChangePasswordModal
           session={session}
@@ -1427,12 +1417,6 @@ export default function AdminScreen({
                   action: () => setPanel("password"),
                 },
                 {
-                  icon: "truck",
-                  title: "Warehouse return address",
-                  description: "Set the address shown in return instructions",
-                  action: () => setPanel("warehouse-address"),
-                },
-                {
                   icon: "lock",
                   title: "Fingerprint & security",
                   description: security.enabled
@@ -1477,7 +1461,7 @@ export default function AdminScreen({
   );
 }
 
-const s = StyleSheet.create({
+const baseS = StyleSheet.create({
   cashAlert: {
     flexDirection: "row",
     alignItems: "center",
@@ -1866,27 +1850,6 @@ const s = StyleSheet.create({
     minHeight: 48,
     marginTop: 10,
   },
-  riderDropdown: {
-    minHeight: 54,
-    borderWidth: 1,
-    borderColor: "#cbb8e2",
-    backgroundColor: "#fff",
-    borderRadius: 13,
-    paddingHorizontal: 14,
-    marginTop: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  riderDropdownMenu: {
-    borderWidth: 1,
-    borderColor: "#eae3f2",
-    borderRadius: 13,
-    backgroundColor: "#fff",
-    padding: 9,
-    marginTop: 7,
-  },
-  riderDropdownList: { maxHeight: 210 },
   riderSelected: { borderColor: "#a477ee", backgroundColor: "#f1e9ff" },
   riderSearch: {
     borderWidth: 1,
@@ -1960,5 +1923,88 @@ const s = StyleSheet.create({
     padding: 15,
     borderRadius: 17,
     marginBottom: 12,
+  },
+});
+
+const screenStyles = {
+  screen: (c) => ({ backgroundColor: c.background }),
+  header: (c) => ({ backgroundColor: c.surface, borderBottomColor: c.border }),
+  drawerOverlay: (c) => ({ backgroundColor: c.background }),
+  drawer: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  drawerHeader: (c) => ({ borderBottomColor: c.border }),
+  drawerFooter: (c) => ({ borderTopColor: c.border }),
+  drawerIdentity: (c) => ({ backgroundColor: c.accentSoft }),
+  drawerAvatar: (c) => ({ backgroundColor: c.soft }),
+  drawerInitial: (c) => ({ color: c.accent }),
+  drawerItem: (c) => ({ borderColor: c.border }),
+  drawerCountText: () => ({ color: "#fff" }),
+  drawerDismiss: (c) => ({ backgroundColor: c.background }),
+  card: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  orderCard: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  metric: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  metricIcon: (c) => ({ backgroundColor: c.soft }),
+  metricNumber: (c) => ({ color: c.text }),
+  profileCard: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  avatar: (c) => ({ backgroundColor: c.soft, borderColor: c.surface }),
+  avatarText: (c) => ({ color: c.accent }),
+  adminBadge: (c) => ({ backgroundColor: c.accentSoft }),
+  accountAction: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  riderSummary: (c) => ({ backgroundColor: c.soft }),
+  dashboardWelcome: (c) => ({ backgroundColor: c.background }),
+  hero: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.border }),
+  heroIcon: (c) => ({ backgroundColor: c.soft }),
+  heroEyebrow: (c) => ({ color: c.accent }),
+  heroTitle: (c) => ({ color: c.text }),
+  heroBody: (c) => ({ color: c.muted }),
+  cashAlert: (c) => ({ backgroundColor: c.warningSoft || c.accentSoft, borderColor: c.border }),
+  drawerItemActive: (c) => ({ backgroundColor: c.accentSoft }),
+  drawerItemText: (c) => ({ color: c.muted }),
+  drawerItemTextActive: (c) => ({ color: c.accent }),
+  screenText: (c) => ({ color: c.text }),
+  title: (c) => ({ color: c.text }),
+  welcomeName: (c) => ({ color: c.text }),
+  sectionTitle: (c) => ({ color: c.text }),
+  cardTitle: (c) => ({ color: c.text }),
+  customer: (c) => ({ color: c.text }),
+  profileName: (c) => ({ color: c.text }),
+  drawerName: (c) => ({ color: c.text }),
+  body: (c) => ({ color: c.text }),
+  muted: (c) => ({ color: c.muted }),
+  welcomeCaption: (c) => ({ color: c.muted }),
+  eyebrow: (c) => ({ color: c.accent }),
+  drawerBrand: (c) => ({ color: c.accent }),
+  drawerSection: (c) => ({ color: c.muted }),
+  orderNumber: (c) => ({ color: c.muted }),
+  metricLabel: (c) => ({ color: c.muted }),
+  orderAmount: (c) => ({ color: c.accent }),
+  itemName: (c) => ({ color: c.text }),
+  stockBadge: (c) => ({ backgroundColor: c.warning === "#fbbf24" ? "#3b3020" : "#fff5de" }),
+  link: (c) => ({ color: c.accent }),
+  drawerCount: (c) => ({ backgroundColor: c.accent }),
+  iconButton: (c) => ({ backgroundColor: c.soft }),
+  secondary: (c) => ({ backgroundColor: c.accentSoft }),
+  button: (c) => ({ backgroundColor: c.accent }),
+  danger: (c) => ({ backgroundColor: c.dangerSoft }),
+  dangerText: (c) => ({ color: c.danger }),
+  error: (c) => ({ color: c.danger }),
+  errorBox: (c) => ({ backgroundColor: c.dangerSoft, borderColor: c.border }),
+  success: (c) => ({ color: c.success }),
+  input: (c) => ({ backgroundColor: c.elevated, borderColor: c.border, color: c.text }),
+  search: (c) => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
+  riderSearch: (c) => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
+  riderChoice: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
+  riderSelected: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
+  chip: (c) => ({ backgroundColor: c.soft, borderColor: c.border }),
+  chipActive: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
+  chipText: (c) => ({ color: c.text }),
+  pagination: (c) => ({ backgroundColor: c.background }),
+  cardFoot: (c) => ({ borderTopColor: c.border }),
+};
+
+const s = new Proxy(baseS, {
+  get(target, property) {
+    const style = Reflect.get(target, property);
+    const override = screenStyles[property];
+    return override ? [style, override(themePalette)] : style;
   },
 });
