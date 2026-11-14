@@ -56,7 +56,8 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [reason, setReason] = useState("");
+  const [reasonType, setReasonType] = useState("");
+  const [reasonDetails, setReasonDetails] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -107,7 +108,8 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
     setTab(next);
     setPage(0);
     setSelected(null);
-    setReason("");
+    setReasonType("");
+    setReasonDetails("");
     setError("");
   }
 
@@ -116,10 +118,14 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
 
     const item = data?.items.find((entry) => entry.orderItemId === selected);
 
-    if (!item || !reason.trim()) {
-      setError("Select a product and explain why you want to return it.");
+    if (!item || !reasonType || (reasonType === "Other" && !reasonDetails.trim())) {
+      setError("Choose a product and reason. If you choose Other, describe the issue.");
       return;
     }
+
+    const reason = reasonType === "Other"
+      ? `Other: ${reasonDetails.trim()}`
+      : reasonType;
 
     pending.current = true;
     setBusy(true);
@@ -130,11 +136,12 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
       await request(token, "", {
         orderId: item.orderId,
         orderItemId: item.orderItemId,
-        reason: reason.trim(),
+        reason,
       });
 
       setSelected(null);
-      setReason("");
+      setReasonType("");
+      setReasonDetails("");
       setTab("history");
       setPage(0);
       setReload((value) => value + 1);
@@ -222,15 +229,15 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                 {tab === "eligible" && (
                   <Text style={styles.description}>
                     Returns cover the full quantity of the selected purchased
-                    item. Delivered and paid COD or bank transfer orders, and
-                    verified Safepay orders, are eligible when no return exists.
+                    item. Only delivered, paid COD or verified Safepay items without an existing
+                    return request are eligible.
                   </Text>
                 )}
 
                 {data.items.length === 0 && (
                   <Text style={styles.description}>
                     {tab === "eligible"
-                      ? orderId ? "No eligible items for this order. It must be delivered, paid (including bank transfer receipt confirmed by the shop), and not already have a return request." : "No eligible products on this page."
+                      ? orderId ? "No eligible items for this order. It must be delivered, paid, and not already have a return request." : "No eligible products on this page."
                       : "No return requests on this page."}
                   </Text>
                 )}
@@ -246,6 +253,8 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                       disabled={busy}
                       onPress={() => {
                         setSelected(item.orderItemId);
+                        setReasonType("");
+                        setReasonDetails("");
                         setError("");
                       }}
                       style={[
@@ -298,19 +307,56 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                 {tab === "eligible" && selected && (
                   <View style={styles.form}>
                     <Text style={styles.name}>Reason for return</Text>
-                    <TextInput
-                      accessibilityLabel="Reason for return"
-                      placeholder="Describe the issue with your purchased item"
-                      placeholderTextColor="#94a3b8"
-                      value={reason}
-                      onChangeText={setReason}
-                      editable={!busy}
-                      maxLength={1000}
-                      multiline
-                      textAlignVertical="top"
-                      style={styles.input}
-                    />
-                    <Text style={styles.muted}>{reason.length}/1000</Text>
+                    {[
+                      "Wrong item received",
+                      "Item is damaged",
+                      "Item is defective or not working",
+                      "Missing parts or accessories",
+                      "Item does not match description",
+                      "Size or fit issue",
+                      "Changed my mind",
+                      "Other",
+                    ].map((option) => (
+                      <Pressable
+                        key={option}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: reasonType === option }}
+                        disabled={busy}
+                        onPress={() => {
+                          setReasonType(option);
+                          setReasonDetails("");
+                          setError("");
+                        }}
+                        style={[
+                          styles.reasonOption,
+                          reasonType === option && styles.reasonOptionSelected,
+                        ]}
+                      >
+                        <View style={[
+                          styles.radioMark,
+                          reasonType === option && styles.radioMarkSelected,
+                        ]} />
+                        <Text style={styles.reasonOptionText}>{option}</Text>
+                      </Pressable>
+                    ))}
+                    {reasonType === "Other" && (
+                      <>
+                        <Text style={styles.muted}>Describe the specific issue (required)</Text>
+                        <TextInput
+                          accessibilityLabel="Describe the specific issue"
+                          placeholder="Tell us what is wrong with the item"
+                          placeholderTextColor="#94a3b8"
+                          value={reasonDetails}
+                          onChangeText={setReasonDetails}
+                          editable={!busy}
+                          maxLength={980}
+                          multiline
+                          textAlignVertical="top"
+                          style={styles.input}
+                        />
+                        <Text style={styles.muted}>{reasonDetails.length}/980</Text>
+                      </>
+                    )}
                     <Pressable
                       accessibilityRole="button"
                       disabled={busy}
@@ -404,6 +450,27 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
   form: { marginVertical: 15 },
+  reasonOption: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  reasonOptionSelected: { borderColor: "#7c3aed", backgroundColor: "#f5f3ff" },
+  radioMark: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#94a3b8",
+  },
+  radioMarkSelected: { borderColor: "#7c3aed", backgroundColor: "#7c3aed" },
+  reasonOptionText: { color: "#334155", fontSize: 14, flex: 1 },
   input: {
     minHeight: 110,
     borderWidth: 1,

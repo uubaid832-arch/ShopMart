@@ -72,7 +72,8 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
   const [itemId, setItemId] = useState("");
-  const [reason, setReason] = useState("");
+  const [reasonType, setReasonType] = useState("");
+  const [reasonDetails, setReasonDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [submitError, setSubmitError] = useState(null);
@@ -156,10 +157,14 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
 
     const item = eligible?.items.find((entry) => entry.orderItemId === itemId);
 
-    if (!item || !reason.trim()) {
+    if (!item || !reasonType || (reasonType === "Other" && !reasonDetails.trim())) {
       setSubmitError({ type: "validation" });
       return;
     }
+
+    const reason = reasonType === "Other"
+      ? `Other: ${reasonDetails.trim()}`
+      : reasonType;
 
     inFlight.current = true;
     setSubmitting(true);
@@ -170,11 +175,12 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
       await submitReturn(accessToken, {
         orderId: item.orderId,
         orderItemId: item.orderItemId,
-        reason: reason.trim(),
+        reason,
       });
 
       setItemId("");
-      setReason("");
+      setReasonType("");
+      setReasonDetails("");
       setEligiblePage(0);
       setHistoryPage(0);
       setReload((current) => current + 1);
@@ -194,8 +200,8 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
     ? ""
     : submitError.type === "validation"
       ? text(
-          "Select an item and enter your reason.",
-          "مصنوع منتخب کریں اور واپسی کی وجہ درج کریں۔",
+          "Select an item and a reason. If you choose Other, describe the issue.",
+          "مصنوع اور واپسی کی وجہ منتخب کریں۔ اگر دیگر منتخب کریں تو مسئلہ بیان کریں۔",
         )
       : text(
           submitError.message,
@@ -295,6 +301,8 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
                         value={itemId}
                         onChange={(event) => {
                           setItemId(event.target.value);
+                          setReasonType("");
+                          setReasonDetails("");
                           setSubmitError(null);
                         }}
                         className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3"
@@ -319,19 +327,46 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
 
                     <label className="grid gap-2 text-sm font-semibold">
                       {text("Reason for return", "واپسی کی وجہ")}
-                      <textarea
+                      <select
                         required
-                        dir="auto"
-                        rows={3}
-                        maxLength={1000}
-                        value={reason}
+                        value={reasonType}
                         onChange={(event) => {
-                          setReason(event.target.value);
+                          setReasonType(event.target.value);
+                          setReasonDetails("");
                           setSubmitError(null);
                         }}
-                        className="box-border w-full resize-y rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 font-[inherit]"
-                      />
+                        className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3"
+                      >
+                        <option value="">{text("Choose a reason", "وجہ منتخب کریں")}</option>
+                        <option value="Wrong item received">{text("Wrong item received", "غلط مصنوع موصول ہوئی")}</option>
+                        <option value="Item is damaged">{text("Item is damaged", "مصنوع خراب ہے")}</option>
+                        <option value="Item is defective or not working">{text("Item is defective or not working", "مصنوع میں خرابی ہے یا کام نہیں کرتی")}</option>
+                        <option value="Missing parts or accessories">{text("Missing parts or accessories", "حصے یا لوازمات موجود نہیں")}</option>
+                        <option value="Item does not match description">{text("Item does not match description", "مصنوع تفصیل کے مطابق نہیں")}</option>
+                        <option value="Size or fit issue">{text("Size or fit issue", "سائز یا فِٹ کا مسئلہ")}</option>
+                        <option value="Changed my mind">{text("Changed my mind", "ارادہ بدل گیا")}</option>
+                        <option value="Other">{text("Other", "دیگر")}</option>
+                      </select>
                     </label>
+
+                    {reasonType === "Other" && (
+                      <label className="grid gap-2 text-sm font-semibold">
+                        {text("Describe the specific issue", "مسئلے کی وضاحت کریں")}
+                        <textarea
+                          required
+                          dir="auto"
+                          rows={3}
+                          maxLength={980}
+                          value={reasonDetails}
+                          onChange={(event) => {
+                            setReasonDetails(event.target.value);
+                            setSubmitError(null);
+                          }}
+                          placeholder={text("Tell us what is wrong with the item", "مصنوع کا مسئلہ بتائیں")}
+                          className="box-border w-full resize-y rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 font-[inherit]"
+                        />
+                      </label>
+                    )}
 
                     <button
                       type="submit"
@@ -351,8 +386,8 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
                   {text(
                     orderId
                       ? "No eligible items for this order. It must be delivered, paid, and not already have a return request."
-                      : "No eligible items on this page. Delivered, paid COD or bank transfer, and verified Safepay items can be returned if there is no existing return request.",
-                    "صرف ڈیلیور شدہ اور ادا شدہ COD یا بینک ٹرانسفر، یا تصدیق شدہ Safepay آئٹمز واپس کیے جا سکتے ہیں، بشرطیکہ پہلے سے واپسی کی درخواست موجود نہ ہو۔",
+                      : "No eligible items on this page. Only delivered, paid COD or verified Safepay items without an existing return request are eligible.",
+                    "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
                   )}
                 </p>
               )}
