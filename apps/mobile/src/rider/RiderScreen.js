@@ -21,6 +21,7 @@ import DeliveryFailureModal from "./DeliveryFailureModal";
 import NotificationsModal from "../notifications/NotificationsModal";
 import NotificationBell from "../notifications/NotificationBell";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
+import AppearanceModal from "../appearance/AppearanceModal";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -37,6 +38,7 @@ const paths = {
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
   phone: "M7 3H3v4c0 8 6 14 14 14h4v-4l-5-2-2 2a12 12 0 0 1-7-7l2-2-2-5Z",
   pin: "M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Zm-5 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
+  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 function Icon({ name, color, size = 21 }) {
   const { theme } = useMobileAppearance();
@@ -105,6 +107,7 @@ export default function RiderScreen({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [failureDelivery, setFailureDelivery] = useState(null);
   const pending = useRef(false);
 
@@ -256,6 +259,14 @@ export default function RiderScreen({
         />
         <Pressable
           accessibilityRole="button"
+          accessibilityLabel="Change app theme"
+          onPress={() => setAppearanceOpen(true)}
+          style={styles.iconButton}
+        >
+          <Icon name="palette" color={palette.accent} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Sign out"
           disabled={Boolean(busyId) || signingOut}
           onPress={confirmSignOut}
@@ -264,7 +275,7 @@ export default function RiderScreen({
           {signingOut ? (
             <ActivityIndicator color={palette.accent} />
           ) : (
-            <Icon name="logout" color="#9a839e" />
+            <Icon name="logout" color={palette.muted} />
           )}
         </Pressable>
       </View>
@@ -367,7 +378,7 @@ export default function RiderScreen({
               style={styles.iconButton}
             >
               {!current ? (
-                <ActivityIndicator color="#7c3aed" />
+                <ActivityIndicator color={palette.accent} />
               ) : (
                 <Icon name="refresh" />
               )}
@@ -433,7 +444,7 @@ export default function RiderScreen({
           {!current ? (
             <ActivityIndicator
               size="large"
-              color="#7c3aed"
+              color={palette.accent}
               style={styles.loader}
             />
           ) : result.error ? (
@@ -474,7 +485,7 @@ export default function RiderScreen({
                       </View>
                       <Text style={styles.customer}>{item.customerName}</Text>
                       <View style={styles.addressRow}>
-                        <Icon name="pin" size={17} color="#9c90b0" />
+                        <Icon name="pin" size={17} color={palette.muted} />
                         <Text style={styles.address}>{item.address}</Text>
                       </View>
                       <View style={styles.amountRow}>
@@ -517,7 +528,7 @@ export default function RiderScreen({
                           onPress={() => openWhatsApp(item)}
                           style={[styles.secondary, styles.whatsappButton]}
                         >
-                          <Icon name="chat" size={17} color="#16804d" />
+                          <Icon name="chat" size={17} color={palette.success} />
                           <Text style={styles.whatsappText}>WhatsApp</Text>
                         </Pressable>
                       </View>
@@ -707,6 +718,10 @@ export default function RiderScreen({
           onClose={() => setNotificationsOpen(false)}
         />
       )}
+      <AppearanceModal
+        visible={appearanceOpen}
+        onClose={() => setAppearanceOpen(false)}
+      />
     </SafeAreaView>
   );
 }

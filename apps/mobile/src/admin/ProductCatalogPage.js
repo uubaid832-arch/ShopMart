@@ -15,6 +15,7 @@ import Svg, { Path } from "react-native-svg";
 import { apiBaseUrl, imageUrl } from "./adminApi";
 import { Notice } from "./adminUi";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
+import AppearanceModal from "../appearance/AppearanceModal";
 
 let catalogPalette = null;
 
@@ -34,12 +35,13 @@ const paths = {
   back: "m15 5-7 7 7 7",
   arrow: "m9 5 7 7-7 7",
 };
-function Icon({ name, size = 20, color = "#7c3aed" }) {
+function Icon({ name, size = 20, color }) {
+  const { theme } = useMobileAppearance();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d={paths[name]}
-        stroke={color}
+        stroke={color || theme.colors.accent}
         strokeWidth={1.7}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -48,6 +50,7 @@ function Icon({ name, size = 20, color = "#7c3aed" }) {
   );
 }
 function Action({ icon, label, onPress, disabled, danger, style }) {
+  const { theme } = useMobileAppearance();
   return (
     <Pressable
       accessibilityRole="button"
@@ -56,8 +59,8 @@ function Action({ icon, label, onPress, disabled, danger, style }) {
       onPress={onPress}
       style={({ pressed }) => [s.action, style, (pressed || disabled) && s.dim]}
     >
-      <Icon name={icon} color={danger ? "#bd365c" : "#7c3aed"} />
-      <Text style={[s.actionText, danger && { color: "#bd365c" }]}>
+      <Icon name={icon} color={danger ? theme.colors.danger : theme.colors.accent} />
+      <Text style={[s.actionText, danger && { color: theme.colors.danger }, !danger && { color: theme.colors.accent }]}>
         {label}
       </Text>
     </Pressable>
@@ -81,7 +84,7 @@ function Thumbnail({ uri, name, onPress }) {
           onError={() => setFailed(true)}
         />
       ) : (
-        <Icon name="image" size={30} color="#b9a6cc" />
+        <Icon name="image" size={30} color={catalogPalette.muted} />
       )}
     </Pressable>
   );
@@ -109,6 +112,7 @@ export default function ProductCatalogPage({
   const { theme } = useMobileAppearance();
   catalogPalette = theme.colors;
   const [picker, setPicker] = useState("");
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [photos, setPhotos] = useState({ key: "", values: {} });
   const items = result.data?.items || [];
   const ids = items
@@ -165,6 +169,7 @@ export default function ProductCatalogPage({
   );
   const totalPages = Math.max(1, result.data?.totalPages || 1);
   return (
+    <>
     <Modal
       visible
       animationType="slide"
@@ -174,6 +179,14 @@ export default function ProductCatalogPage({
     >
       <SafeAreaView style={s.screen}>
         <View style={s.topActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Change app theme"
+            onPress={() => setAppearanceOpen(true)}
+            style={s.iconButton}
+          >
+            <Icon name="palette" />
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Refresh products"
@@ -216,7 +229,7 @@ export default function ProductCatalogPage({
             value={search}
             onChangeText={onSearch}
             placeholder="Search products"
-            placeholderTextColor="#968aa7"
+            placeholderTextColor={catalogPalette.muted}
             style={s.searchInput}
             autoCorrect={false}
           />
@@ -261,7 +274,7 @@ export default function ProductCatalogPage({
             : `${result.data?.totalItems ?? 0} products`}
         </Text>
         {result.loading ? (
-          <ActivityIndicator color="#7c3aed" size="large" style={s.loader} />
+          <ActivityIndicator color={catalogPalette.accent} size="large" style={s.loader} />
         ) : result.error ? (
           <View style={s.empty}>
             <Text style={s.error}>{result.error}</Text>
@@ -319,7 +332,7 @@ export default function ProductCatalogPage({
                         })}
                       </Text>
                       <View style={s.stock}>
-                        <Icon name="box" size={17} color="#897b9c" />
+                        <Icon name="box" size={17} color={catalogPalette.muted} />
                         <Text style={s.stockText}>Stock: {product.stock}</Text>
                       </View>
                     </View>
@@ -431,6 +444,11 @@ export default function ProductCatalogPage({
         </Modal>
       )}
     </Modal>
+    <AppearanceModal
+      visible={appearanceOpen}
+      onClose={() => setAppearanceOpen(false)}
+    />
+    </>
   );
 }
 const baseS = StyleSheet.create({

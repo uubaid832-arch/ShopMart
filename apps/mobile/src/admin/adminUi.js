@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { readable } from "./adminApi";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
+import AppearanceModal from "../appearance/AppearanceModal";
 
 let activePalette = null;
 export function setAdminPalette(palette) {
@@ -49,6 +50,7 @@ const icons = {
   refresh:
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2",
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
+  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 export function Icon({ name, size = 21, color }) {
   const { theme } = useMobileAppearance();
@@ -272,9 +274,11 @@ export function Page({
   footerAction,
 }) {
   const { theme } = useMobileAppearance();
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   setAdminPalette(theme.colors);
   const palette = theme.colors;
   return (
+    <>
     <Modal
       visible
       animationType="slide"
@@ -308,6 +312,14 @@ export function Page({
           )}
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Change app theme"
+            style={[ui.iconButton, { backgroundColor: palette.soft }]}
+            onPress={() => setAppearanceOpen(true)}
+          >
+            <Icon name="palette" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="Close module"
             disabled={busy}
             style={[ui.iconButton, { backgroundColor: palette.soft }]}
@@ -336,6 +348,11 @@ export function Page({
         {children}
       </SafeAreaView>
     </Modal>
+    <AppearanceModal
+      visible={appearanceOpen}
+      onClose={() => setAppearanceOpen(false)}
+    />
+    </>
   );
 }
 export function Form({ children }) {

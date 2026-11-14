@@ -34,6 +34,7 @@ import ChangePasswordModal from "../account/ChangePasswordModal";
 import BiometricSettingsModal from "../account/BiometricSecurity";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 import { setAdminPalette } from "./adminUi";
+import AppearanceModal from "../appearance/AppearanceModal";
 
 let themePalette = {
   background: "#f8f7fc", surface: "#fff", elevated: "#fff", soft: "#f5f3fa",
@@ -68,13 +69,15 @@ const paths = {
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
   lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
+  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
-function Icon({ name, size = 21, color = "#7c3aed" }) {
+function Icon({ name, size = 21, color }) {
+  const { theme } = useMobileAppearance();
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <Path
         d={paths[name]}
-        stroke={color}
+        stroke={color || theme.colors.accent}
         strokeWidth={1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -103,6 +106,7 @@ function Button({
   danger = false,
   secondary = false,
 }) {
+  const { theme } = useMobileAppearance();
   return (
     <Pressable
       accessibilityRole="button"
@@ -119,7 +123,7 @@ function Button({
         <Icon
           name={icon}
           size={18}
-          color={danger ? "#be3153" : secondary ? "#7c3aed" : "#fff"}
+          color={danger ? theme.colors.danger : secondary ? theme.colors.accent : "#fff"}
         />
       )}
       <Text style={[s.buttonText, secondary && s.link, danger && s.dangerText]}>
@@ -129,14 +133,15 @@ function Button({
   );
 }
 function Status({ value }) {
+  const { theme } = useMobileAppearance();
   const tone =
     value === "DELIVERED"
-      ? { bg: "#e5f5ec", fg: "#20764a" }
+      ? { bg: theme.colors.successSoft, fg: theme.colors.success }
       : value === "CANCELLED"
-        ? { bg: "#fff0f3", fg: "#be3153" }
+        ? { bg: theme.colors.dangerSoft, fg: theme.colors.danger }
         : value === "PENDING"
-          ? { bg: "#fff5de", fg: "#94600b" }
-          : { bg: "#f0eafa", fg: "#7c3aed" };
+          ? { bg: theme.isDark ? "#3b3020" : "#fff5de", fg: theme.colors.warning }
+          : { bg: theme.colors.accentSoft, fg: theme.colors.accent };
   return (
     <View style={[s.status, { backgroundColor: tone.bg }]}>
       <Text style={[s.statusText, { color: tone.fg }]}>{readable(value)}</Text>
@@ -192,7 +197,7 @@ function OrderCard({ order, onPress }) {
           )}
         </View>
         <Text style={s.orderAmount}>{money(order.total, order.currency)}</Text>
-        <Icon name="arrow" size={16} color="#a996c2" />
+        <Icon name="arrow" size={16} color={themePalette.muted} />
       </View>
     </Pressable>
   );
@@ -354,7 +359,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
       <ScrollView contentContainerStyle={s.content}>
         {busy && (
           <View style={s.inline}>
-            <ActivityIndicator color="#7c3aed" />
+            <ActivityIndicator color={themePalette.accent} />
             <Text style={s.muted}>Saving your change...</Text>
           </View>
         )}
@@ -365,7 +370,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
           </Text>
         ) : null}
         {loading ? (
-          <ActivityIndicator size="large" color="#7c3aed" style={s.loader} />
+          <ActivityIndicator size="large" color={themePalette.accent} style={s.loader} />
         ) : detail.error ? (
           <ErrorMessage message={detail.error} onRetry={refresh} />
         ) : (
@@ -466,7 +471,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                     </Text>
                     {order.status === "DISPATCHED" &&
                       (warehouse.loading ? (
-                        <ActivityIndicator color="#7c3aed" />
+                        <ActivityIndicator color={themePalette.accent} />
                       ) : warehouse.error ? (
                         <ErrorMessage
                           message={warehouse.error}
@@ -730,13 +735,13 @@ function OrdersModal({
             </View>
             <View style={s.filters}>
               <View style={s.search}>
-                <Icon name="search" size={19} color="#9a8eab" />
+                <Icon name="search" size={19} color={themePalette.muted} />
                 <TextInput
                   value={search}
                   onChangeText={setSearch}
                   accessibilityLabel="Search orders on this page"
                   placeholder="Search this page"
-                  placeholderTextColor="#9a8eab"
+                  placeholderTextColor={themePalette.muted}
                   style={s.input}
                   autoCorrect={false}
                 />
@@ -778,7 +783,7 @@ function OrdersModal({
             {result.loading ? (
               <ActivityIndicator
                 size="large"
-                color="#7c3aed"
+                color={themePalette.accent}
                 style={s.loader}
               />
             ) : result.error ? (
@@ -857,6 +862,7 @@ export default function AdminScreen({
   const overviewRef = useRef(null);
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const dashboard = useAdminResource(
     session.accessToken,
     "/dashboard",
@@ -915,6 +921,11 @@ export default function AdminScreen({
           onPress={() => setPanel("notifications")}
         />
         <IconButton
+          icon="palette"
+          label="Change app theme"
+          onPress={() => setAppearanceOpen(true)}
+        />
+        <IconButton
           icon="user"
           label="Admin profile and security"
           onPress={() => setPanel("account")}
@@ -928,7 +939,7 @@ export default function AdminScreen({
           <RefreshControl
             refreshing={dashboard.loading}
             onRefresh={refresh}
-            tintColor="#7c3aed"
+            tintColor={themePalette.accent}
           />
         }
       >
@@ -957,7 +968,7 @@ export default function AdminScreen({
         {dashboard.error ? (
           <ErrorMessage message={dashboard.error} onRetry={refresh} />
         ) : dashboard.loading && !data ? (
-          <ActivityIndicator size="large" color="#7c3aed" style={s.loader} />
+          <ActivityIndicator size="large" color={themePalette.accent} style={s.loader} />
         ) : (
           data && (
             <>
@@ -982,7 +993,7 @@ export default function AdminScreen({
                 onPress={() => setModule("cash")}
                 style={s.cashAlert}
               >
-                <Icon name="wallet" color="#a15a00" />
+                <Icon name="wallet" color={themePalette.warning} />
                 <View style={s.grow}>
                   <Text style={s.cardTitle}>
                     {data.pendingCodHandovers || 0} COD handovers awaiting
@@ -1007,27 +1018,27 @@ export default function AdminScreen({
                     label: "Total orders",
                     value: data.totalOrders,
                     icon: "box",
-                    color: "#f1eafb",
+                    color: themePalette.accentSoft,
                     action: () => setOrders({}),
                   },
                   {
                     label: "Pending orders",
                     value: data.pendingOrders,
                     icon: "clock",
-                    color: "#fff3d9",
+                    color: themePalette.warning,
                     action: () => setOrders({ initialStatus: "PENDING" }),
                   },
                   {
                     label: "Active products",
                     value: data.activeProducts,
                     icon: "grid",
-                    color: "#e6f3eb",
+                    color: themePalette.success,
                   },
                   {
                     label: "Active customers",
                     value: data.activeCustomers,
                     icon: "user",
-                    color: "#eaf0fc",
+                    color: themePalette.accent,
                   },
                 ].map((item) => (
                   <View key={item.label} style={s.metric}>
@@ -1152,7 +1163,7 @@ export default function AdminScreen({
               <View style={s.drawerHeader}>
                 <View style={s.grow}>
                   <Text style={s.drawerBrand}>
-                    Shop<Text style={{ color: "#7c3aed" }}>Mart</Text>
+                    Shop<Text style={{ color: themePalette.accent }}>Mart</Text>
                   </Text>
                   <Text style={s.eyebrow}>ADMIN WORKSPACE</Text>
                 </View>
@@ -1266,7 +1277,7 @@ export default function AdminScreen({
                     <Icon
                       name={item.icon}
                       size={21}
-                      color={item.selected ? "#7c3aed" : "#8d789f"}
+                      color={item.selected ? themePalette.accent : themePalette.muted}
                     />
                     <Text
                       style={[
@@ -1296,9 +1307,9 @@ export default function AdminScreen({
                   }}
                   style={s.drawerItem}
                 >
-                  <Icon name="user" color="#8d789f" />
+                  <Icon name="user" color={themePalette.muted} />
                   <Text style={s.drawerItemText}>My profile & security</Text>
-                  <Icon name="arrow" size={15} color="#b3a1c4" />
+                  <Icon name="arrow" size={15} color={themePalette.muted} />
                 </Pressable>
               </ScrollView>
               <View style={s.drawerFooter}>
@@ -1372,6 +1383,10 @@ export default function AdminScreen({
           }}
         />
       )}
+      <AppearanceModal
+        visible={appearanceOpen}
+        onClose={() => setAppearanceOpen(false)}
+      />
       {panel === "account" && (
         <Modal
           visible
@@ -1384,6 +1399,11 @@ export default function AdminScreen({
                 <Text style={s.eyebrow}>SHOPMART ADMIN</Text>
                 <Text style={s.title}>My account</Text>
               </View>
+              <IconButton
+                icon="palette"
+                label="Change app theme"
+                onPress={() => setAppearanceOpen(true)}
+              />
               <IconButton
                 icon="close"
                 label="Close admin account"
