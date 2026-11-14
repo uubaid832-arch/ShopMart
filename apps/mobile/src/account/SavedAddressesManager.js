@@ -38,18 +38,21 @@ export default function SavedAddressesManager({ token }) {
     return () => { active = false; };
   }, [token, revision]);
 
-  const field = (key, label, multiline = false) => (
-    <TextInput
-      key={key}
-      accessibilityLabel={label}
-      placeholder={label}
-      value={form[key]}
-      onChangeText={(value) => setForm((current) => ({ ...current, [key]: key === "phone" ? value.replace(/\D/g, "") : value }))}
-      keyboardType={key === "phone" ? "phone-pad" : "default"}
-      multiline={multiline}
-      maxLength={key === "addressLine" ? 250 : key === "phone" ? 32 : 100}
-      style={[styles.input, multiline && styles.multiline]}
-    />
+  const field = (key, label, placeholder, multiline = false) => (
+    <View key={key} style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        placeholder={placeholder}
+        placeholderTextColor="#8791a3"
+        value={form[key]}
+        onChangeText={(value) => setForm((current) => ({ ...current, [key]: key === "phone" ? value.replace(/\D/g, "") : value }))}
+        keyboardType={key === "phone" ? "phone-pad" : "default"}
+        multiline={multiline}
+        maxLength={key === "addressLine" ? 250 : key === "phone" ? 32 : 100}
+        style={[styles.input, multiline && styles.multiline]}
+      />
+    </View>
   );
 
   async function save() {
@@ -93,11 +96,28 @@ export default function SavedAddressesManager({ token }) {
       {form ? (
         <View style={styles.form}>
           <Text style={styles.copy}>Address label</Text>
-          <View style={styles.row}>
-            {["Home", "Office", "Other"].map((label) => <Pressable key={label} accessibilityRole="radio" accessibilityState={{ checked: form.label === label }} onPress={() => setForm({ ...form, label })} style={[styles.choice, form.label === label && styles.selected]}><Text style={styles.choiceText}>{label}</Text></Pressable>)}
+          <View style={styles.labelChoices}>
+            {["Home", "Office", "Other"].map((label) => <Pressable key={label} accessibilityRole="radio" accessibilityLabel={`${label} address label`} accessibilityState={{ checked: form.label === label }} onPress={() => setForm({ ...form, label })} style={[styles.choice, form.label === label && styles.selected]}><Text style={styles.choiceText}>{label}</Text></Pressable>)}
           </View>
-          {form.label === "Other" && <TextInput accessibilityLabel="Custom address label" placeholder="Custom label" value={form.customLabel} onChangeText={(value) => setForm({ ...form, customLabel: value })} maxLength={80} style={styles.input} />}
-          {field("recipientName", "Recipient name")}{field("phone", "Phone number")}{field("addressLine", "Street address", true)}{field("city", "City")}{field("postalCode", "Postal code (optional)")}
+          {form.label === "Other" && (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>Custom address label</Text>
+              <TextInput
+                accessibilityLabel="Custom address label"
+                placeholder="For example, Parents or Shop"
+                placeholderTextColor="#8791a3"
+                value={form.customLabel}
+                onChangeText={(value) => setForm({ ...form, customLabel: value })}
+                maxLength={80}
+                style={styles.input}
+              />
+            </View>
+          )}
+          {field("recipientName", "Recipient name", "Name of the person receiving the order")}
+          {field("phone", "Phone number", "e.g. 0300 1234567")}
+          {field("addressLine", "Street address", "House/flat, street and area", true)}
+          {field("city", "City", "e.g. Lahore")}
+          {field("postalCode", "Postal code (optional)", "Enter postal code if available")}
           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: form.isDefault }} onPress={() => setForm({ ...form, isDefault: !form.isDefault })} style={styles.row}><Text style={styles.copy}>{form.isDefault ? "☑" : "☐"} Use as default</Text></Pressable>
           <View style={styles.row}><Pressable disabled={busy} onPress={save} style={styles.primary}><Text style={styles.primaryText}>{busy ? "Saving…" : "Save address"}</Text></Pressable><Pressable disabled={busy} onPress={() => setForm(null)} style={styles.choice}><Text style={styles.choiceText}>Cancel</Text></Pressable></View>
         </View>
@@ -115,7 +135,10 @@ const styles = StyleSheet.create({
   addressTitle: { color: "#6d28d9", fontWeight: "800" },
   copy: { color: "#596579", fontSize: 12, lineHeight: 18 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 7 },
-  form: { gap: 8, marginTop: 4 },
+  form: { gap: 12, marginTop: 4 },
+  field: { gap: 6 },
+  fieldLabel: { color: "#334155", fontSize: 13, fontWeight: "700" },
+  labelChoices: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 3 },
   input: { width: "100%", borderWidth: 1, borderColor: "#e5def4", borderRadius: 11, backgroundColor: "#fff", padding: 12, color: "#25304a" },
   multiline: { minHeight: 68, textAlignVertical: "top" },
   choice: { paddingHorizontal: 13, paddingVertical: 10, borderRadius: 10, backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5def4" },
