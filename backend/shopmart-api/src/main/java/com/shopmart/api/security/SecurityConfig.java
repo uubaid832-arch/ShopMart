@@ -306,6 +306,12 @@ public class SecurityConfig {
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.PATCH, "/api/admin/cod/handovers/*")
                                                 .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/admin/settings/warehouse-address")
+                                                .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                "/api/admin/settings/warehouse-address")
+                                                .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.POST, "/api/vouchers/quote").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/admin/vouchers").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/vouchers").hasRole("ADMIN")

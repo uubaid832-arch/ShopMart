@@ -203,7 +203,9 @@ export default function ProfileModal({ session, onSaved, onClose }) {
                     {busy ? "Saving..." : "Save changes"}
                   </Text>
                 </Pressable>
-                <SavedAddressesManager token={token} />
+                {session.user.role === "CUSTOMER" && (
+                  <SavedAddressesManager token={token} />
+                )}
               </>
             ) : (
               <Pressable

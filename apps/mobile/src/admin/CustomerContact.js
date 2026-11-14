@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Text, View } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { adminRequest } from "./adminApi";
 import { Button, Card, Choice, Field, Form, Page, ui } from "./adminUi";
 import { customerContactUrl, customerMessage } from "./contactMessages";
@@ -19,11 +18,9 @@ export default function CustomerContact({
   const [addressReady, setAddressReady] = useState(!needsWarehouse);
   const [contact, setContact] = useState(null);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const key = `shopmart.admin.warehouse-address.${session.user.id}`;
   const orderId = item.orderId || item.id;
   useEffect(() => {
     const controller = new AbortController();
@@ -44,15 +41,14 @@ export default function CustomerContact({
       });
     let active = true;
     if (needsWarehouse)
-      AsyncStorage.getItem(key)
-        .then((value) => {
-          if (active) setWarehouse(value || "");
+      adminRequest(session.accessToken, "/settings/warehouse-address", {
+        signal: controller.signal,
+      })
+        .then((result) => {
+          if (active) setWarehouse(result.address || "");
         })
-        .catch(() => {
-          if (active)
-            setError(
-              "Could not load the saved warehouse address. Please enter it again.",
-            );
+        .catch((failure) => {
+          if (active && failure.name !== "AbortError") setError(failure.message);
         })
         .finally(() => {
           if (active) setAddressReady(true);
@@ -61,43 +57,26 @@ export default function CustomerContact({
       active = false;
       controller.abort();
     };
-  }, [session.accessToken, orderId, mode, key, needsWarehouse]);
+  }, [session.accessToken, orderId, mode, needsWarehouse]);
   function build() {
     return customerMessage({
       mode,
       orderNumber: contact.orderNumber,
       customerName: contact.delivery?.name,
       productName: item.productName,
+      returnId: item.id,
       status: item.status,
       warehouse,
       refundChoice,
       rejectionReason: item.rejectionReason,
     });
   }
-  async function save() {
-    setError("");
-    setNotice("");
-    if (warehouse.trim().length < 10) {
-      setError(
-        "Enter the complete warehouse address, city and contact information.",
-      );
-      return;
-    }
-    try {
-      await AsyncStorage.setItem(key, warehouse.trim());
-      setNotice("Warehouse return address saved on this phone.");
-    } catch {
-      setError("Unable to save the address. Please try again.");
-    }
-  }
   async function compose(channel) {
     if (busy || !contact) return;
     setBusy(true);
     setError("");
-    setNotice("");
     try {
       const body = build();
-      if (needsWarehouse) await AsyncStorage.setItem(key, warehouse.trim());
       const url = customerContactUrl(
         channel,
         channel === "email" ? email : phone,
@@ -130,7 +109,6 @@ export default function CustomerContact({
             {error}
           </Text>
         ) : null}
-        {notice ? <Text style={ui.success}>{notice}</Text> : null}
         {!contact ? (
           <ActivityIndicator color="#7c3aed" />
         ) : (
@@ -167,23 +145,13 @@ export default function CustomerContact({
             {needsWarehouse && (
               <Card
                 title="Warehouse return address"
-                subtitle="Enter the complete address, city and warehouse contact details."
+                subtitle="This saved ShopMart address appears in the customer instructions."
               >
-                <Field
-                  label="Return parcels to"
-                  multiline
-                  value={warehouse}
-                  onChangeText={setWarehouse}
-                  editable={addressReady && !busy}
-                  maxLength={1500}
-                />
-                <Button
-                  title="Save warehouse address"
-                  icon="check"
-                  secondary
-                  onPress={save}
-                  disabled={!addressReady || busy}
-                />
+                <Text style={ui.body} selectable>
+                  {!addressReady
+                    ? "Loading saved address…"
+                    : warehouse || "No warehouse address saved. Add it from Admin My account."}
+                </Text>
               </Card>
             )}
             {mode === "refund" && <Choice label="Refund follow-up" value={refundChoice} onChange={setRefundChoice} options={[{value:"ACCOUNT",label:"Ask account details / preference"},{value:"VOUCHER",label:"Offer future purchase voucher"}]} />}

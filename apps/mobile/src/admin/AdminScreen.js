@@ -32,6 +32,7 @@ import NotificationBell from "../notifications/NotificationBell";
 import ProfileModal from "../account/ProfileModal";
 import ChangePasswordModal from "../account/ChangePasswordModal";
 import BiometricSettingsModal from "../account/BiometricSecurity";
+import AdminWarehouseAddress from "./AdminWarehouseAddress";
 
 const paths = {
   ticket: "M3 6h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4V6Zm12 0v2m0 3v2m0 3v2",
@@ -53,6 +54,7 @@ const paths = {
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2",
   bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
   arrow: "m9 5 7 7-7 7",
+  down: "m5 9 7 7 7-7",
   back: "m15 5-7 7 7 7",
   close: "m6 6 12 12M6 18 18 6",
   wallet: "M3 5h16v15H3V5Zm0 0 13-3v3m-1 5h6v6h-6v-6m3 3h.01",
@@ -194,6 +196,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   const [revision, setRevision] = useState(0);
   const [riderId, setRiderId] = useState("");
   const [riderSearch, setRiderSearch] = useState("");
+  const [riderDropdownOpen, setRiderDropdownOpen] = useState(false);
   const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -493,47 +496,60 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                         </Text>
                         {assignment.data?.riders.length ? (
                           <>
-                          <TextInput
-                            accessibilityLabel="Search active riders"
-                            placeholder="Search active riders by name"
-                            value={riderSearch}
-                            onChangeText={setRiderSearch}
-                            editable={!locked}
-                            autoCapitalize="words"
-                            style={s.riderSearch}
-                          />
-                          {assignment.data.riders.filter((rider) =>
-                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
-                          ).map((rider) => (
                             <Pressable
-                              key={rider.id}
-                              accessibilityRole="radio"
-                              accessibilityState={{
-                                checked: riderId === rider.id,
-                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Select active rider. ${assignment.data.riders.find((rider) => rider.id === riderId)?.name || "No rider selected"}`}
+                              accessibilityState={{ expanded: riderDropdownOpen }}
                               disabled={locked}
-                              onPress={() => setRiderId(rider.id)}
-                              style={[
-                                s.riderChoice,
-                                riderId === rider.id && s.riderSelected,
-                              ]}
+                              onPress={() => setRiderDropdownOpen((open) => !open)}
+                              style={s.riderDropdown}
                             >
-                              <View
-                                style={[
-                                  s.radio,
-                                  riderId === rider.id && s.radioSelected,
-                                ]}
-                              >
-                                {riderId === rider.id && (
-                                  <Icon name="check" size={12} color="#fff" />
-                                )}
-                              </View>
-                              <Text style={[s.body, s.grow]}>{rider.name}</Text>
+                              <Text style={[s.body, s.grow]}>
+                                {assignment.data.riders.find((rider) => rider.id === riderId)?.name || "Choose an active rider"}
+                              </Text>
+                              <Icon name="down" size={17} />
                             </Pressable>
-                          ))}
-                          {assignment.data.riders.filter((rider) =>
-                            rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
-                          ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
+                            {riderDropdownOpen && (
+                              <View style={s.riderDropdownMenu}>
+                                <TextInput
+                                  accessibilityLabel="Search active riders"
+                                  placeholder="Type rider name to search"
+                                  value={riderSearch}
+                                  onChangeText={setRiderSearch}
+                                  editable={!locked}
+                                  autoCapitalize="words"
+                                  style={s.riderSearch}
+                                />
+                                <ScrollView
+                                  style={s.riderDropdownList}
+                                  nestedScrollEnabled
+                                  keyboardShouldPersistTaps="handled"
+                                >
+                                  {assignment.data.riders.filter((rider) =>
+                                    rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                                  ).map((rider) => (
+                                    <Pressable
+                                      key={rider.id}
+                                      accessibilityRole="radio"
+                                      accessibilityState={{ checked: riderId === rider.id }}
+                                      disabled={locked}
+                                      onPress={() => {
+                                        setRiderId(rider.id);
+                                        setRiderSearch("");
+                                        setRiderDropdownOpen(false);
+                                      }}
+                                      style={[s.riderChoice, riderId === rider.id && s.riderSelected]}
+                                    >
+                                      <Text style={[s.body, s.grow]}>{rider.name}</Text>
+                                      {riderId === rider.id && <Icon name="check" size={16} />}
+                                    </Pressable>
+                                  ))}
+                                  {assignment.data.riders.filter((rider) =>
+                                    rider.name.toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                                  ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
+                                </ScrollView>
+                              </View>
+                            )}
                           </>
                         ) : (
                           <Text style={s.muted}>
@@ -1343,6 +1359,12 @@ export default function AdminScreen({
           onClose={() => setPanel("")}
         />
       )}
+      {panel === "warehouse-address" && (
+        <AdminWarehouseAddress
+          session={session}
+          onClose={() => setPanel("account")}
+        />
+      )}
       {panel === "password" && (
         <ChangePasswordModal
           session={session}
@@ -1403,6 +1425,12 @@ export default function AdminScreen({
                   title: "Change password",
                   description: "Secure your administrator account",
                   action: () => setPanel("password"),
+                },
+                {
+                  icon: "truck",
+                  title: "Warehouse return address",
+                  description: "Set the address shown in return instructions",
+                  action: () => setPanel("warehouse-address"),
                 },
                 {
                   icon: "lock",
@@ -1838,6 +1866,27 @@ const s = StyleSheet.create({
     minHeight: 48,
     marginTop: 10,
   },
+  riderDropdown: {
+    minHeight: 54,
+    borderWidth: 1,
+    borderColor: "#cbb8e2",
+    backgroundColor: "#fff",
+    borderRadius: 13,
+    paddingHorizontal: 14,
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  riderDropdownMenu: {
+    borderWidth: 1,
+    borderColor: "#eae3f2",
+    borderRadius: 13,
+    backgroundColor: "#fff",
+    padding: 9,
+    marginTop: 7,
+  },
+  riderDropdownList: { maxHeight: 210 },
   riderSelected: { borderColor: "#a477ee", backgroundColor: "#f1e9ff" },
   riderSearch: {
     borderWidth: 1,
