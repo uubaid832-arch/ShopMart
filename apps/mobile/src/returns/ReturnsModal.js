@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -50,6 +51,8 @@ async function request(token, path, values, signal) {
 }
 
 export default function ReturnsModal({ session, onClose, orderId = null }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const token = session.accessToken;
   const [tab, setTab] = useState("eligible");
   const [page, setPage] = useState(0);
@@ -158,27 +161,31 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
 
   return (
     <Modal visible animationType="slide" onRequestClose={close}>
-      <SafeAreaView style={styles.screen}>
+      <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <KeyboardAvoidingView
           style={styles.screen}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.header}>
-            <Text style={styles.title}>Returns & refunds</Text>
+          <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
+            <View style={styles.headerCopy}>
+              <Text style={[styles.eyebrow, { color: palette.accent }]}>SHOPMART AFTER-SALES</Text>
+              <Text style={[styles.title, { color: palette.text }]}>Returns & refunds</Text>
+              <Text style={[styles.headerSubtitle, { color: palette.muted }]}>Request a return and follow every update.</Text>
+            </View>
             <Pressable
               accessibilityRole="button"
               disabled={busy}
               onPress={close}
-              style={styles.button}
+              style={[styles.closeButton, { backgroundColor: palette.soft }]}
             >
-              <Text style={styles.link}>Close</Text>
+              <Text style={[styles.closeText, { color: palette.text }]}>×</Text>
             </Pressable>
           </View>
 
-          <View style={styles.tabs}>
+          <View style={[styles.tabs, { backgroundColor: palette.soft }]}>
             {[
-              ["eligible", "Request return"],
-              ["history", "Your requests"],
+              ["eligible", "Start a return"],
+              ["history", "My requests"],
             ].map(([value, title]) => (
               <Pressable
                 key={value}
@@ -186,9 +193,9 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                 accessibilityState={{ selected: tab === value }}
                 disabled={busy}
                 onPress={() => changeTab(value)}
-                style={[styles.tab, tab === value && styles.activeTab]}
+                style={[styles.tab, tab === value && { backgroundColor: palette.surface, borderColor: palette.border }]}
               >
-                <Text style={tab === value ? styles.white : styles.link}>
+                <Text style={[styles.tabText, { color: tab === value ? palette.accent : palette.muted }]}>
                   {title}
                 </Text>
               </Pressable>
@@ -206,40 +213,57 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                 setSelected(null);
                 setReload((value) => value + 1);
               }}
-              style={styles.refresh}
+              style={[styles.refresh, { backgroundColor: palette.accentSoft }]}
             >
-              <Text style={styles.link}>Refresh</Text>
+              <Text style={[styles.link, { color: palette.accent }]}>↻  Refresh</Text>
             </Pressable>
 
-            {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+            {notice ? <Text style={[styles.notice, { color: palette.success, backgroundColor: palette.accentSoft }]}>{notice}</Text> : null}
             {error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger, backgroundColor: theme.isDark ? "#3b202b" : "#fff1f2" }]}>
                 {error}
               </Text>
             ) : null}
 
             {!current ? (
-              <ActivityIndicator color="#7c3aed" />
+              <ActivityIndicator color={palette.accent} />
             ) : result.error ? (
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger, backgroundColor: theme.isDark ? "#3b202b" : "#fff1f2" }]}>
                 {result.error}
               </Text>
             ) : (
               <>
+                {tab === "history" && (
+                  <View style={[styles.historyIntro, { backgroundColor: theme.isDark ? palette.elevated : palette.accentSoft, borderColor: palette.border }]}>
+                    <Text style={[styles.historyIntroEyebrow, { color: palette.accent }]}>YOUR RETURN PROGRESS</Text>
+                    <Text style={[styles.historyIntroTitle, { color: palette.text }]}>Keep track of every update</Text>
+                    <Text style={[styles.description, { color: palette.muted }]}>See return decisions, item checks, and refund status in one place.</Text>
+                  </View>
+                )}
                 {tab === "eligible" && (
-                  <Text style={styles.description}>
-                    Returns cover the full quantity of the selected purchased
-                    item. Only delivered, paid COD or verified Safepay items without an existing
-                    return request are eligible.
-                  </Text>
+                  <View style={[styles.hero, { backgroundColor: theme.isDark ? palette.elevated : palette.accentSoft, borderColor: palette.border }]}>
+                    <View style={[styles.heroIcon, { backgroundColor: palette.surface }]}><Text style={[styles.heroIconText, { color: palette.accent }]}>↩</Text></View>
+                    <Text style={[styles.heroTitle, { color: palette.text }]}>Need to return an item?</Text>
+                    <Text style={[styles.description, { color: palette.muted }]}>Choose an eligible delivered item, select a reason, and we’ll keep you updated here.</Text>
+                    <View style={styles.steps}>
+                      {[["1", "Choose item"], ["2", "Tell us why"], ["3", "Track progress"]].map(([number, title]) => <View key={number} style={styles.step}><Text style={[styles.stepNumber, { color: palette.accent, backgroundColor: palette.surface }]}>{number}</Text><Text style={[styles.stepText, { color: palette.muted }]}>{title}</Text></View>)}
+                    </View>
+                  </View>
                 )}
 
                 {data.items.length === 0 && (
-                  <Text style={styles.description}>
+                  <View style={[styles.emptyCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                    <Text style={[styles.emptyIcon, { color: palette.accent }]}>✓</Text>
+                    <Text style={[styles.emptyTitle, { color: palette.text }]}>{tab === "eligible" ? "No items to return right now" : "No return requests yet"}</Text>
+                    <Text style={[styles.description, { color: palette.muted }]}>
                     {tab === "eligible"
-                      ? orderId ? "No eligible items for this order. It must be delivered, paid, and not already have a return request." : "No eligible products on this page."
-                      : "No return requests on this page."}
-                  </Text>
+                      ? orderId ? "This order needs to be delivered and paid, and it must not already have a return request." : "Only eligible delivered orders appear here. Check back after your order arrives."
+                      : "When you submit a return request, its decision and refund progress will appear here."}
+                    </Text>
+                    <Pressable accessibilityRole="button" onPress={() => changeTab(tab === "eligible" ? "history" : "eligible")} style={[styles.emptyAction, { backgroundColor: palette.accent }]}>
+                      <Text style={styles.white}>{tab === "eligible" ? "View my requests" : "Start a return"}</Text>
+                    </Pressable>
+                  </View>
                 )}
 
                 {data.items.map((item) =>
@@ -257,56 +281,64 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                         setReasonDetails("");
                         setError("");
                       }}
-                      style={[
-                        styles.card,
-                        selected === item.orderItemId && styles.selected,
-                      ]}
+                      style={[styles.card, { backgroundColor: palette.surface, borderColor: selected === item.orderItemId ? palette.accent : palette.border }, selected === item.orderItemId && { backgroundColor: palette.accentSoft }]}
                     >
-                      <Text style={styles.name}>{item.productName}</Text>
-                      <Text style={styles.muted}>
-                        Quantity: {item.quantity}
-                      </Text>
-                      <Text style={styles.muted}>{item.orderNumber}</Text>
-                      <Text style={styles.link}>
-                        {selected === item.orderItemId
-                          ? "Selected"
-                          : "Select this item"}
-                      </Text>
+                      <View style={styles.itemHeader}>
+                        <View style={[styles.itemIcon, { backgroundColor: palette.accentSoft }]}><Text style={[styles.itemIconText, { color: palette.accent }]}>□</Text></View>
+                        <View style={styles.itemCopy}>
+                          <Text style={[styles.name, { color: palette.text }]}>{item.productName}</Text>
+                          <Text style={[styles.muted, { color: palette.muted }]}>{item.orderNumber} · Quantity {item.quantity}</Text>
+                        </View>
+                        <View style={[styles.selectMark, { borderColor: selected === item.orderItemId ? palette.accent : palette.border, backgroundColor: selected === item.orderItemId ? palette.accent : palette.surface }]}>
+                          {selected === item.orderItemId && <Text style={styles.check}>✓</Text>}
+                        </View>
+                      </View>
+                      <Text style={[styles.cardAction, { color: palette.accent }]}>{selected === item.orderItemId ? "Item selected — choose a reason below" : "Tap to choose this item"}</Text>
                     </Pressable>
                   ) : (
-                    <View key={item.id} style={styles.card}>
-                      <Text style={styles.name}>{item.productName}</Text>
-                      <Text style={styles.status}>{label(item.status)}</Text>
-                      <Text style={styles.muted}>{item.orderNumber}</Text>
-                      <Text style={styles.muted}>
-                        Quantity: {item.quantity}
-                      </Text>
-                      <Text style={styles.description}>{item.reason}</Text>
+                    <View key={item.id} style={[styles.historyCard, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                      <View style={styles.historyHeader}>
+                        <View style={styles.itemCopy}>
+                          <Text style={[styles.historyEyebrow, { color: palette.muted }]}>RETURN REQUEST</Text>
+                          <Text style={[styles.name, { color: palette.text }]}>{item.productName}</Text>
+                        </View>
+                        <Text style={[styles.statusBadge, item.status === "REJECTED"
+                          ? { color: palette.danger, backgroundColor: theme.isDark ? "#3b202b" : "#fff1f2" }
+                          : { color: palette.accent, backgroundColor: palette.accentSoft }]}>{label(item.status)}</Text>
+                      </View>
+                      <Text style={[styles.muted, { color: palette.muted }]}>{item.orderNumber} · {new Date(item.createdAt).toLocaleDateString("en-PK")}</Text>
+                      <View style={[styles.historyReason, { backgroundColor: palette.soft }]}>
+                        <Text style={[styles.historyLabel, { color: palette.muted }]}>REASON</Text>
+                        <Text style={[styles.description, { color: palette.text }]}>{item.reason}</Text>
+                      </View>
+                      <View style={[styles.refundRow, { borderTopColor: palette.border }]}>
+                        <View>
+                          <Text style={[styles.historyLabel, { color: palette.muted }]}>REFUND STATUS</Text>
+                          <Text style={[styles.refundStatus, { color: item.refundStatus === "REFUNDED" ? palette.success : palette.text }]}>{label(item.refundStatus)}</Text>
+                        </View>
+                        {item.refundAmount != null && <View style={styles.amountBlock}>
+                          <Text style={[styles.historyLabel, { color: palette.muted }]}>AMOUNT</Text>
+                          <Text style={[styles.refundAmount, { color: palette.accent }]}>PKR {Number(item.refundAmount).toLocaleString("en-PK")}</Text>
+                        </View>}
+                      </View>
                       {item.rejectionReason ? (
-                        <Text style={styles.description}>
-                          Rejection reason: {item.rejectionReason}. Your product
-                          will be shipped back soon.
+                        <Text style={[styles.rejection, { color: palette.danger, backgroundColor: theme.isDark ? "#3b202b" : "#fff1f2" }]}>
+                          Return not approved: {item.rejectionReason}. Your product will be shipped back soon.
                         </Text>
                       ) : null}
-                      <Text style={styles.name}>
-                        Refund: {label(item.refundStatus)}
-                      </Text>
-                      {item.refundAmount != null && (
-                        <Text style={styles.muted}>
-                          Refund amount: PKR{" "}
-                          {Number(item.refundAmount).toLocaleString("en-PK")}
-                        </Text>
-                      )}
-                      <Text style={styles.muted}>
-                        {new Date(item.createdAt).toLocaleDateString("en-PK")}
+                      {/* Existing status and refund state stay visible together for clarity. */}
+                      <Text style={[styles.muted, { color: palette.muted }]}>
+                        Quantity: {item.quantity}
                       </Text>
                     </View>
                   ),
                 )}
 
                 {tab === "eligible" && selected && (
-                  <View style={styles.form}>
-                    <Text style={styles.name}>Reason for return</Text>
+                  <View style={[styles.form, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+                    <Text style={[styles.formEyebrow, { color: palette.accent }]}>STEP 2 OF 2</Text>
+                    <Text style={[styles.formTitle, { color: palette.text }]}>Why are you returning it?</Text>
+                    <Text style={[styles.formHint, { color: palette.muted }]}>Choose the closest reason. It helps us handle your request faster.</Text>
                     {[
                       "Wrong item received",
                       "Item is damaged",
@@ -329,39 +361,39 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                         }}
                         style={[
                           styles.reasonOption,
-                          reasonType === option && styles.reasonOptionSelected,
+                          { backgroundColor: reasonType === option ? palette.accentSoft : palette.surface, borderColor: reasonType === option ? palette.accent : palette.border },
                         ]}
                       >
                         <View style={[
                           styles.radioMark,
-                          reasonType === option && styles.radioMarkSelected,
+                          { borderColor: reasonType === option ? palette.accent : palette.muted, backgroundColor: reasonType === option ? palette.accent : "transparent" },
                         ]} />
-                        <Text style={styles.reasonOptionText}>{option}</Text>
+                        <Text style={[styles.reasonOptionText, { color: palette.text }]}>{option}</Text>
                       </Pressable>
                     ))}
                     {reasonType === "Other" && (
                       <>
-                        <Text style={styles.muted}>Describe the specific issue (required)</Text>
+                        <Text style={[styles.fieldLabel, { color: palette.text }]}>Describe the specific issue (required)</Text>
                         <TextInput
                           accessibilityLabel="Describe the specific issue"
                           placeholder="Tell us what is wrong with the item"
-                          placeholderTextColor="#94a3b8"
+                          placeholderTextColor={palette.muted}
                           value={reasonDetails}
                           onChangeText={setReasonDetails}
                           editable={!busy}
                           maxLength={980}
                           multiline
                           textAlignVertical="top"
-                          style={styles.input}
+                          style={[styles.input, { color: palette.text, backgroundColor: palette.soft, borderColor: palette.border }]}
                         />
-                        <Text style={styles.muted}>{reasonDetails.length}/980</Text>
+                        <Text style={[styles.muted, { color: palette.muted }]}>{reasonDetails.length}/980</Text>
                       </>
                     )}
                     <Pressable
                       accessibilityRole="button"
                       disabled={busy}
                       onPress={submit}
-                      style={styles.submit}
+                      style={[styles.submit, { backgroundColor: palette.accent }]}
                     >
                       <Text style={styles.white}>
                         {busy ? "Submitting..." : "Submit return request"}
@@ -379,11 +411,11 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                         setSelected(null);
                         setPage((value) => value - 1);
                       }}
-                      style={styles.button}
+                      style={[styles.button, { backgroundColor: palette.soft }]}
                     >
-                      <Text style={styles.link}>Previous</Text>
+                      <Text style={[styles.link, { color: palette.accent }]}>Previous</Text>
                     </Pressable>
-                    <Text style={styles.muted}>
+                    <Text style={[styles.muted, { color: palette.muted }]}>
                       {page + 1} / {data.totalPages}
                     </Text>
                     <Pressable
@@ -393,9 +425,9 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                         setSelected(null);
                         setPage((value) => value + 1);
                       }}
-                      style={styles.button}
+                      style={[styles.button, { backgroundColor: palette.soft }]}
                     >
-                      <Text style={styles.link}>Next</Text>
+                      <Text style={[styles.link, { color: palette.accent }]}>Next</Text>
                     </Pressable>
                   </View>
                 )}
@@ -409,47 +441,85 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
+  screen: { flex: 1 },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    padding: 18,
-    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 17,
+    gap: 12,
+    borderBottomWidth: 1,
   },
-  title: { fontSize: 21, fontWeight: "800", color: "#0f172a", flex: 1 },
-  button: { backgroundColor: "#f5f3ff", padding: 12, borderRadius: 12 },
+  headerCopy: { flex: 1 },
+  eyebrow: { fontSize: 9, letterSpacing: 1.4, fontWeight: "900" },
+  title: { fontSize: 24, fontWeight: "900", flex: 1, marginTop: 5, letterSpacing: -0.6 },
+  headerSubtitle: { fontSize: 12, marginTop: 4 },
+  closeButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 14 },
+  closeText: { fontSize: 27, lineHeight: 30 },
+  button: { padding: 12, borderRadius: 12 },
   link: { color: "#7c3aed", fontWeight: "700", fontSize: 12 },
-  tabs: { flexDirection: "row", paddingHorizontal: 18, gap: 10 },
+  tabs: { flexDirection: "row", marginHorizontal: 18, marginTop: 14, padding: 5, borderRadius: 16, gap: 5 },
   tab: {
     flex: 1,
-    padding: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 5,
     borderRadius: 12,
-    backgroundColor: "#f5f3ff",
+    borderWidth: 1,
+    borderColor: "transparent",
     alignItems: "center",
   },
-  activeTab: { backgroundColor: "#7c3aed" },
+  tabText: { fontSize: 12, fontWeight: "800", textAlign: "center" },
   white: { color: "#fff", fontWeight: "700", textAlign: "center" },
-  content: { padding: 18, paddingBottom: 40 },
-  refresh: { alignSelf: "flex-end", padding: 12, marginBottom: 10 },
-  description: { color: "#64748b", lineHeight: 22, marginVertical: 12 },
+  content: { padding: 18, paddingTop: 14, paddingBottom: 44 },
+  refresh: { alignSelf: "flex-end", paddingHorizontal: 13, paddingVertical: 9, borderRadius: 12, marginBottom: 10 },
+  hero: { padding: 18, borderRadius: 22, borderWidth: 1, marginBottom: 17 },
+  heroIcon: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  heroIconText: { fontSize: 27, fontWeight: "800" },
+  heroTitle: { fontSize: 20, fontWeight: "900", letterSpacing: -0.4 },
+  description: { lineHeight: 20, marginTop: 8, marginBottom: 3, fontSize: 13 },
+  steps: { flexDirection: "row", gap: 7, marginTop: 15 },
+  step: { flex: 1, alignItems: "center", gap: 6 },
+  stepNumber: { width: 24, height: 24, borderRadius: 12, textAlign: "center", textAlignVertical: "center", fontSize: 12, fontWeight: "900", overflow: "hidden" },
+  stepText: { fontSize: 9, fontWeight: "700", textAlign: "center" },
+  emptyCard: { borderWidth: 1, borderRadius: 20, padding: 23, alignItems: "center", marginVertical: 8 },
+  emptyIcon: { fontSize: 32, fontWeight: "900", marginBottom: 8 },
+  emptyTitle: { fontSize: 16, fontWeight: "800", textAlign: "center" },
+  emptyAction: { marginTop: 15, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
+  historyIntro: { padding: 17, borderRadius: 20, borderWidth: 1, marginBottom: 15 },
+  historyIntroEyebrow: { fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
+  historyIntroTitle: { fontSize: 19, fontWeight: "900", marginTop: 5 },
   card: {
-    padding: 16,
+    padding: 15,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 16,
-    marginBottom: 12,
+    borderRadius: 18,
+    marginBottom: 10,
   },
-  selected: { borderColor: "#7c3aed", backgroundColor: "#f5f3ff" },
-  name: { color: "#334155", fontWeight: "700", fontSize: 14 },
-  muted: { color: "#64748b", fontSize: 12, marginVertical: 5 },
-  status: {
-    color: "#7c3aed",
-    fontWeight: "700",
-    marginTop: 10,
-    textTransform: "capitalize",
-  },
-  form: { marginVertical: 15 },
+  itemHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  itemIcon: { width: 43, height: 43, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  itemIconText: { fontSize: 22, fontWeight: "700" },
+  itemCopy: { flex: 1, minWidth: 0 },
+  cardAction: { marginTop: 12, fontSize: 11, fontWeight: "800" },
+  selectMark: { width: 24, height: 24, borderWidth: 2, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  check: { color: "#fff", fontSize: 13, fontWeight: "900" },
+  name: { fontSize: 14, fontWeight: "800", lineHeight: 20 },
+  muted: { fontSize: 11, marginTop: 5 },
+  historyCard: { borderWidth: 1, borderRadius: 19, padding: 15, marginBottom: 11 },
+  historyHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  historyEyebrow: { fontSize: 9, fontWeight: "900", letterSpacing: 1.1, marginBottom: 5 },
+  statusBadge: { fontSize: 10, fontWeight: "800", paddingHorizontal: 9, paddingVertical: 6, borderRadius: 10, overflow: "hidden", textAlign: "center", maxWidth: 132 },
+  historyReason: { marginTop: 13, padding: 12, borderRadius: 13 },
+  historyLabel: { fontSize: 9, fontWeight: "900", letterSpacing: 1 },
+  refundRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, marginTop: 13, paddingTop: 12 },
+  amountBlock: { alignItems: "flex-end" },
+  refundStatus: { marginTop: 4, fontSize: 13, fontWeight: "800" },
+  refundAmount: { marginTop: 4, fontSize: 14, fontWeight: "900" },
+  rejection: { padding: 11, borderRadius: 12, lineHeight: 18, fontSize: 11, marginTop: 12 },
+  form: { marginTop: 15, marginBottom: 18, padding: 16, borderRadius: 20, borderWidth: 1 },
+  formEyebrow: { fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
+  formTitle: { fontSize: 18, fontWeight: "900", marginTop: 5 },
+  formHint: { fontSize: 12, lineHeight: 18, marginTop: 4, marginBottom: 8 },
+  fieldLabel: { fontSize: 12, fontWeight: "800", marginTop: 10 },
   reasonOption: {
     minHeight: 46,
     borderWidth: 1,
@@ -493,6 +563,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 16,
   },
-  notice: { color: "#15803d", lineHeight: 22, marginBottom: 14 },
-  error: { color: "#be123c", lineHeight: 22, marginBottom: 14 },
+  notice: { lineHeight: 20, marginBottom: 14, padding: 12, borderRadius: 13, fontSize: 12, fontWeight: "700" },
+  error: { lineHeight: 20, marginBottom: 14, padding: 12, borderRadius: 13, fontSize: 12, fontWeight: "700" },
 });

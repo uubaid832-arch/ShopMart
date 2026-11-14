@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { getProducts } from "./api/products";
 import "./App.css";
@@ -334,9 +334,25 @@ function ProductCard({
           <bdi>{product.category}</bdi>
         </p>
 
-        <h3 className="mb-4 mt-2 break-words text-base font-bold">
-          <bdi>{product.name}</bdi>
-        </h3>
+        <div className="mb-4 mt-2 flex items-start justify-between gap-2">
+          <h3 className="m-0 min-w-0 flex-1 break-words text-base font-bold">
+            <bdi>{product.name}</bdi>
+          </h3>
+
+          {Number(product.reviewCount) > 0 && (
+            <p
+              aria-label={text(
+                `Rated ${Number(product.averageRating).toFixed(1)} out of 5 from ${product.reviewCount} reviews`,
+                `${product.reviewCount} reviews, rating ${Number(product.averageRating).toFixed(1)} out of 5`,
+              )}
+              className="m-0 flex shrink-0 items-center gap-1 text-sm font-bold text-[#f59e0b]"
+            >
+              <span aria-hidden="true">★</span>
+              <span>{Number(product.averageRating).toFixed(1)}</span>
+              <span className="font-normal text-slate-500">({product.reviewCount})</span>
+            </p>
+          )}
+        </div>
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
           <p className="m-0 text-lg font-extrabold">
@@ -378,7 +394,7 @@ function ProductCard({
   );
 }
 
-function Storefront({ products }) {
+function Storefront({ products, onRatingSummaryChange }) {
   const { language, direction } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
 
@@ -1162,6 +1178,7 @@ function Storefront({ products }) {
         }
         formatPrice={formatPrice}
         onAdd={handleAdd}
+        onRatingSummaryChange={onRatingSummaryChange}
         onClose={() => setSelectedProduct(null)}
       >
         {selectedProduct && (
@@ -1206,6 +1223,25 @@ export default function App() {
 
   const [products, setProducts] = useState(null);
   const [error, setError] = useState("");
+
+  const updateRatingSummary = useCallback((productId, summary) => {
+    setProducts((current) => {
+      if (!current) return current;
+      let changed = false;
+      const next = current.map((product) => {
+        if (product.id !== productId) return product;
+        const averageRating = Number(summary.averageRating) || 0;
+        const reviewCount = Number(summary.reviewCount) || 0;
+        if (
+          Number(product.averageRating) === averageRating &&
+          Number(product.reviewCount) === reviewCount
+        ) return product;
+        changed = true;
+        return { ...product, averageRating, reviewCount };
+      });
+      return changed ? next : current;
+    });
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1261,5 +1297,10 @@ export default function App() {
     );
   }
 
-  return <Storefront products={products} />;
+  return (
+    <Storefront
+      products={products}
+      onRatingSummaryChange={updateRatingSummary}
+    />
+  );
 }

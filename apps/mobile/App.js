@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -163,6 +163,25 @@ function ShopMart() {
   const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
   const [chatOpen, setChatOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+
+  const updateRatingSummary = useCallback((productId, summary) => {
+    setResult((current) => {
+      if (!current?.items) return current;
+      let changed = false;
+      const items = current.items.map((item) => {
+        if (item.id !== productId) return item;
+        const averageRating = Number(summary.averageRating) || 0;
+        const reviewCount = Number(summary.reviewCount) || 0;
+        if (
+          Number(item.averageRating) === averageRating &&
+          Number(item.reviewCount) === reviewCount
+        ) return item;
+        changed = true;
+        return { ...item, averageRating, reviewCount };
+      });
+      return changed ? { ...current, items } : current;
+    });
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -561,24 +580,27 @@ function ShopMart() {
                 </Pressable>
               </View>
               <View style={styles.cardContent}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`View ${item.name}`}
-                  onPress={() => setSelectedProduct(item)}
-                >
-                  <Text style={[styles.productName, { color: palette.text }]} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                </Pressable>
-                {item.reviewCount > 0 && (
-                  <Text
-                    accessibilityLabel={`Rated ${Number(item.averageRating).toFixed(1)} out of 5 from ${item.reviewCount} reviews`}
-                    style={[styles.category, { color: palette.accent, marginTop: 5 }]}
-                    numberOfLines={1}
+                <View style={styles.productHeading}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`View ${item.name}`}
+                    onPress={() => setSelectedProduct(item)}
+                    style={styles.productHeadingName}
                   >
-                    ★ {Number(item.averageRating).toFixed(1)} · {item.reviewCount} {item.reviewCount === 1 ? "review" : "reviews"}
-                  </Text>
-                )}
+                    <Text style={[styles.productName, { color: palette.text }]} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                  </Pressable>
+                  {Number(item.reviewCount) > 0 && Number.isFinite(Number(item.averageRating)) && (
+                    <Text
+                      accessibilityLabel={`Rated ${Number(item.averageRating).toFixed(1)} out of 5 from ${item.reviewCount} reviews`}
+                      style={styles.productRating}
+                      numberOfLines={1}
+                    >
+                      ★ {Number(item.averageRating).toFixed(1)} ({item.reviewCount})
+                    </Text>
+                  )}
+                </View>
                   <Text style={[styles.category, { color: palette.muted }]} numberOfLines={1}>
                   {item.category}
                 </Text>
@@ -711,6 +733,7 @@ function ShopMart() {
           key={selectedProduct.id}
           product={selectedProduct}
           session={auth.session}
+          onRatingSummaryChange={updateRatingSummary}
           onClose={() => setSelectedProduct(null)}
         />
       )}
@@ -1064,6 +1087,9 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     letterSpacing: -0.2,
   },
+  productHeading: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 6 },
+  productHeadingName: { flex: 1, minWidth: 0 },
+  productRating: { color: "#f59e0b", fontSize: 11, fontWeight: "800", flexShrink: 0, marginTop: 2 },
   category: { marginTop: 4, color: "#a29aaf", fontSize: 10 },
   price: {
     marginTop: 12,

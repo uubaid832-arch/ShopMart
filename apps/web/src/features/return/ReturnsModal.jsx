@@ -425,7 +425,7 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
                           <bdi>{request.productName}</bdi> × {request.quantity}
                         </strong>
 
-                        <span className="rounded-full bg-violet-100 px-2 py-1 text-xs capitalize text-violet-700">
+                        <span className={`rounded-full px-2 py-1 text-xs capitalize ${request.status === "REJECTED" ? "bg-rose-100 text-rose-700" : "bg-violet-100 text-violet-700"}`}>
                           {displayStatus(request.status)}
                         </span>
                       </div>
