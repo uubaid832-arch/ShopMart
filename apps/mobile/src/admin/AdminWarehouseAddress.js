@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text } from "react-native";
 import { adminRequest } from "./adminApi";
+import { warehouseAddressError } from "./warehouseAddressErrors";
 import { Button, Card, Field, Form, Page, ui } from "./adminUi";
 
 export default function AdminWarehouseAddress({ session, onClose }) {
@@ -20,7 +21,7 @@ export default function AdminWarehouseAddress({ session, onClose }) {
         if (!controller.signal.aborted) setAddress(result.address || "");
       })
       .catch((failure) => {
-        if (!controller.signal.aborted) setError(failure.message);
+        if (!controller.signal.aborted) setError(warehouseAddressError(failure));
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -47,7 +48,7 @@ export default function AdminWarehouseAddress({ session, onClose }) {
       setAddress(saved.address);
       setNotice("Warehouse address saved. New return instructions will use it.");
     } catch (failure) {
-      setError(failure.message || "Could not save the warehouse address.");
+      setError(warehouseAddressError(failure));
     } finally {
       pending.current = false;
       setSaving(false);

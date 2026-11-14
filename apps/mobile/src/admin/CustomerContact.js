@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Linking, Text, View } from "react-native";
 import { adminRequest } from "./adminApi";
+import { warehouseAddressError } from "./warehouseAddressErrors";
 import { Button, Card, Choice, Field, Form, Page, ui } from "./adminUi";
 import { customerContactUrl, customerMessage } from "./contactMessages";
 
@@ -48,7 +49,8 @@ export default function CustomerContact({
           if (active) setWarehouse(result.address || "");
         })
         .catch((failure) => {
-          if (active && failure.name !== "AbortError") setError(failure.message);
+          if (active && failure.name !== "AbortError")
+            setError(warehouseAddressError(failure));
         })
         .finally(() => {
           if (active) setAddressReady(true);

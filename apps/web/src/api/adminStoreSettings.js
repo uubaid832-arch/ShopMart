@@ -6,7 +6,9 @@ export async function getWarehouseReturnAddress(token, signal) {
     signal,
   });
   if (!response.ok) {
-    throw new Error("Could not load the saved warehouse return address.");
+    throw new Error(
+      `Could not load the saved warehouse return address (HTTP ${response.status}). Check the deployed backend endpoint and migration 021.`,
+    );
   }
   const result = await response.json();
   return result.address || "";
