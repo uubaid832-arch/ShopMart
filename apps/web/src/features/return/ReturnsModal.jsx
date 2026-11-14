@@ -351,8 +351,8 @@ export default function ReturnsModal({ accessToken, onClose, orderId = null }) {
                   {text(
                     orderId
                       ? "No eligible items for this order. It must be delivered, paid, and not already have a return request."
-                      : "No eligible items on this page. Only delivered, paid COD or verified Safepay items without an existing return request are eligible.",
-                    "اس صفحے پر کوئی اہل مصنوع موجود نہیں۔ صرف پہنچائی گئی اور ادا شدہ COD یا تصدیق شدہ Safepay مصنوعات اہل ہیں جن کے لیے پہلے واپسی کی درخواست موجود نہ ہو۔",
+                      : "No eligible items on this page. Delivered, paid COD or bank transfer, and verified Safepay items can be returned if there is no existing return request.",
+                    "صرف ڈیلیور شدہ اور ادا شدہ COD یا بینک ٹرانسفر، یا تصدیق شدہ Safepay آئٹمز واپس کیے جا سکتے ہیں، بشرطیکہ پہلے سے واپسی کی درخواست موجود نہ ہو۔",
                   )}
                 </p>
               )}

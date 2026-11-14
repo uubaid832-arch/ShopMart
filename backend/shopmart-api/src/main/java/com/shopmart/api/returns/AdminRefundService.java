@@ -85,44 +85,13 @@ public class AdminRefundService {
           "Inspect and accept the returned goods before recording a refund.");
     }
 
-    if (!"COD".equals(order.get("payment_method"))
+    if (!("COD".equals(order.get("payment_method"))
+        || "BANK_TRANSFER".equals(order.get("payment_method")))
         || !java.util.Set.of("PAID", "PARTIALLY_REFUNDED")
             .contains(order.get("payment_status"))) {
       throw failure(
           HttpStatus.CONFLICT,
-          "Only paid COD orders support manual refund recording here.");
-    }
-
-    // A delivered COD order is not eligible for a customer refund while its
-    // cash is still with the rider or a reported handover is awaiting review.
-    // Lock the collection rows as RiderCodService.report does, so a report
-    // cannot race this decision. Legacy orders without a collection ledger
-    // retain the existing manual-refund workflow.
-    jdbc.queryForList("""
-        SELECT id FROM public.rider_cod_collections
-        WHERE order_id = ?
-        FOR UPDATE
-        """, orderId);
-
-    Boolean unsettledCod = jdbc.queryForObject("""
-        SELECT EXISTS (
-            SELECT 1
-            FROM public.rider_cod_collections c
-            WHERE c.order_id = ?
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM public.rider_cod_handover_claims claim
-                  JOIN public.rider_cod_handovers handover
-                    ON handover.id = claim.handover_id
-                  WHERE claim.collection_id = c.id
-                    AND handover.status = 'CONFIRMED'
-              )
-        )
-        """, Boolean.class, orderId);
-
-    if (Boolean.TRUE.equals(unsettledCod)) {
-      throw failure(HttpStatus.CONFLICT,
-          "COD cash must be handed over by the rider and confirmed by an administrator before recording this refund.");
+          "Only paid COD or bank transfer orders support manual refund recording here.");
     }
 
     BigDecimal previous = jdbc.queryForObject("""

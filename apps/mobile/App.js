@@ -132,7 +132,11 @@ function ShopMart() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [previewAdminId, setPreviewAdminId] = useState(null);
-  const isStorePreview = canPreviewStore(auth.session?.user.role, auth.session?.user.id, previewAdminId);
+  const isStorePreview = canPreviewStore(
+    auth.session?.user.role,
+    auth.session?.user.id,
+    previewAdminId,
+  );
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -202,8 +206,18 @@ function ShopMart() {
   function pop(value) {
     value.setValue(0.72);
     Animated.sequence([
-      Animated.spring(value, { toValue: 1.24, speed: 26, bounciness: 9, useNativeDriver: true }),
-      Animated.spring(value, { toValue: 1, speed: 22, bounciness: 7, useNativeDriver: true }),
+      Animated.spring(value, {
+        toValue: 1.24,
+        speed: 26,
+        bounciness: 9,
+        useNativeDriver: true,
+      }),
+      Animated.spring(value, {
+        toValue: 1,
+        speed: 22,
+        bounciness: 7,
+        useNativeDriver: true,
+      }),
     ]).start();
   }
 
@@ -218,11 +232,24 @@ function ShopMart() {
       cartToastScale.setValue(0.86);
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(cartToastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-          Animated.spring(cartToastScale, { toValue: 1, speed: 22, bounciness: 8, useNativeDriver: true }),
+          Animated.timing(cartToastOpacity, {
+            toValue: 1,
+            duration: 180,
+            useNativeDriver: true,
+          }),
+          Animated.spring(cartToastScale, {
+            toValue: 1,
+            speed: 22,
+            bounciness: 8,
+            useNativeDriver: true,
+          }),
         ]),
         Animated.delay(1500),
-        Animated.timing(cartToastOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
+        Animated.timing(cartToastOpacity, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }),
       ]).start(({ finished }) => {
         if (finished) setCartToast("");
       });
@@ -405,7 +432,33 @@ function ShopMart() {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
-      {isStorePreview && <View style={{backgroundColor:"#ede9fe",padding:12,flexDirection:"row",alignItems:"center",justifyContent:"space-between"}}><Text style={{color:"#6d28d9",fontWeight:"700"}}>Store preview · Admin</Text><Pressable accessibilityRole="button" onPress={() => {setPreviewAdminId(null);setCartOpen(false);setAccountOpen(false);}}><Text style={{color:"#6d28d9",fontWeight:"800"}}>Back to Admin →</Text></Pressable></View>}
+      {isStorePreview && (
+        <View
+          style={{
+            backgroundColor: "#ede9fe",
+            padding: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Text style={{ color: "#6d28d9", fontWeight: "700" }}>
+            Store preview · Admin
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              setPreviewAdminId(null);
+              setCartOpen(false);
+              setAccountOpen(false);
+            }}
+          >
+            <Text style={{ color: "#6d28d9", fontWeight: "800" }}>
+              Back to Admin →
+            </Text>
+          </Pressable>
+        </View>
+      )}
       <View style={styles.header}>
         <Text style={styles.brand}>
           Shop<Text style={styles.violet}>Mart</Text>
@@ -427,7 +480,9 @@ function ShopMart() {
             onPress={() => setCartOpen(true)}
           >
             {cart.count > 0 && (
-              <Animated.View style={[styles.badge, { transform: [{ scale: cartPulse }] }]}>
+              <Animated.View
+                style={[styles.badge, { transform: [{ scale: cartPulse }] }]}
+              >
                 <Text style={styles.badgeText}>
                   {cart.count > 99 ? "99+" : cart.count}
                 </Text>
@@ -439,12 +494,26 @@ function ShopMart() {
 
       {cartToast ? (
         <Animated.View
-          accessibilityRole="status"
-          style={[styles.cartToast, { opacity: cartToastOpacity, transform: [{ scale: cartToastScale }] }]}
+          style={[
+            styles.cartToast,
+            {
+              opacity: cartToastOpacity,
+              transform: [{ scale: cartToastScale }],
+            },
+          ]}
         >
           <Icon name="cart" size={20} color="#047857" />
-          <Text style={styles.cartToastText} numberOfLines={1}>{cartToast} added to cart ✓</Text>
-          <Pressable accessibilityRole="button" onPress={() => setCartOpen(true)}>
+          <Text
+            accessibilityLiveRegion="polite"
+            style={styles.cartToastText}
+            numberOfLines={1}
+          >
+            {cartToast} added to cart ✓
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setCartOpen(true)}
+          >
             <Text style={styles.cartToastLink}>View cart</Text>
           </Pressable>
         </Animated.View>
@@ -534,8 +603,19 @@ function ShopMart() {
                   onPress={() => toggleProductWishlist(item.id, saved)}
                   style={styles.heart}
                 >
-                  <Animated.View style={heartPulseId === item.id ? { transform: [{ scale: heartPulse }] } : undefined}>
-                    <Icon name="heart" size={19} color={saved ? "#7c3aed" : "#454d66"} filled={saved} />
+                  <Animated.View
+                    style={
+                      heartPulseId === item.id
+                        ? { transform: [{ scale: heartPulse }] }
+                        : undefined
+                    }
+                  >
+                    <Icon
+                      name="heart"
+                      size={19}
+                      color={saved ? "#7c3aed" : "#454d66"}
+                      filled={saved}
+                    />
                   </Animated.View>
                 </Pressable>
               </View>
@@ -597,8 +677,18 @@ function ShopMart() {
                         styles.disabled,
                     ]}
                   >
-                    <Animated.View style={cartPulseId === item.id ? { transform: [{ scale: cartPulse }] } : undefined}>
-                      <Icon name="cart" color={unavailable ? "#7b8498" : "#fff"} size={17} />
+                    <Animated.View
+                      style={
+                        cartPulseId === item.id
+                          ? { transform: [{ scale: cartPulse }] }
+                          : undefined
+                      }
+                    >
+                      <Icon
+                        name="cart"
+                        color={unavailable ? "#7b8498" : "#fff"}
+                        size={17}
+                      />
                     </Animated.View>
                     <Text
                       style={[

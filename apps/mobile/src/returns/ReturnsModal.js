@@ -222,15 +222,15 @@ export default function ReturnsModal({ session, onClose, orderId = null }) {
                 {tab === "eligible" && (
                   <Text style={styles.description}>
                     Returns cover the full quantity of the selected purchased
-                    item. Only delivered, paid COD or verified Safepay items without an existing
-                    return request are eligible.
+                    item. Delivered and paid COD or bank transfer orders, and
+                    verified Safepay orders, are eligible when no return exists.
                   </Text>
                 )}
 
                 {data.items.length === 0 && (
                   <Text style={styles.description}>
                     {tab === "eligible"
-                      ? orderId ? "No eligible items for this order. It must be delivered, paid, and not already have a return request." : "No eligible products on this page."
+                      ? orderId ? "No eligible items for this order. It must be delivered, paid (including bank transfer receipt confirmed by the shop), and not already have a return request." : "No eligible products on this page."
                       : "No return requests on this page."}
                   </Text>
                 )}

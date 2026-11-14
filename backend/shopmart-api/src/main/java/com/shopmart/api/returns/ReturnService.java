@@ -39,6 +39,7 @@ public class ReturnService {
         WHERE o.user_id = ?
           AND o.status = 'DELIVERED'
           AND ((o.payment_method = 'COD' AND o.payment_status IN ('PAID', 'PARTIALLY_REFUNDED'))
+            OR (o.payment_method = 'BANK_TRANSFER' AND o.payment_status IN ('PAID', 'PARTIALLY_REFUNDED'))
             OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
                 AND EXISTS (SELECT 1 FROM public.safepay_sessions sp
                             WHERE sp.order_id = o.id AND sp.state = 'PAID')))
@@ -57,6 +58,7 @@ public class ReturnService {
         WHERE o.user_id = ?
           AND o.status = 'DELIVERED'
           AND ((o.payment_method = 'COD' AND o.payment_status IN ('PAID', 'PARTIALLY_REFUNDED'))
+            OR (o.payment_method = 'BANK_TRANSFER' AND o.payment_status IN ('PAID', 'PARTIALLY_REFUNDED'))
             OR (o.payment_method = 'DEMO' AND o.payment_status = 'DEMO_PAID'
                 AND EXISTS (SELECT 1 FROM public.safepay_sessions sp
                             WHERE sp.order_id = o.id AND sp.state = 'PAID')))
@@ -154,16 +156,19 @@ public class ReturnService {
 
     boolean paidCod = "COD".equals(order.get("payment_method"))
         && java.util.Set.of("PAID", "PARTIALLY_REFUNDED").contains(order.get("payment_status"));
+    boolean paidBankTransfer = "BANK_TRANSFER".equals(order.get("payment_method"))
+        && java.util.Set.of("PAID", "PARTIALLY_REFUNDED").contains(order.get("payment_status"));
     boolean verifiedSafepay = "DEMO".equals(order.get("payment_method"))
         && "DEMO_PAID".equals(order.get("payment_status"))
         && Boolean.TRUE.equals(jdbc.queryForObject("""
             SELECT EXISTS (SELECT 1 FROM public.safepay_sessions
                            WHERE order_id = ? AND state = 'PAID')
             """, Boolean.class, request.orderId()));
-    if (!"DELIVERED".equals(order.get("status")) || !(paidCod || verifiedSafepay)) {
+    if (!"DELIVERED".equals(order.get("status"))
+        || !(paidCod || paidBankTransfer || verifiedSafepay)) {
       throw failure(
           HttpStatus.CONFLICT,
-          "Only delivered paid COD or verified Safepay orders are eligible for return.");
+          "Only delivered paid COD, bank transfer, or verified Safepay orders are eligible for return.");
     }
 
     var items = jdbc.queryForList("""

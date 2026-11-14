@@ -230,421 +230,424 @@ export default function RiderScreen({
     );
   }
 
+  const topBar = (
+    <View style={styles.header}>
+      <View style={styles.grow}>
+        <Text style={styles.eyebrow}>SHOPMART RIDER</Text>
+        <Text style={styles.title}>
+          {view === "dashboard"
+            ? "Home"
+            : view === "profile"
+              ? "My account"
+              : "Your deliveries"}
+        </Text>
+      </View>
+      <NotificationBell
+        session={session}
+        onPress={() => setNotificationsOpen(true)}
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Sign out"
+        disabled={Boolean(busyId) || signingOut}
+        onPress={confirmSignOut}
+        style={styles.iconButton}
+      >
+        {signingOut ? (
+          <ActivityIndicator color="#7c3aed" />
+        ) : (
+          <Icon name="logout" color="#9a839e" />
+        )}
+      </Pressable>
+    </View>
+  );
+
+  const welcomeBanner = (
+    <View style={styles.welcome}>
+      <View style={styles.grow}>
+        <Text style={styles.welcomeName}>
+          Hi, {session.user.name?.split(" ")[0] || "Rider"}
+        </Text>
+        <Text style={styles.welcomeText}>
+          {view === "deliveries"
+            ? "Your delivery jobs are below."
+            : "Your work, all in one place."}
+        </Text>
+      </View>
+      <View style={styles.truck}>
+        <Icon name="truck" size={35} />
+      </View>
+    </View>
+  );
+
+  const mainNavigation = (
+    <View style={styles.viewTabs}>
+      {[
+        ["dashboard", "Home"],
+        ["deliveries", "Deliveries"],
+        ["profile", "My account"],
+      ].map(([value, title]) => (
+        <Pressable
+          key={value}
+          accessibilityRole="button"
+          accessibilityState={{ selected: view === value }}
+          disabled={Boolean(busyId)}
+          onPress={() => setView(value)}
+          style={[styles.viewTab, view === value && styles.viewTabActive]}
+        >
+          <Text
+            style={[
+              styles.viewTabText,
+              view === value && styles.activeTabText,
+            ]}
+          >
+            {title}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+
+  function renderDeliveryCard(item) {
+    const delivered = item.status === "DELIVERED";
+    const dispatched = item.status === "DISPATCHED";
+    return (
+      <View key={item.id} style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.grow}>
+            <Text style={styles.cardEyebrow}>ORDER</Text>
+            <Text style={styles.orderNumber}>{item.orderNumber}</Text>
+          </View>
+          <Text style={[styles.status, delivered && styles.delivered]}>
+            {delivered
+              ? "Done"
+              : item.status === "CANCELLED"
+                ? "Cancelled"
+                : dispatched
+                  ? "Ready to deliver"
+                  : "Waiting for dispatch"}
+          </Text>
+        </View>
+
+        <Text style={styles.customer}>{item.customerName || "Customer"}</Text>
+        <View style={styles.addressRow}>
+          <Icon name="pin" size={19} color="#6850b5" />
+          <Text style={styles.address}>{item.address || "Address not available"}</Text>
+        </View>
+
+        <View style={styles.amountPanel}>
+          <View style={styles.grow}>
+            <Text style={styles.amountLabel}>Order amount</Text>
+            <Text style={styles.payment}>
+              {item.paymentMethod === "BANK_TRANSFER" && item.paymentStatus === "PAID"
+                ? "Paid already · do not collect cash"
+                : item.paymentMethod === "COD"
+                  ? "Cash to collect"
+                  : "Paid already · do not collect cash"}
+            </Text>
+          </View>
+          <Text style={styles.amount}>
+            {new Intl.NumberFormat("en-PK", {
+              style: "currency",
+              currency: item.currency || "PKR",
+              maximumFractionDigits: 0,
+            }).format(Number(item.total))}
+          </Text>
+        </View>
+
+        <Text style={styles.stepLabel}>1 · CONTACT THE CUSTOMER</Text>
+        <View style={styles.actions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Call ${item.customerName}`}
+            onPress={() =>
+              openLink(`tel:${String(item.phone || "").replace(/[^0-9+]/g, "")}`)
+            }
+            style={styles.secondary}
+          >
+            <Icon name="phone" size={19} />
+            <Text style={styles.link}>Call</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Message ${item.customerName} on WhatsApp`}
+            onPress={() => openWhatsApp(item)}
+            style={[styles.secondary, styles.whatsappButton]}
+          >
+            <Icon name="chat" size={19} color="#16804d" />
+            <Text style={styles.whatsappText}>WhatsApp</Text>
+          </Pressable>
+        </View>
+
+        {dispatched && !item.warehouseReturnPending && (
+          <>
+            <Text style={styles.stepLabel}>2 · DELIVER THE ORDER</Text>
+            <Pressable
+              accessibilityRole="button"
+              disabled={gps.busy || Boolean(busyId)}
+              onPress={() =>
+                gps.orderId === item.id ? gps.stop() : gps.start(item)
+              }
+              style={styles.gpsButton}
+            >
+              <Text style={styles.link}>
+                {gps.busy
+                  ? "Starting location…"
+                  : gps.orderId === item.id
+                    ? "Stop sharing location"
+                    : gps.orderId
+                      ? "Share location for this order"
+                      : "Share my live location"}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={Boolean(busyId) || gps.busy}
+              onPress={async () => {
+                if (gps.orderId === item.id) await gps.stop();
+                setFailureDelivery(item);
+              }}
+              style={styles.failureButton}
+            >
+              <Text style={styles.failureText}>Could not deliver</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={Boolean(busyId) || item.warehouseReturnPending}
+              onPress={() => confirmDelivery(item)}
+              style={[styles.primary, (Boolean(busyId) || item.warehouseReturnPending) && styles.dim]}
+            >
+              <Text style={styles.white}>
+                {busyId === item.id ? "Saving…" : "I delivered this order"}
+              </Text>
+            </Pressable>
+          </>
+        )}
+
+        {item.lastAttempt && (
+          <Pressable
+            accessibilityRole="button"
+            disabled={Boolean(busyId)}
+            onPress={() => setWarehouseDelivery(item)}
+            style={styles.warehouseButton}
+          >
+            <Text style={styles.warehouseText}>Parcel return status</Text>
+          </Pressable>
+        )}
+
+        {!dispatched && !delivered && item.status !== "CANCELLED" && (
+          <Text style={styles.waitingNote}>
+            Please wait. The shop will send this order to you before delivery.
+          </Text>
+        )}
+        {item.warehouseReturnPending && (
+          <Text style={styles.waitingNote}>
+            Parcel is back at the shop. Wait for the shop to arrange the next step.
+          </Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar style="dark" />
-      <View style={styles.header}>
-        <View style={styles.grow}>
-          <Text style={styles.eyebrow}>SHOPMART RIDER</Text>
-          <Text style={styles.title}>
-            {view === "dashboard"
-              ? "Rider dashboard"
-              : view === "profile"
-                ? "My profile"
-                : "Your deliveries"}
-          </Text>
-        </View>
-        <NotificationBell
-          session={session}
-          onPress={() => setNotificationsOpen(true)}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Sign out"
-          disabled={Boolean(busyId) || signingOut}
-          onPress={confirmSignOut}
-          style={styles.iconButton}
-        >
-          {signingOut ? (
-            <ActivityIndicator color="#7c3aed" />
-          ) : (
-            <Icon name="logout" color="#9a839e" />
-          )}
-        </Pressable>
-      </View>
-      <View style={styles.welcome}>
-        <View style={styles.grow}>
-          <Text style={styles.welcomeName}>
-            Hi, {session.user.name?.split(" ")[0] || "Rider"}
-          </Text>
-          <Text style={styles.welcomeText}>
-            Your assigned deliveries, all in one place.
-          </Text>
-        </View>
-        <View style={styles.truck}>
-          <Icon name="truck" size={35} />
-        </View>
-      </View>
-      <View style={styles.viewTabs}>
-        {[
-          ["dashboard", "Dashboard"],
-          ["deliveries", "Deliveries"],
-          ["profile", "My profile"],
-        ].map(([value, title]) => (
-          <Pressable
-            key={value}
-            accessibilityRole="button"
-            accessibilityState={{ selected: view === value }}
-            disabled={Boolean(busyId)}
-            onPress={() => setView(value)}
-            style={[styles.viewTab, view === value && styles.viewTabActive]}
-          >
-            <Text
-              style={[
-                styles.viewTabText,
-                view === value && styles.activeTabText,
-              ]}
-            >
-              {title}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      {view === "dashboard" && sessionError ? (
-        <Text accessibilityRole="alert" style={styles.error}>
-          {sessionError}
-        </Text>
-      ) : null}
-      {view === "dashboard" && gps.orderId && (
-        <View style={styles.gpsInfo}>
-          <Text style={styles.gpsText}>
-            Rider GPS sharing is active for one delivery.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => gps.stop()}
-            style={styles.gpsStop}
-          >
-            <Text style={styles.link}>Stop sharing</Text>
-          </Pressable>
-        </View>
-      )}
-      {view === "dashboard" ? (
-        <RiderDashboard
-          session={session}
-          revision={cashRevision}
-          onOpenCash={() => setCashOpen(true)}
-          onOpenDeliveries={() => setView("deliveries")}
-        />
-      ) : view === "profile" ? (
-        <RiderProfile
-          session={session}
-          onUpdateUser={onUpdateUser}
-          security={security}
-          onPasswordChanged={async () => {
-            await gps.stop(false);
-            await onPasswordChanged();
-          }}
+      {view === "deliveries" ? (
+        <FlatList
+          style={styles.deliveryList}
+          data={data?.items ?? []}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.deliveryListContent}
+          ListHeaderComponent={
+            <>
+              {topBar}
+              {welcomeBanner}
+              {mainNavigation}
+              <View style={styles.section}>
+                <View style={styles.grow}>
+                  <Text style={styles.sectionTitle}>
+                    {section === "ASSIGNED"
+                      ? "To deliver"
+                      : section === "DELIVERED"
+                        ? "Delivered"
+                        : "Cancelled"}
+                  </Text>
+                  <Text style={styles.muted}>
+                    {data ? `${data.totalItems} orders` : "Loading orders…"}
+                  </Text>
+                </View>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh deliveries"
+                  disabled={!current || Boolean(busyId)}
+                  onPress={() => setReload((value) => value + 1)}
+                  style={styles.refreshButton}
+                >
+                  {!current ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Icon name="refresh" color="#fff" />
+                  )}
+                  <Text style={styles.refreshText}>Refresh</Text>
+                </Pressable>
+              </View>
+              <View style={styles.tabs}>
+                {[
+                  ["ASSIGNED", "To do"],
+                  ["DELIVERED", "Done"],
+                  ["CANCELLED", "Cancelled"],
+                ].map(([value, title]) => (
+                  <Pressable
+                    key={value}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: section === value }}
+                    disabled={Boolean(busyId)}
+                    onPress={() => {
+                      setSection(value);
+                      setPage(0);
+                      setError("");
+                      setNotice("");
+                    }}
+                    style={[styles.tab, section === value && styles.activeTab]}
+                  >
+                    <Text
+                      style={[
+                        styles.tabText,
+                        section === value && styles.activeTabText,
+                      ]}
+                    >
+                      {title}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.locationBanner}>
+                <Icon name="pin" size={18} color="#245b43" />
+                <View style={styles.grow}>
+                  <Text style={styles.locationTitle}>
+                    {gps.orderId ? "Location is being shared" : "Location is off"}
+                  </Text>
+                  <Text style={styles.locationCopy}>
+                    Turn it on from an order when the customer needs your location.
+                  </Text>
+                </View>
+                {gps.orderId ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => gps.stop()}
+                    style={styles.stopLocation}
+                  >
+                    <Text style={styles.stopLocationText}>Stop</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {gps.message ? (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  {gps.message}
+                </Text>
+              ) : null}
+              {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+              {error || sessionError ? (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  {error || sessionError}
+                </Text>
+              ) : null}
+            </>
+          }
+          ListEmptyComponent={
+            !current ? (
+              <ActivityIndicator
+                size="large"
+                color="#5b3cc4"
+                style={styles.loader}
+              />
+            ) : result?.error ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {result.error}
+              </Text>
+            ) : (
+              <View style={styles.empty}>
+                <View style={styles.emptyIcon}>
+                  <Icon name="truck" size={36} color="#5b3cc4" />
+                </View>
+                <Text style={styles.emptyTitle}>No orders here</Text>
+                <Text style={styles.emptyCopy}>
+                  New orders will show here when the shop assigns them to you.
+                </Text>
+              </View>
+            )
+          }
+          renderItem={({ item }) => renderDeliveryCard(item)}
+          ListFooterComponent={
+            data?.totalPages > 1 ? (
+              <View style={styles.pagination}>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={page === 0 || Boolean(busyId)}
+                  onPress={() => setPage((value) => value - 1)}
+                  style={[styles.pageButton, (page === 0 || Boolean(busyId)) && styles.disabledButton]}
+                >
+                  <Text style={styles.pageButtonText}>Previous</Text>
+                </Pressable>
+                <Text style={styles.pageCount}>
+                  Page {page + 1} of {data.totalPages}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={page + 1 >= data.totalPages || Boolean(busyId)}
+                  onPress={() => setPage((value) => value + 1)}
+                  style={[styles.pageButton, (page + 1 >= data.totalPages || Boolean(busyId)) && styles.disabledButton]}
+                >
+                  <Text style={styles.pageButtonText}>Next</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.listEndSpace} />
+            )
+          }
         />
       ) : (
         <>
-          <View style={styles.section}>
-            <View style={styles.grow}>
-              <Text style={styles.sectionTitle}>
-                {section === "ASSIGNED"
-                  ? "Assigned to you"
-                  : section === "DELIVERED"
-                    ? "Delivered orders"
-                    : "Cancelled orders"}
-              </Text>
-              <Text style={styles.muted}>
-                {data
-                  ? `${data.totalItems} order(s) in this section`
-                  : "Checking your deliveries..."}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Refresh deliveries"
-              disabled={!current || Boolean(busyId)}
-              onPress={() => setReload((value) => value + 1)}
-              style={styles.iconButton}
-            >
-              {!current ? (
-                <ActivityIndicator color="#7c3aed" />
-              ) : (
-                <Icon name="refresh" />
-              )}
-            </Pressable>
-          </View>
-          <View style={styles.tabs}>
-            {[
-              ["ASSIGNED", "Assigned"],
-              ["DELIVERED", "Delivered"],
-              ["CANCELLED", "Cancelled"],
-            ].map(([value, title]) => (
-              <Pressable
-                key={value}
-                accessibilityRole="button"
-                accessibilityState={{ selected: section === value }}
-                disabled={Boolean(busyId)}
-                onPress={() => {
-                  setSection(value);
-                  setPage(0);
-                  setError("");
-                  setNotice("");
-                }}
-                style={[styles.tab, section === value && styles.activeTab]}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    section === value && styles.activeTabText,
-                  ]}
-                >
-                  {title}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-          <View style={styles.gpsInfo}>
-            <Text style={styles.gpsText}>
-              {gps.orderId
-                ? "GPS sharing is on for one delivery. "
-                : "GPS sharing is off. "}
-              Sharing continues in the background while Android allows the
-              location service.
+          {topBar}
+          {welcomeBanner}
+          {mainNavigation}
+          {view === "dashboard" && sessionError ? (
+            <Text accessibilityRole="alert" style={styles.error}>
+              {sessionError}
             </Text>
-            {gps.message ? (
-              <Text style={styles.gpsText}>{gps.message}</Text>
-            ) : null}
-            {gps.orderId && (
+          ) : null}
+          {view === "dashboard" && gps.orderId ? (
+            <View style={styles.locationBanner}>
+              <Icon name="pin" size={18} color="#245b43" />
+              <Text style={[styles.locationTitle, styles.grow]}>
+                Location sharing is on.
+              </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => gps.stop()}
-                style={styles.gpsStop}
+                style={styles.stopLocation}
               >
-                <Text style={styles.link}>Stop sharing</Text>
+                <Text style={styles.stopLocationText}>Stop</Text>
               </Pressable>
-            )}
-          </View>
-          {notice ? <Text style={styles.notice}>{notice}</Text> : null}
-          {error || sessionError ? (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {error || sessionError}
-            </Text>
+            </View>
           ) : null}
-          {!current ? (
-            <ActivityIndicator
-              size="large"
-              color="#7c3aed"
-              style={styles.loader}
+          {view === "dashboard" ? (
+            <RiderDashboard
+              session={session}
+              revision={cashRevision}
+              onOpenCash={() => setCashOpen(true)}
+              onOpenDeliveries={() => setView("deliveries")}
             />
-          ) : result.error ? (
-            <Text accessibilityRole="alert" style={styles.error}>
-              {result.error}
-            </Text>
           ) : (
-            <>
-              <FlatList
-                data={data.items}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.list}
-                ListEmptyComponent={
-                  <View style={styles.empty}>
-                    <Icon name="truck" size={45} />
-                    <Text style={styles.emptyTitle}>
-                      No deliveries on this page
-                    </Text>
-                    <Text style={styles.muted}>
-                      New assignments appear here after the admin assigns them.
-                    </Text>
-                  </View>
-                }
-                renderItem={({ item }) => {
-                  const delivered = item.status === "DELIVERED";
-                  const dispatched = item.status === "DISPATCHED";
-                  return (
-                    <View style={styles.card}>
-                      <View style={styles.cardHeader}>
-                        <Text style={styles.orderNumber}>
-                          {item.orderNumber}
-                        </Text>
-                        <Text
-                          style={[styles.status, delivered && styles.delivered]}
-                        >
-                          {readable(item.status)}
-                        </Text>
-                      </View>
-                      <Text style={styles.customer}>{item.customerName}</Text>
-                      <View style={styles.addressRow}>
-                        <Icon name="pin" size={17} color="#9c90b0" />
-                        <Text style={styles.address}>{item.address}</Text>
-                      </View>
-                      <View style={styles.amountRow}>
-                        <View style={styles.grow}>
-                          <Text style={styles.muted}>
-                            {item.paymentMethod === "COD"
-                              ? "Cash on delivery"
-                              : readable(item.paymentMethod)}
-                          </Text>
-                          <Text style={styles.payment}>
-                            {item.paymentMethod === "BANK_TRANSFER" && item.paymentStatus === "PAID"
-                              ? "Bank transfer received — do not collect cash"
-                              : readable(item.paymentStatus)}
-                          </Text>
-                        </View>
-                        <Text style={styles.amount}>
-                          {new Intl.NumberFormat("en-PK", {
-                            style: "currency",
-                            currency: item.currency || "PKR",
-                          }).format(Number(item.total))}
-                        </Text>
-                      </View>
-                      <View style={styles.actions}>
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`Call ${item.customerName}`}
-                          onPress={() =>
-                            openLink(
-                              `tel:${item.phone.replace(/[^0-9+]/g, "")}`,
-                            )
-                          }
-                          style={styles.secondary}
-                        >
-                          <Icon name="phone" size={17} />
-                          <Text style={styles.link}>Call customer</Text>
-                        </Pressable>
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`Ask ${item.customerName} for their location on WhatsApp`}
-                          onPress={() => openWhatsApp(item)}
-                          style={[styles.secondary, styles.whatsappButton]}
-                        >
-                          <Icon name="chat" size={17} color="#16804d" />
-                          <Text style={styles.whatsappText}>WhatsApp</Text>
-                        </Pressable>
-                      </View>
-                      {dispatched && !item.warehouseReturnPending && (
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={Boolean(busyId) || gps.busy}
-                          onPress={async () => {
-                            if (gps.orderId === item.id) await gps.stop();
-                            setFailureDelivery(item);
-                          }}
-                          style={[
-                            styles.failureButton,
-                            Boolean(busyId) && styles.dim,
-                          ]}
-                        >
-                          <Text style={styles.failureText}>
-                            Report delivery failure
-                          </Text>
-                        </Pressable>
-                      )}
-                      {dispatched && !item.warehouseReturnPending && (
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={gps.busy || Boolean(busyId)}
-                          onPress={() =>
-                            gps.orderId === item.id
-                              ? gps.stop()
-                              : gps.start(item)
-                          }
-                          style={styles.gpsButton}
-                        >
-                          <Text style={styles.link}>
-                            {gps.busy
-                              ? "Preparing GPS..."
-                              : gps.orderId === item.id
-                                ? "Stop sharing this delivery"
-                                : gps.orderId
-                                  ? "Switch GPS sharing to this delivery"
-                                  : "Start sharing rider location"}
-                          </Text>
-                        </Pressable>
-                      )}
-                      {item.lastAttempt && (
-                        <Pressable
-                          accessibilityRole="button"
-                          disabled={Boolean(busyId)}
-                          onPress={() => setWarehouseDelivery(item)}
-                          style={styles.warehouseButton}
-                        >
-                          <Text style={styles.warehouseText}>
-                            Return to warehouse / view status
-                          </Text>
-                        </Pressable>
-                      )}
-                      {item.lastAttempt && (
-                        <View style={styles.attempt}>
-                          <Text style={styles.attemptTitle}>
-                            Last attempt: {readable(item.lastAttempt.reason)}
-                          </Text>
-                          {item.lastAttempt.note ? (
-                            <Text style={styles.muted}>
-                              {item.lastAttempt.note}
-                            </Text>
-                          ) : null}
-                        </View>
-                      )}
-                      {dispatched ? (
-                        <>
-                          <Pressable
-                            accessibilityRole="button"
-                            disabled={
-                              Boolean(busyId) || item.warehouseReturnPending
-                            }
-                            onPress={() => confirmDelivery(item)}
-                            style={[
-                              styles.primary,
-                              (Boolean(busyId) ||
-                                item.warehouseReturnPending) &&
-                                styles.dim,
-                            ]}
-                          >
-                            <Text style={styles.white}>
-                              {item.warehouseReturnPending
-                                ? "Awaiting warehouse resolution"
-                                : busyId === item.id
-                                  ? "Updating..."
-                                  : "Mark as delivered"}
-                            </Text>
-                          </Pressable>
-                          {item.warehouseReturnPending && (
-                            <Text style={styles.stageNote}>
-                              Parcel returned to warehouse. Delivery completion
-                              is disabled until the administrator arranges
-                              another attempt.
-                            </Text>
-                          )}
-                        </>
-                      ) : (
-                        <Text style={styles.stageNote}>
-                          {delivered
-                            ? "Delivery completed."
-                            : "Delivery completion becomes available after dispatch."}
-                        </Text>
-                      )}
-                    </View>
-                  );
-                }}
-              />
-              {data.totalPages > 1 && (
-                <View style={styles.pagination}>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={page === 0 || Boolean(busyId)}
-                    onPress={() => setPage((value) => value - 1)}
-                    style={styles.pageButton}
-                  >
-                    <Text style={styles.link}>Previous</Text>
-                  </Pressable>
-                  <Text style={styles.muted}>
-                    {page + 1} / {data.totalPages}
-                  </Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={page + 1 >= data.totalPages || Boolean(busyId)}
-                    onPress={() => setPage((value) => value + 1)}
-                    style={styles.pageButton}
-                  >
-                    <Text style={styles.link}>Next</Text>
-                  </Pressable>
-                </View>
-              )}
-            </>
+            <RiderProfile
+              session={session}
+              onUpdateUser={onUpdateUser}
+              security={security}
+              onPasswordChanged={async () => {
+                await gps.stop(false);
+                await onPasswordChanged();
+              }}
+            />
           )}
         </>
       )}
@@ -706,253 +709,240 @@ export default function RiderScreen({
 }
 
 const styles = StyleSheet.create({
-  viewTabs: {
-    flexDirection: "row",
-    backgroundColor: "#f0eafa",
-    borderRadius: 15,
-    padding: 5,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 3,
-  },
-  viewTab: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 11,
-  },
-  viewTabActive: { backgroundColor: "#7c3aed" },
-  viewTabText: { color: "#a28bb6", fontWeight: "700", fontSize: 12 },
-  tabs: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 8,
-    marginBottom: 14,
-  },
-  tab: {
-    flex: 1,
-    backgroundColor: "#f0eafa",
-    paddingVertical: 13,
-    borderRadius: 13,
-    alignItems: "center",
-  },
-  activeTab: { backgroundColor: "#7c3aed" },
-  tabText: { color: "#9c83b6", fontSize: 12, fontWeight: "700" },
-  activeTabText: { color: "#fff" },
-  gpsInfo: {
-    marginHorizontal: 20,
-    padding: 12,
-    backgroundColor: "#f1f8f3",
-    borderRadius: 13,
-    marginBottom: 14,
-  },
-  gpsText: { color: "#789480", fontSize: 10, lineHeight: 17 },
-  gpsStop: { paddingVertical: 10, alignSelf: "flex-start" },
-  gpsButton: {
-    backgroundColor: "#edf8f0",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 12,
-    alignItems: "center",
-  },
-  warehouseButton: {
-    backgroundColor: "#fff7e9",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 12,
-  },
-  warehouseText: {
-    color: "#b18a46",
-    fontSize: 11,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  screen: { flex: 1, backgroundColor: "#faf9fd" },
+  screen: { flex: 1, backgroundColor: "#f4f6fb" },
   grow: { flex: 1, minWidth: 0 },
-  header: { flexDirection: "row", alignItems: "center", padding: 20, gap: 9 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: 14,
+    gap: 10,
+  },
   eyebrow: {
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1.7,
-    color: "#a28cb8",
+    letterSpacing: 1.1,
+    color: "#6254a0",
   },
   title: {
     fontSize: 25,
-    fontWeight: "800",
-    color: "#28213b",
-    marginTop: 5,
-    letterSpacing: -0.7,
+    fontWeight: "900",
+    color: "#182235",
+    marginTop: 3,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    backgroundColor: "#f0eafa",
-    borderRadius: 14,
+    minWidth: 50,
+    minHeight: 50,
+    backgroundColor: "#ece8fa",
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
   welcome: {
-    marginHorizontal: 20,
-    borderRadius: 23,
-    backgroundColor: "#eee7fb",
-    padding: 20,
+    marginHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: "#e9e5fb",
+    padding: 18,
     flexDirection: "row",
     alignItems: "center",
-    gap: 13,
+    gap: 12,
   },
-  welcomeName: { fontSize: 22, fontWeight: "800", color: "#3b2c52" },
-  welcomeText: { color: "#9583ad", lineHeight: 21, fontSize: 12, marginTop: 7 },
+  welcomeName: { fontSize: 23, fontWeight: "900", color: "#2c2450" },
+  welcomeText: { color: "#50476c", lineHeight: 21, fontSize: 14, marginTop: 5 },
   truck: {
-    width: 65,
-    height: 65,
-    backgroundColor: "#e4d8f9",
-    borderRadius: 20,
+    width: 58,
+    height: 58,
+    backgroundColor: "#d8cff5",
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  section: { flexDirection: "row", alignItems: "center", padding: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: "800", color: "#383047" },
-  muted: { color: "#9b90a6", fontSize: 11, lineHeight: 19, marginTop: 4 },
-  list: { paddingHorizontal: 20, paddingBottom: 25 },
-  card: {
-    padding: 17,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#eae4f2",
-    borderRadius: 21,
-    marginBottom: 16,
-  },
-  cardHeader: {
+  viewTabs: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 9,
+    backgroundColor: "#e9eaf1",
+    borderRadius: 16,
+    padding: 4,
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 4,
   },
-  orderNumber: { color: "#8a7b9d", fontSize: 11, fontWeight: "700" },
-  status: {
-    color: "#7c3aed",
-    backgroundColor: "#f2ebfc",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 9,
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "capitalize",
-  },
-  delivered: { backgroundColor: "#ecfdf5", color: "#15803d" },
-  customer: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#3c314c",
-    marginTop: 18,
-  },
-  addressRow: { flexDirection: "row", gap: 7, marginTop: 10 },
-  address: { flex: 1, fontSize: 12, color: "#9b90a6", lineHeight: 20 },
-  amountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginVertical: 17,
-    paddingTop: 13,
-    borderTopWidth: 1,
-    borderTopColor: "#f3eef7",
-  },
-  payment: {
-    color: "#a496b3",
-    fontSize: 10,
-    marginTop: 4,
-    textTransform: "capitalize",
-  },
-  amount: {
-    maxWidth: "55%",
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#7c3aed",
-    letterSpacing: -0.6,
-  },
-  actions: { flexDirection: "row", gap: 8 },
-  secondary: {
+  viewTab: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
     borderRadius: 12,
-    backgroundColor: "#f6f2fc",
+  },
+  viewTabActive: { backgroundColor: "#553bb5" },
+  viewTabText: { color: "#434b5d", fontWeight: "800", fontSize: 13 },
+  activeTabText: { color: "#fff" },
+  section: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingTop: 22,
+    paddingBottom: 13,
+    gap: 10,
+  },
+  sectionTitle: { fontSize: 22, fontWeight: "900", color: "#182235" },
+  muted: { color: "#4f5b6f", fontSize: 13, lineHeight: 20, marginTop: 4 },
+  refreshButton: {
+    minHeight: 50,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    backgroundColor: "#553bb5",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
   },
-  link: { color: "#7c3aed", fontSize: 11, fontWeight: "700" },
-  primary: {
-    backgroundColor: "#7c3aed",
-    borderRadius: 13,
-    padding: 15,
-    marginTop: 12,
+  refreshText: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  tabs: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 8,
+    marginBottom: 12,
   },
-  white: {
-    color: "#fff",
-    fontSize: 12,
-    textAlign: "center",
-    fontWeight: "700",
+  tab: {
+    flex: 1,
+    minHeight: 50,
+    backgroundColor: "#e7e9f0",
+    paddingHorizontal: 3,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  whatsappButton: { backgroundColor: "#edf9f1" },
-  whatsappText: { color: "#16804d", fontSize: 11, fontWeight: "700" },
-  failureButton: {
-    backgroundColor: "#fff3f5",
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 12,
+  activeTab: { backgroundColor: "#553bb5" },
+  tabText: { color: "#30394c", fontSize: 13, fontWeight: "800" },
+  locationBanner: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 13,
+    backgroundColor: "#e7f4ec",
+    borderRadius: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  locationTitle: { color: "#204b38", fontSize: 14, fontWeight: "900" },
+  locationCopy: { color: "#315c48", fontSize: 12, lineHeight: 18, marginTop: 3 },
+  stopLocation: {
+    minHeight: 42,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderRadius: 11,
+  },
+  stopLocationText: { color: "#245b43", fontSize: 13, fontWeight: "900" },
+  deliveryList: { flex: 1 },
+  deliveryListContent: { paddingBottom: 28 },
+  card: {
+    padding: 17,
+    marginHorizontal: 16,
+    marginTop: 5,
+    marginBottom: 13,
+    backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#f8dfe6",
+    borderColor: "#dfe4ed",
+    borderRadius: 20,
+    elevation: 2,
   },
-  failureText: {
-    color: "#c45b78",
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cardEyebrow: { color: "#5b6474", fontSize: 11, fontWeight: "900", letterSpacing: 0.8 },
+  orderNumber: { color: "#333d50", fontSize: 13, fontWeight: "800", marginTop: 3 },
+  status: {
+    maxWidth: "52%",
+    color: "#3c3470",
+    backgroundColor: "#ece9fb",
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 10,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "900",
     textAlign: "center",
   },
-  dim: { opacity: 0.5 },
-  stageNote: { color: "#a59aaf", fontSize: 11, lineHeight: 19, marginTop: 14 },
-  attempt: {
-    backgroundColor: "#fff8ed",
+  delivered: { backgroundColor: "#e1f4e8", color: "#145a34" },
+  customer: { fontSize: 21, fontWeight: "900", color: "#182235", marginTop: 17 },
+  addressRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10 },
+  address: { flex: 1, fontSize: 15, color: "#344156", lineHeight: 22 },
+  amountPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 7,
+    padding: 14,
+    borderRadius: 15,
+    backgroundColor: "#f0edfb",
+  },
+  amountLabel: { color: "#40365f", fontSize: 13, fontWeight: "900" },
+  payment: { color: "#3f4b5d", fontSize: 12, lineHeight: 18, marginTop: 5 },
+  amount: { maxWidth: "48%", fontSize: 22, fontWeight: "900", color: "#5036ae", textAlign: "right" },
+  stepLabel: { color: "#465166", fontSize: 11, fontWeight: "900", letterSpacing: 0.5, marginTop: 13, marginBottom: 8 },
+  actions: { flexDirection: "row", gap: 9 },
+  secondary: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 13,
+    backgroundColor: "#efedfa",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  link: { color: "#3f2e91", fontSize: 14, fontWeight: "900" },
+  primary: {
+    minHeight: 56,
+    justifyContent: "center",
+    backgroundColor: "#4c32a5",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 10,
+  },
+  white: { color: "#fff", fontSize: 16, textAlign: "center", fontWeight: "900" },
+  whatsappButton: { backgroundColor: "#e5f4e9" },
+  whatsappText: { color: "#145b38", fontSize: 14, fontWeight: "900" },
+  gpsButton: {
+    minHeight: 50,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#e7f4ec",
     padding: 12,
     borderRadius: 12,
-    marginTop: 12,
   },
-  attemptTitle: {
-    color: "#ab7b36",
-    fontWeight: "600",
-    fontSize: 11,
-    textTransform: "capitalize",
+  failureButton: {
+    minHeight: 48,
+    justifyContent: "center",
+    backgroundColor: "#fff0e8",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 9,
   },
-  pagination: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    backgroundColor: "#fff",
-  },
-  pageButton: { padding: 13, backgroundColor: "#f0eafa", borderRadius: 12 },
-  loader: { marginTop: 35 },
-  notice: {
-    marginHorizontal: 20,
-    marginBottom: 13,
-    color: "#15803d",
-    lineHeight: 21,
-    fontSize: 12,
-  },
-  error: {
-    marginHorizontal: 20,
-    marginBottom: 15,
-    color: "#be123c",
-    lineHeight: 21,
-    fontSize: 12,
-  },
-  empty: { paddingVertical: 45, alignItems: "center" },
-  emptyTitle: {
-    color: "#70617e",
-    fontSize: 17,
-    fontWeight: "700",
-    marginTop: 18,
-  },
+  failureText: { color: "#84350d", fontSize: 14, fontWeight: "900", textAlign: "center" },
+  waitingNote: { color: "#354256", backgroundColor: "#f1f3f7", padding: 13, borderRadius: 12, fontSize: 13, lineHeight: 20, marginTop: 12 },
+  warehouseButton: { minHeight: 48, justifyContent: "center", backgroundColor: "#fff4dd", padding: 12, borderRadius: 12, marginTop: 10 },
+  warehouseText: { color: "#684b13", fontSize: 13, fontWeight: "900", textAlign: "center" },
+  dim: { opacity: 0.5 },
+  pagination: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, marginHorizontal: 16, marginTop: 3 },
+  pageButton: { minWidth: 92, minHeight: 48, alignItems: "center", justifyContent: "center", paddingHorizontal: 12, borderRadius: 12, backgroundColor: "#553bb5" },
+  disabledButton: { opacity: 0.42 },
+  pageButtonText: { color: "#fff", fontSize: 13, fontWeight: "900" },
+  pageCount: { flex: 1, color: "#334155", fontSize: 13, fontWeight: "800", textAlign: "center" },
+  listEndSpace: { height: 24 },
+  loader: { marginVertical: 32 },
+  notice: { marginHorizontal: 16, marginBottom: 10, padding: 13, borderRadius: 12, backgroundColor: "#e5f4e9", color: "#145b38", fontSize: 14, lineHeight: 20, fontWeight: "700" },
+  error: { marginHorizontal: 16, marginBottom: 12, padding: 13, borderRadius: 12, backgroundColor: "#fde9e9", color: "#8a2020", fontSize: 14, lineHeight: 21, fontWeight: "700" },
+  empty: { margin: 16, padding: 24, alignItems: "center", backgroundColor: "#fff", borderRadius: 18, borderWidth: 1, borderColor: "#dfe4ed" },
+  emptyIcon: { width: 64, height: 64, borderRadius: 20, backgroundColor: "#ece9fb", alignItems: "center", justifyContent: "center" },
+  emptyTitle: { color: "#182235", fontSize: 20, fontWeight: "900", marginTop: 14 },
+  emptyCopy: { color: "#3d485a", fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 7 },
 });

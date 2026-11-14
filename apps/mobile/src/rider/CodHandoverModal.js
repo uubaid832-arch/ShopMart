@@ -193,7 +193,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
         >
           <View style={styles.header}>
             <Text style={styles.title}>
-              {detailId ? "Handover details" : "COD cash handovers"}
+              {detailId ? "Cash report" : "Cash for the shop"}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -207,8 +207,8 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
           {!detailId && (
             <View style={styles.tabs}>
               {[
-                ["report", "Report handover"],
-                ["history", "History"],
+                ["report", "Give cash"],
+                ["history", "Past reports"],
               ].map(([value, label]) => (
                 <Pressable
                   key={value}
@@ -269,7 +269,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                       Administrator note: {detail.data.handover.decisionNote}
                     </Text>
                   ) : null}
-                  <Text style={styles.heading}>Included collections</Text>
+                    <Text style={styles.heading}>Orders in this report</Text>
                   {detail.data.collections.map((item) => (
                     <View key={item.id} style={styles.card}>
                       <Text style={styles.name}>{item.orderNumber}</Text>
@@ -293,9 +293,8 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                 </Pressable>
                 {tab === "report" && (
                   <Text style={styles.muted}>
-                    Select the completed COD orders whose cash you physically
-                    handed over. Each collection is reported in full. Select up
-                    to 100 orders across pages. This does not transfer money.
+                    Choose the orders whose cash you gave to the shop. Choose
+                    each order in full. You can choose up to 100 orders.
                   </Text>
                 )}
                 {!current ? (
@@ -307,8 +306,8 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                     {!data.items.length && (
                       <Text style={styles.muted}>
                         {tab === "report"
-                          ? "No unreported COD collections on this page."
-                          : "No handover reports yet."}
+                          ? "No cash to report on this page."
+                          : "No past cash reports yet."}
                       </Text>
                     )}
                     {data.items.map((item) =>
@@ -386,7 +385,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                 {tab === "report" && (
                   <View style={styles.summary}>
                     <Text style={styles.heading}>
-                      {choices.length} order(s) selected
+                      {choices.length} orders selected
                     </Text>
                     <Text style={styles.amount}>{money(total)}</Text>
                     <TextInput
@@ -411,7 +410,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                           ? "Reporting..."
                           : locked
                             ? "Retry confirmation"
-                            : "Report cash handed over"}
+                          : "Report cash given to the shop"}
                       </Text>
                     </Pressable>
                     {!locked && choices.length > 0 && (
@@ -424,8 +423,7 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
                       </Pressable>
                     )}
                     <Text style={styles.muted}>
-                      Your outstanding balance changes only when the
-                      administrator confirms receipt.
+                      The amount is updated after the shop checks the cash.
                     </Text>
                   </View>
                 )}
@@ -438,59 +436,66 @@ export default function CodHandoverModal({ session, onClose, onChanged }) {
   );
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#fff" },
-  header: { padding: 20, flexDirection: "row", alignItems: "center", gap: 10 },
-  title: { flex: 1, fontSize: 22, fontWeight: "800", color: "#473050" },
+  screen: { flex: 1, backgroundColor: "#f4f6fb" },
+  header: { padding: 18, flexDirection: "row", alignItems: "center", gap: 10 },
+  title: { flex: 1, fontSize: 23, fontWeight: "900", color: "#182235" },
   button: {
-    padding: 13,
-    backgroundColor: "#f3ecfb",
-    borderRadius: 12,
+    minHeight: 48,
+    minWidth: 78,
+    paddingHorizontal: 13,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ece9fb",
+    borderRadius: 13,
     alignSelf: "flex-start",
   },
-  link: { color: "#8b55cc", fontWeight: "700", fontSize: 12 },
-  tabs: { flexDirection: "row", paddingHorizontal: 20, gap: 10 },
+  link: { color: "#3f2e91", fontWeight: "900", fontSize: 14 },
+  tabs: { flexDirection: "row", paddingHorizontal: 16, gap: 10 },
   tab: {
     flex: 1,
+    minHeight: 50,
     alignItems: "center",
-    padding: 14,
-    backgroundColor: "#f3ecfb",
-    borderRadius: 13,
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    backgroundColor: "#e7e9f0",
+    borderRadius: 14,
   },
-  activeTab: { backgroundColor: "#7c3aed" },
+  activeTab: { backgroundColor: "#553bb5" },
   white: {
     color: "#fff",
-    fontWeight: "700",
-    fontSize: 12,
+    fontWeight: "900",
+    fontSize: 15,
     textAlign: "center",
   },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 32 },
   refresh: { alignSelf: "flex-end", marginBottom: 12 },
-  muted: { color: "#a28eac", fontSize: 11, lineHeight: 21, marginTop: 8 },
+  muted: { color: "#344156", fontSize: 14, lineHeight: 22, marginTop: 8 },
   card: {
     padding: 16,
     borderWidth: 1,
-    borderColor: "#eae1f3",
+    borderColor: "#dfe4ed",
     borderRadius: 16,
     marginTop: 12,
+    backgroundColor: "#fff",
   },
-  selected: { borderColor: "#9868d8", backgroundColor: "#f5effd" },
-  name: { color: "#7c6590", fontWeight: "700", fontSize: 12 },
-  value: { color: "#8c52cb", fontWeight: "800", fontSize: 20, marginTop: 8 },
+  selected: { borderColor: "#553bb5", backgroundColor: "#f0edfb" },
+  name: { color: "#182235", fontWeight: "900", fontSize: 15 },
+  value: { color: "#5036ae", fontWeight: "900", fontSize: 21, marginTop: 8 },
   status: {
-    color: "#a083b7",
-    fontWeight: "700",
-    fontSize: 11,
+    color: "#3f2e91",
+    fontWeight: "900",
+    fontSize: 13,
     marginVertical: 10,
   },
-  heading: { color: "#7e618e", fontSize: 14, fontWeight: "700", marginTop: 15 },
+  heading: { color: "#182235", fontSize: 16, fontWeight: "900", marginTop: 15 },
   amount: {
-    color: "#7c3aed",
+    color: "#5036ae",
     fontSize: 29,
-    fontWeight: "800",
+    fontWeight: "900",
     marginVertical: 12,
   },
   summary: {
-    backgroundColor: "#faf6ff",
+    backgroundColor: "#f0edfb",
     padding: 17,
     borderRadius: 18,
     marginTop: 20,
@@ -498,18 +503,20 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 80,
     borderWidth: 1,
-    borderColor: "#e7daf1",
+    borderColor: "#cfd5df",
     borderRadius: 12,
     padding: 12,
-    color: "#725781",
+    color: "#182235",
     backgroundColor: "#fff",
     marginTop: 10,
     textAlignVertical: "top",
   },
   primary: {
     padding: 16,
-    backgroundColor: "#7c3aed",
-    borderRadius: 13,
+    minHeight: 54,
+    justifyContent: "center",
+    backgroundColor: "#4c32a5",
+    borderRadius: 14,
     marginVertical: 15,
   },
   dim: { opacity: 0.5 },
@@ -519,7 +526,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 16,
   },
-  notice: { color: "#398d5e", lineHeight: 21, marginBottom: 12, fontSize: 12 },
-  error: { color: "#be123c", lineHeight: 21, marginBottom: 12, fontSize: 12 },
+  notice: { color: "#145b38", backgroundColor: "#e5f4e9", padding: 13, borderRadius: 12, lineHeight: 21, marginBottom: 12, fontSize: 14 },
+  error: { color: "#8a2020", backgroundColor: "#fde9e9", padding: 13, borderRadius: 12, lineHeight: 21, marginBottom: 12, fontSize: 14 },
   loader: { marginVertical: 25 },
 });

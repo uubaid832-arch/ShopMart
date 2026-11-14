@@ -38,24 +38,24 @@ export default function RiderProfile({
   const actions = [
     {
       icon: "user",
-      title: "Personal details",
-      description: "Update your name and phone number",
+      title: "My name and phone",
+      description: "Change your contact details",
       action: () => setProfileOpen(true),
       disabled: typeof onUpdateUser !== "function",
     },
     {
       icon: "lock",
-      title: "Change password",
-      description: "Protect your rider account",
+      title: "Change my password",
+      description: "Use a new password to sign in",
       action: () => setPasswordOpen(true),
       disabled: typeof onPasswordChanged !== "function",
     },
     {
       icon: "fingerprint",
-      title: "Fingerprint & security",
+      title: "Fingerprint lock",
       description: security?.enabled
-        ? "Biometric unlock is enabled on this device"
-        : "Enable biometric unlock on this device",
+        ? "On for this phone"
+        : "Turn on fingerprint sign-in",
       action: () => setBiometricOpen(true),
       disabled: !security,
     },
@@ -69,16 +69,14 @@ export default function RiderProfile({
               {user.name?.trim().charAt(0).toUpperCase() || "R"}
             </Text>
           </View>
-          <Text style={styles.name}>{user.name}</Text>
+        <Text style={styles.name}>{user.name || "Rider"}</Text>
           <Text style={styles.email}>{user.email}</Text>
           <View style={styles.role}>
             <Text style={styles.roleText}>RIDER ACCOUNT</Text>
           </View>
         </View>
-        <Text style={styles.sectionTitle}>Account settings</Text>
-        <Text style={styles.sectionCaption}>
-          Your details and security, in one place.
-        </Text>
+        <Text style={styles.sectionTitle}>My account</Text>
+        <Text style={styles.sectionCaption}>Choose what you want to change.</Text>
         {actions.map((item) => (
           <Pressable
             key={item.icon}
@@ -104,9 +102,7 @@ export default function RiderProfile({
         <View style={styles.info}>
           <Text style={styles.infoTitle}>Keep your account safe</Text>
           <Text style={styles.description}>
-            Never share your password or email verification code. Changing your
-            password requires signing in again. Your phone handles biometric
-            verification.
+            Do not tell anyone your password or email code. Keep your phone with you.
           </Text>
         </View>
       </ScrollView>
@@ -139,56 +135,56 @@ export default function RiderProfile({
   );
 }
 const styles = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 35 },
+  content: { paddingHorizontal: 16, paddingTop: 18, paddingBottom: 32 },
   profileCard: {
-    padding: 23,
-    borderRadius: 24,
-    backgroundColor: "#f3ebfc",
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: "#e9e5fb",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e9dcf7",
+    borderColor: "#d8cff5",
   },
   avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 26,
-    backgroundColor: "#e2d2f4",
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: "#d8cff5",
     borderWidth: 3,
     borderColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
   },
-  initial: { fontSize: 32, fontWeight: "800", color: "#8f54c5" },
+  initial: { fontSize: 32, fontWeight: "900", color: "#3f2e91" },
   name: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#49314f",
+    fontSize: 23,
+    fontWeight: "900",
+    color: "#182235",
     textAlign: "center",
     marginTop: 15,
   },
-  email: { fontSize: 12, color: "#82718b", marginTop: 7, textAlign: "center" },
+  email: { fontSize: 14, color: "#334155", marginTop: 7, textAlign: "center" },
   role: {
-    backgroundColor: "#eaddf9",
+    backgroundColor: "#d8cff5",
     paddingVertical: 7,
     paddingHorizontal: 14,
     borderRadius: 20,
     marginTop: 14,
   },
   roleText: {
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    color: "#a17bb8",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1,
+    color: "#3f2e91",
   },
   sectionTitle: {
-    fontSize: 19,
-    fontWeight: "800",
-    color: "#49314f",
+    fontSize: 21,
+    fontWeight: "900",
+    color: "#182235",
     marginTop: 27,
   },
   sectionCaption: {
-    fontSize: 11,
-    color: "#82718b",
+    fontSize: 14,
+    color: "#3d485a",
     marginTop: 5,
     marginBottom: 17,
   },
@@ -196,10 +192,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 15,
+    minHeight: 76,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#eee3f5",
-    borderRadius: 18,
+    borderColor: "#dfe4ed",
+    borderRadius: 16,
     backgroundColor: "#fff",
     marginBottom: 12,
   },
@@ -207,20 +204,20 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 15,
-    backgroundColor: "#f5edfc",
+    backgroundColor: "#ece9fb",
     alignItems: "center",
     justifyContent: "center",
   },
   copy: { flex: 1 },
-  actionTitle: { color: "#5e466c", fontSize: 13, fontWeight: "700" },
-  description: { color: "#82718b", fontSize: 11, lineHeight: 19, marginTop: 5 },
+  actionTitle: { color: "#182235", fontSize: 15, fontWeight: "900" },
+  description: { color: "#3d485a", fontSize: 13, lineHeight: 20, marginTop: 5 },
   info: {
     padding: 18,
-    backgroundColor: "#f7f3fb",
+    backgroundColor: "#eef0f4",
     borderRadius: 18,
     marginTop: 12,
   },
-  infoTitle: { color: "#725481", fontSize: 12, fontWeight: "700" },
+  infoTitle: { color: "#182235", fontSize: 15, fontWeight: "900" },
   pressed: { opacity: 0.7 },
   dim: { opacity: 0.45 },
 });

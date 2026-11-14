@@ -3,7 +3,7 @@ import { useSession } from "../auth/useSession";
 import {
   getAdminReturns,
   updateAdminReturnStatus,
-  recordCodRefund,
+  recordManualRefund,
   refundSafepay,
 } from "../../api/adminReturns";
 import CustomerContact from "./CustomerContact";
@@ -295,7 +295,7 @@ export default function AdminReturns() {
                 </div>
 
                 <p className="break-all text-xs text-slate-400">
-                  Order {request.orderNumber}
+                  {request.orderNumber}
                 </p>
 
                 <p className="whitespace-pre-wrap break-words rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
@@ -380,14 +380,14 @@ export default function AdminReturns() {
 
                 {request.status === "APPROVED" &&
                   request.refundStatus === "NOT_INITIATED" &&
-                  request.paymentMethod === "COD" && (
+                  ["COD", "BANK_TRANSFER"].includes(request.paymentMethod) && (
                     <button
                       type="button"
                       disabled={Boolean(savingId)}
                       onClick={() => setRefundRequest(request)}
                       className="mt-3 rounded-xl border-0 bg-emerald-600 px-4 py-3 text-sm font-semibold text-white enabled:hover:bg-emerald-700 disabled:opacity-50"
                     >
-                      Record COD refund
+                      Record {request.paymentMethod === "BANK_TRANSFER" ? "bank transfer" : "COD"} refund
                     </button>
                   )}
                 {request.status === "APPROVED" && request.paymentProvider === "SAFEPAY" && request.refundStatus !== "REFUNDED" && (
@@ -440,7 +440,7 @@ export default function AdminReturns() {
           key={refundRequest.id}
           request={refundRequest}
           onSave={async (reference) => {
-            await recordCodRefund(token, refundRequest.id, reference);
+            await recordManualRefund(token, refundRequest.id, reference);
             setFeedback("Refund recorded.");
             setReload((current) => current + 1);
           }}

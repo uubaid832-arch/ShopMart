@@ -55,7 +55,7 @@ export const getAdminReturns = (token, page, signal) =>
 export const updateAdminReturnStatus = (token, id, status, rejectionReason) =>
   adminReturnRequest(token, `/${id}/status`, { status, rejectionReason });
 
-export async function recordCodRefund(token, id, reference) {
+export async function recordManualRefund(token, id, reference) {
   const csrfResponse = await fetch("/api/auth/csrf", {
     credentials: "same-origin",
     cache: "no-store",
@@ -80,23 +80,12 @@ export async function recordCodRefund(token, id, reference) {
   });
 
   if (!response.ok) {
-    const problem = await response.json().catch(() => null);
-    const serverMessage =
-      typeof problem?.detail === "string"
-        ? problem.detail
-        : typeof problem?.message === "string"
-          ? problem.message
-          : "";
-    if (serverMessage.trim()) {
-      throw new Error(serverMessage);
-    }
-
     const messages = {
       400: "Enter a receipt reference of up to 200 characters.",
       401: "Please sign in again.",
       403: "Access denied. Check your administrator sign-in.",
       404: "Return request not found.",
-      409: "The COD is still held by rider.",
+      409: "The refund cannot be recorded in its current state. Refresh the request.",
     };
 
     throw new Error(
@@ -106,26 +95,17 @@ export async function recordCodRefund(token, id, reference) {
   }
 }
 
+// Backward-compatible export for callers that still use the COD-specific name.
+export const recordCodRefund = recordManualRefund;
+
 export async function refundSafepay(token, id) {
-  const csrfResponse = await fetch("/api/auth/csrf", {
-    credentials: "same-origin",
-    cache: "no-store",
-  });
-  if (!csrfResponse.ok)
-    throw new Error("Could not prepare the secure request.");
+  const csrfResponse = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });
+  if (!csrfResponse.ok) throw new Error("Could not prepare the secure request.");
   const csrf = await csrfResponse.json();
   const response = await fetch(`/api/admin/returns/${id}/safepay-refund`, {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      [csrf.headerName]: csrf.token,
-    },
+    method: "POST", credentials: "same-origin", cache: "no-store",
+    headers: { Authorization: `Bearer ${token}`, [csrf.headerName]: csrf.token },
   });
-  if (!response.ok)
-    throw new Error(
-      "Refund not confirmed. Refresh the list. Check approval, payment eligibility and sandbox configuration; an unresolved refund must be reconciled before retrying.",
-    );
+  if (!response.ok) throw new Error("Refund not confirmed. Refresh the list. Check approval, payment eligibility and sandbox configuration; an unresolved refund must be reconciled before retrying.");
   return response.json();
 }

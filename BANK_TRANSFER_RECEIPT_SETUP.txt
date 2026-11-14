@@ -1,0 +1,12 @@
+ShopMart bank transfer receipt confirmation update
+
+Flow
+- The customer order remains PENDING. The displayed bank information is fictional demo information and cannot receive money.
+- An admin reviews the receipt and selects “Confirm receipt received”. This explicit manual action records payment_status=PAID in ShopMart. It does not check a bank or verify funds.
+- The admin separately selects “Confirm order”; then existing rider assignment and dispatch steps follow.
+- Customer and rider views show “Bank transfer received”; riders are instructed not to collect cash.
+- COD behavior is unchanged.
+
+No new database table or column is required. Migration 020_bank_transfer_orders.sql is included to allow BANK_TRANSFER as a payment method. If it has already been applied in Neon, do not rerun it.
+
+Overlay the archive contents onto your ShopMart repository root and review `git diff` before committing.
