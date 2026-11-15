@@ -114,7 +114,7 @@ export default function ProductDetails({
   if (!product) return null;
 
   const outOfStock = product.stock <= 0;
-  const atLimit = quantity >= product.stock;
+  const atLimit = quantity >= Math.min(product.stock, 5);
 
   const facts = [
     [text("Category", "قسم"), product.category],
@@ -124,7 +124,6 @@ export default function ProductDetails({
         ? text("Out of stock", "اسٹاک ختم")
         : text("In stock", "اسٹاک میں موجود"),
     ],
-    [text("Available quantity", "دستیاب مقدار"), product.stock],
     [text("In your cart", "آپ کی ٹوکری میں"), quantity],
   ];
 
@@ -204,7 +203,7 @@ export default function ProductDetails({
             {outOfStock
               ? text("Out of stock", "اسٹاک ختم")
               : atLimit
-                ? text("Stock limit reached", "دستیاب مقدار کی حد پوری")
+                ? text("Maximum 5 per customer", "ایک صارف زیادہ سے زیادہ 5 خرید سکتا ہے")
                 : text("＋ Add to cart", "＋ ٹوکری میں شامل کریں")}
           </button>
 

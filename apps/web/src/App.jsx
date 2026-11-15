@@ -207,7 +207,7 @@ function ProductCard({
   const [failedImages, setFailedImages] = useState([]);
 
   const outOfStock = product.stock <= 0;
-  const atLimit = quantity >= product.stock;
+  const atLimit = quantity >= Math.min(product.stock, 5);
 
   const colors = {
     lavender: "bg-[#eeebfc] text-[#51478a]",
@@ -359,7 +359,7 @@ function ProductCard({
             <bdi>{formatPrice(product.price)}</bdi>
           </p>
           <span className="text-xs text-slate-500">
-            {text(`${product.stock} available`, `${product.stock} دستیاب`)}
+            {text("In stock", "اسٹاک میں موجود")}
           </span>
         </div>
 
@@ -373,7 +373,9 @@ function ProductCard({
           {outOfStock
             ? text("Out of stock", "اسٹاک ختم")
             : atLimit
-              ? text("Stock limit reached", "دستیاب مقدار کی حد پوری")
+              ? quantity >= 5
+                ? text("Maximum 5 per customer", "ایک صارف زیادہ سے زیادہ 5 خرید سکتا ہے")
+                : text("Stock limit reached", "دستیاب مقدار کی حد پوری")
               : text("＋ Add to cart", "＋ ٹوکری میں شامل کریں")}
         </button>
 
@@ -580,7 +582,7 @@ function Storefront({ products, onRatingSummaryChange }) {
     const quantity =
       cart.items.find((item) => item.id === product.id)?.quantity ?? 0;
 
-    if (product.stock <= 0 || quantity >= product.stock) return;
+    if (product.stock <= 0 || quantity >= Math.min(product.stock, 5)) return;
 
     cart.addItem(product);
     setNotice({ name: product.name, key: Date.now() });
@@ -675,6 +677,7 @@ function Storefront({ products, onRatingSummaryChange }) {
         dir={direction}
         className="mx-auto max-w-7xl scroll-mt-48 px-4 lg:px-6"
       >
+        {!query && (
         <section
           aria-labelledby="hero-title"
           className="relative my-8 grid overflow-hidden rounded-3xl border border-solid border-violet-200 bg-linear-to-br from-violet-50 to-violet-200 p-6 sm:p-10 lg:grid-cols-2 lg:p-14"
@@ -749,6 +752,7 @@ function Storefront({ products, onRatingSummaryChange }) {
             </div>
           </div>
         </section>
+        )}
 
         <section
           id="products"

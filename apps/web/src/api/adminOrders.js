@@ -85,10 +85,14 @@ async function adminRequest(path, accessToken, { signal, status, method, values 
   return response.json();
 }
 
-export async function getAdminOrders(accessToken, page, signal, size = 20) {
-  const data = await adminRequest(`?page=${page}&size=${size}`, accessToken, {
+export async function getAdminOrders(accessToken, page, signal, size = 20, search = "") {
+  const data = await adminRequest(
+    `?page=${page}&size=${size}&search=${encodeURIComponent(search.trim())}`,
+    accessToken,
+    {
     signal,
-  });
+    },
+  );
 
   return {
     ...data,

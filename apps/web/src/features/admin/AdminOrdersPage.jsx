@@ -16,6 +16,7 @@ export default function AdminOrdersPage() {
 
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+  const [search, setSearch] = useState("");
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -26,7 +27,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    getAdminOrders(accessToken, page, controller.signal, pageSize)
+    getAdminOrders(accessToken, page, controller.signal, pageSize, search)
       .then((data) => {
         if (controller.signal.aborted) return;
 
@@ -41,6 +42,7 @@ export default function AdminOrdersPage() {
           token: accessToken,
           page,
           pageSize,
+          search,
           reload,
           data,
           error: "",
@@ -52,6 +54,7 @@ export default function AdminOrdersPage() {
             token: accessToken,
             page,
             pageSize,
+            search,
             reload,
             data: null,
             error: error.message,
@@ -60,7 +63,7 @@ export default function AdminOrdersPage() {
       });
 
     return () => controller.abort();
-  }, [accessToken, page, pageSize, reload]);
+  }, [accessToken, page, pageSize, search, reload]);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -96,6 +99,7 @@ export default function AdminOrdersPage() {
     result?.token === accessToken &&
     result?.page === page &&
     result?.pageSize === pageSize &&
+    result?.search === search &&
     result?.reload === reload;
 
   const loading = !current;
@@ -147,6 +151,12 @@ export default function AdminOrdersPage() {
     <div className="grid gap-4">
       <AdminOrders
         orders={data?.items ?? []}
+        totalItems={totalItems}
+        search={search}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(0);
+        }}
         loading={loading}
         error={error}
         onView={(order) => setSelectedId(order.id)}

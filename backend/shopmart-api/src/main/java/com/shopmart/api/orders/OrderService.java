@@ -100,6 +100,11 @@ public class OrderService {
         SortedMap<UUID, Integer> quantities = new TreeMap<>();
 
         for (ItemRequest item : request.items()) {
+            if (item.quantity() > 5) {
+                throw failure(
+                        HttpStatus.BAD_REQUEST,
+                        "You can buy a maximum of 5 units of each product.");
+            }
             if (quantities.putIfAbsent(
                     item.productId(),
                     item.quantity()) != null) {
@@ -162,10 +167,6 @@ public class OrderService {
 
             var product = products.get(0);
             int quantity = entry.getValue();
-            if (quantity < 1 || quantity > 5) {
-                throw failure(HttpStatus.BAD_REQUEST,
-                    "You can purchase a maximum of 5 units per product.");
-            }
 
             if (!Boolean.TRUE.equals(product.get("active"))
                     || !"PKR".equals(product.get("currency"))

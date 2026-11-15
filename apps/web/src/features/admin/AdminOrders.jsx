@@ -24,30 +24,23 @@ const formatPrice = (amount, currency = "PKR") =>
 
 export default function AdminOrders({
   orders = [],
+  totalItems = 0,
+  search = "",
+  onSearch,
   loading = false,
   error = "",
   onView,
   onManage,
 }) {
-  const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
-  const query = search.trim().toLowerCase();
-
-  const filtered = orders.filter((order) => {
-    const matchesSearch =
-      `${order.orderNumber ?? order.id} ${order.customerName ?? ""}`
-        .toLowerCase()
-        .includes(query);
-
-    return matchesSearch && (status === "All" || order.status === status);
-  });
+  const filtered = orders.filter((order) => status === "All" || order.status === status);
 
   return (
     <div className="grid gap-5">
       <header>
         <h1 className="m-0 text-3xl font-bold">Orders</h1>
         <p className="mb-0 mt-2 text-sm text-slate-500">
-          Review customer orders. Search and filters apply to this page.
+          Search across all orders, then filter the results by status.
         </p>
       </header>
 
@@ -57,7 +50,7 @@ export default function AdminOrders({
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => onSearch?.(event.target.value)}
             placeholder="Order number or customer name"
             className="box-border w-full rounded-xl border border-solid border-slate-200 bg-white p-3"
           />
@@ -95,11 +88,13 @@ export default function AdminOrders({
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center">
             <h2 className="m-0 text-lg font-bold">
-              {orders.length ? "No matching orders" : "No orders to display"}
+              {totalItems ? "No orders match this status filter" : search ? "No matching orders" : "No orders to display"}
             </h2>
             <p className="mb-0 mt-2 text-sm text-slate-500">
-              {orders.length
-                ? "Try another search or status."
+              {totalItems
+                ? "Try a different status filter."
+                : search
+                ? "Try a different order number or customer name."
                 : "Customer orders will appear here after checkout."}
             </p>
           </div>

@@ -28,10 +28,10 @@ public class AdminOrderController {
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,
-      @RequestParam(required = false) String q) {
+      @RequestParam(defaultValue = "") String search) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(orders.list(userId(jwt), page, size, q));
+        .body(orders.list(userId(jwt), page, size, search));
   }
 
   @GetMapping("/{id}")

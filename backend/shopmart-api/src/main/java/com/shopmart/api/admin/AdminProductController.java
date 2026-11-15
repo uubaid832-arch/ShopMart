@@ -26,11 +26,12 @@ public class AdminProductController {
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,
-      @RequestParam(required = false) String q,
-      @RequestParam(required = false) UUID categoryId) {
+      @RequestParam(required = false) UUID categoryId,
+      @RequestParam(defaultValue = "false") boolean lowStock,
+      @RequestParam(defaultValue = "") String search) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(products.list(userId(jwt), page, size, categoryId, false, q));
+        .body(products.list(userId(jwt), page, size, categoryId, lowStock, search));
   }
 
   @PostMapping

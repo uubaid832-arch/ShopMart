@@ -79,7 +79,7 @@ export default function WishlistModal({
                 cart.items.find((item) => item.id === product.id)?.quantity ??
                 0;
               const outOfStock = product.stock <= 0;
-              const atLimit = quantity >= product.stock;
+              const atLimit = quantity >= Math.min(product.stock, 5);
 
               return (
                 <li

@@ -150,7 +150,7 @@ export default function CartPanel({
                         `Increase quantity of ${item.name}`,
                         `${item.name} کی مقدار بڑھائیں`,
                       )}
-                      disabled={item.quantity >= item.stock}
+                      disabled={item.quantity >= Math.min(item.stock, 5)}
                       onClick={() =>
                         cart.changeQuantity(item.id, item.quantity + 1)
                       }
@@ -164,12 +164,17 @@ export default function CartPanel({
                   </strong>
                 </div>
 
-                {item.quantity >= item.stock && (
+                  {item.quantity >= Math.min(item.stock, 5) && (
                   <p className="mb-0 mt-2 text-xs text-amber-700">
-                    {text(
-                      "Maximum available quantity reached.",
-                      "دستیاب مقدار کی حد پوری ہو چکی ہے۔",
-                    )}
+                    {item.quantity >= 5
+                      ? text(
+                          "Maximum 5 units per product reached.",
+                          "ایک مصنوع کی زیادہ سے زیادہ مقدار 5 ہے۔",
+                        )
+                      : text(
+                          "Maximum available stock reached.",
+                          "مصنوع کی دستیاب مقدار کی حد پوری ہو گئی ہے۔",
+                        )}
                   </p>
                 )}
               </li>

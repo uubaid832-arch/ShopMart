@@ -381,6 +381,7 @@ export function PagedList({
   filter,
   toolbar,
   serverSearch = false,
+  searchPlaceholder,
 }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
@@ -405,7 +406,7 @@ export function PagedList({
               serverSearch ? "Search all records" : "Search current page"
             }
             placeholder={
-              serverSearch ? "Search name or email" : "Search this page"
+              searchPlaceholder || (serverSearch ? "Search all records" : "Search this page")
             }
             placeholderTextColor={palette.muted}
             value={search}

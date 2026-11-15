@@ -37,21 +37,10 @@ import { setAdminPalette } from "./adminUi";
 import AppearanceModal from "../appearance/AppearanceModal";
 
 let themePalette = {
-  background: "#f8f9fc",
-  surface: "#fff",
-  elevated: "#fff",
-  soft: "#f3f5f8",
-  text: "#17243b",
-  muted: "#718096",
-  border: "#e2e8f0",
-  accent: "#2864d8",
-  accentSoft: "#edf4ff",
-  warning: "#a66b12",
-  warningSoft: "#fff6e2",
-  danger: "#be123c",
-  dangerSoft: "#fff1f2",
-  success: "#2d8b57",
-  successSoft: "#e9f7ef",
+  background: "#f8f9fc", surface: "#fff", elevated: "#fff", soft: "#f3f5f8",
+  text: "#17243b", muted: "#718096", border: "#e2e8f0", accent: "#2864d8",
+  accentSoft: "#edf4ff", warning: "#a66b12", warningSoft: "#fff6e2",
+  danger: "#be123c", dangerSoft: "#fff1f2", success: "#2d8b57", successSoft: "#e9f7ef",
 };
 
 const paths = {
@@ -83,8 +72,7 @@ const paths = {
   search: "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
   lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
-  palette:
-    "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
+  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 function Icon({ name, size = 21, color }) {
   return (
@@ -137,13 +125,7 @@ function Button({
         <Icon
           name={icon}
           size={18}
-          color={
-            danger
-              ? theme.colors.danger
-              : secondary
-                ? theme.colors.accent
-                : "#fff"
-          }
+          color={danger ? theme.colors.danger : secondary ? theme.colors.accent : "#fff"}
         />
       )}
       <Text style={[s.buttonText, secondary && s.link, danger && s.dangerText]}>
@@ -160,10 +142,7 @@ function Status({ value }) {
       : value === "CANCELLED"
         ? { bg: theme.colors.dangerSoft, fg: theme.colors.danger }
         : value === "PENDING"
-          ? {
-              bg: theme.isDark ? "#3b3020" : "#fff5de",
-              fg: theme.colors.warning,
-            }
+          ? { bg: theme.isDark ? "#3b3020" : "#fff5de", fg: theme.colors.warning }
           : { bg: theme.colors.accentSoft, fg: theme.colors.accent };
   return (
     <View style={[s.status, { backgroundColor: tone.bg }]}>
@@ -173,14 +152,10 @@ function Status({ value }) {
 }
 function paymentLabel(order) {
   if (order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO") {
-    return order.paymentStatus === "DEMO_PAID"
-      ? "Paid via Safepay"
-      : readable(order.paymentStatus);
+    return order.paymentStatus === "DEMO_PAID" ? "Paid via Safepay" : readable(order.paymentStatus);
   }
   if (order.paymentMethod === "BANK_TRANSFER") {
-    return order.paymentStatus === "PAID"
-      ? "Bank transfer received"
-      : "Pending receipt confirmation";
+    return order.paymentStatus === "PAID" ? "Bank transfer received" : "Pending receipt confirmation";
   }
   return readable(order.paymentStatus);
 }
@@ -216,12 +191,9 @@ function OrderCard({ order, onPress }) {
           <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
           {order.paymentMethod && (
             <Text style={s.muted}>
-              {order.paymentProvider === "SAFEPAY" ||
-              order.paymentMethod === "DEMO"
-                ? "Safepay (Sandbox)"
-                : order.paymentMethod === "COD"
-                  ? "Cash on delivery"
-                  : readable(order.paymentMethod)}{" "}
+              {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
+                ? "Cash on delivery"
+                : readable(order.paymentMethod)}{" "}
               · {paymentLabel(order)}
             </Text>
           )}
@@ -333,13 +305,12 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
         { text: "Go back", style: "cancel" },
         {
           text: "Confirm receipt",
-          onPress: () =>
-            mutate(
-              `${orderPath}/bank-transfer/confirm`,
-              "POST",
-              undefined,
-              "Receipt confirmed. You can now confirm the order.",
-            ),
+          onPress: () => mutate(
+            `${orderPath}/bank-transfer/confirm`,
+            "POST",
+            undefined,
+            "Receipt confirmed. You can now confirm the order.",
+          ),
         },
       ],
     );
@@ -402,11 +373,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
           </Text>
         ) : null}
         {loading ? (
-          <ActivityIndicator
-            size="large"
-            color={themePalette.accent}
-            style={s.loader}
-          />
+          <ActivityIndicator size="large" color={themePalette.accent} style={s.loader} />
         ) : detail.error ? (
           <ErrorMessage message={detail.error} onRetry={refresh} />
         ) : (
@@ -429,12 +396,9 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                   </Text>
                 )}
                 <Text style={s.muted}>
-                  {order.paymentProvider === "SAFEPAY" ||
-                  order.paymentMethod === "DEMO"
-                    ? "Safepay (Sandbox)"
-                    : order.paymentMethod === "COD"
-                      ? "Cash on delivery"
-                      : readable(order.paymentMethod)}{" "}
+                  {order.paymentProvider === "SAFEPAY" || order.paymentMethod === "DEMO" ? "Safepay (Sandbox)" : order.paymentMethod === "COD"
+                    ? "Cash on delivery"
+                    : readable(order.paymentMethod)}{" "}
                   · {paymentLabel(order)}
                 </Text>
                 <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>
@@ -550,20 +514,13 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                               accessibilityLabel="Choose an active rider"
                               accessibilityState={{ expanded: riderPickerOpen }}
                               disabled={locked}
-                              onPress={() =>
-                                setRiderPickerOpen((open) => !open)
-                              }
+                              onPress={() => setRiderPickerOpen((open) => !open)}
                               style={[s.riderChoice, s.riderSelect]}
                             >
                               <Text style={[s.body, s.grow]}>
-                                {(assignment.data.riders ?? []).find(
-                                  (rider) => rider.id === riderId,
-                                )?.name || "Tap to choose an active rider"}
+                                {(assignment.data.riders ?? []).find((rider) => rider.id === riderId)?.name || "Tap to choose an active rider"}
                               </Text>
-                              <Icon
-                                name={riderPickerOpen ? "up" : "down"}
-                                size={17}
-                              />
+                              <Icon name={riderPickerOpen ? "up" : "down"} size={17} />
                             </Pressable>
                             {riderPickerOpen && (
                               <View style={s.riderPickerMenu}>
@@ -576,64 +533,30 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                                   autoCapitalize="words"
                                   style={s.riderSearch}
                                 />
-                                {(assignment.data.riders ?? [])
-                                  .filter((rider) =>
-                                    String(rider.name || "")
-                                      .toLowerCase()
-                                      .includes(
-                                        riderSearch.trim().toLowerCase(),
-                                      ),
-                                  )
-                                  .map((rider) => (
-                                    <Pressable
-                                      key={rider.id}
-                                      accessibilityRole="radio"
-                                      accessibilityState={{
-                                        checked: riderId === rider.id,
-                                      }}
-                                      disabled={locked}
-                                      onPress={() => {
-                                        setRiderId(rider.id);
-                                        setRiderPickerOpen(false);
-                                        setRiderSearch("");
-                                      }}
-                                      style={[
-                                        s.riderChoice,
-                                        riderId === rider.id && s.riderSelected,
-                                      ]}
-                                    >
-                                      <View
-                                        style={[
-                                          s.radio,
-                                          riderId === rider.id &&
-                                            s.radioSelected,
-                                        ]}
-                                      >
-                                        {riderId === rider.id && (
-                                          <Icon
-                                            name="check"
-                                            size={12}
-                                            color="#fff"
-                                          />
-                                        )}
-                                      </View>
-                                      <Text style={[s.body, s.grow]}>
-                                        {rider.name}
-                                      </Text>
-                                    </Pressable>
-                                  ))}
-                                {(assignment.data.riders ?? []).filter(
-                                  (rider) =>
-                                    String(rider.name || "")
-                                      .toLowerCase()
-                                      .includes(
-                                        riderSearch.trim().toLowerCase(),
-                                      ),
-                                ).length === 0 && (
-                                  <Text style={s.muted}>
-                                    No active rider matches that search.
-                                  </Text>
-                                )}
+                                {(assignment.data.riders ?? []).filter((rider) =>
+                                  String(rider.name || "").toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                                ).map((rider) => (
+                                  <Pressable
+                                    key={rider.id}
+                                    accessibilityRole="radio"
+                                    accessibilityState={{ checked: riderId === rider.id }}
+                                    disabled={locked}
+                                    onPress={() => {
+                                      setRiderId(rider.id);
+                                      setRiderPickerOpen(false);
+                                      setRiderSearch("");
+                                    }}
+                                    style={[s.riderChoice, riderId === rider.id && s.riderSelected]}
+                                  >
+                                    <View style={[s.radio, riderId === rider.id && s.radioSelected]}>
+                                      {riderId === rider.id && <Icon name="check" size={12} color="#fff" />}
+                                    </View>
+                                    <Text style={[s.body, s.grow]}>{rider.name}</Text>
+                                  </Pressable>
+                                ))}
+                                {(assignment.data.riders ?? []).filter((rider) =>
+                                  String(rider.name || "").toLowerCase().includes(riderSearch.trim().toLowerCase()),
+                                ).length === 0 && <Text style={s.muted}>No active rider matches that search.</Text>}
                               </View>
                             )}
                           </>
@@ -693,39 +616,22 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
               {(order.status === "PENDING" || order.status === "CONFIRMED") && (
                 <View style={s.card}>
                   <Text style={s.cardTitle}>Order actions</Text>
-                  {order.paymentMethod === "BANK_TRANSFER" &&
-                  order.paymentStatus === "PENDING" ? (
+                  {order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING" ? (
                     <>
-                      <Text style={s.muted}>
-                        Receipt is pending manual review. This demo does not
-                        connect to a bank.
-                      </Text>
-                      <Button
-                        title="Confirm receipt received"
-                        icon="check"
-                        disabled={locked}
-                        onPress={confirmBankTransferReceipt}
-                      />
+                      <Text style={s.muted}>Receipt is pending manual review. This demo does not connect to a bank.</Text>
+                      <Button title="Confirm receipt received" icon="check" disabled={locked} onPress={confirmBankTransferReceipt} />
                     </>
-                  ) : order.paymentMethod === "BANK_TRANSFER" &&
-                    order.paymentStatus === "PAID" ? (
-                    <Text style={s.success}>
-                      Bank transfer received (admin confirmed).
-                    </Text>
+                  ) : order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID" ? (
+                    <Text style={s.success}>Bank transfer received (admin confirmed).</Text>
                   ) : null}
                   {order.status === "PENDING" && (
                     <>
-                      {!(
-                        order.paymentMethod === "BANK_TRANSFER" &&
-                        order.paymentStatus === "PENDING"
-                      ) && (
-                        <Button
-                          title="Confirm order"
-                          icon="check"
-                          disabled={locked}
-                          onPress={() => changeStatus("CONFIRMED")}
-                        />
-                      )}
+                    {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PENDING") && <Button
+                      title="Confirm order"
+                      icon="check"
+                      disabled={locked}
+                      onPress={() => changeStatus("CONFIRMED")}
+                    />}
                     </>
                   )}
                   {order.status === "CONFIRMED" && (
@@ -743,10 +649,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                       )}
                     </>
                   )}
-                  {!(
-                    order.paymentMethod === "BANK_TRANSFER" &&
-                    order.paymentStatus === "PAID"
-                  ) && (
+                  {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID") && (
                     <Button
                       title="Cancel order"
                       icon="close"
@@ -789,16 +692,11 @@ function OrdersModal({
   const detailBusy = useRef(false);
   const result = useAdminResource(
     session.accessToken,
-    `/orders?page=${page}&size=15`,
+    `/orders?page=${page}&size=15&search=${encodeURIComponent(search.trim())}`,
     revision,
   );
-  const query = search.trim().toLowerCase();
   const items = (result.data?.items || []).filter(
-    (order) =>
-      (status === "ALL" || status === order.status) &&
-      `${order.orderNumber} ${order.customerName}`
-        .toLowerCase()
-        .includes(query),
+    (order) => status === "ALL" || status === order.status,
   );
   function changed() {
     setRevision((v) => v + 1);
@@ -847,9 +745,12 @@ function OrdersModal({
                 <Icon name="search" size={19} color={themePalette.muted} />
                 <TextInput
                   value={search}
-                  onChangeText={setSearch}
-                  accessibilityLabel="Search orders on this page"
-                  placeholder="Search this page"
+                  onChangeText={(value) => {
+                    setSearch(value);
+                    setPage(0);
+                  }}
+                  accessibilityLabel="Search all orders"
+                  placeholder="Order number or customer"
                   placeholderTextColor={themePalette.muted}
                   style={s.input}
                   autoCorrect={false}
@@ -883,7 +784,7 @@ function OrdersModal({
                 ))}
               </ScrollView>
               <Text style={s.muted}>
-                Search and status filters apply to this page.{" "}
+                Search covers all orders; status filters apply to the results.{" "}
                 {result.data
                   ? `${result.data.totalItems} orders in total.`
                   : ""}
@@ -916,7 +817,7 @@ function OrdersModal({
                     <Icon name="box" size={40} />
                     <Text style={s.sectionTitle}>No matching orders</Text>
                     <Text style={s.muted}>
-                      Try another filter or another page.
+                      Try another search or status filter.
                     </Text>
                   </View>
                 }
@@ -954,18 +855,12 @@ function WarehouseAddressSettings({ session }) {
   const { theme } = useMobileAppearance();
   const palette = {
     ...theme.colors,
-    accent:
-      theme.accent === "violet"
-        ? theme.isDark
-          ? "#8db7ff"
-          : "#2864d8"
-        : theme.colors.accent,
-    accentSoft:
-      theme.accent === "violet"
-        ? theme.isDark
-          ? "#1d2d49"
-          : "#edf4ff"
-        : theme.colors.accentSoft,
+    accent: theme.accent === "violet"
+      ? theme.isDark ? "#8db7ff" : "#2864d8"
+      : theme.colors.accent,
+    accentSoft: theme.accent === "violet"
+      ? theme.isDark ? "#1d2d49" : "#edf4ff"
+      : theme.colors.accentSoft,
     warningSoft: theme.isDark ? "#3c3423" : "#fff6e2",
   };
   const [address, setAddress] = useState("");
@@ -1029,9 +924,7 @@ function WarehouseAddressSettings({ session }) {
       <Text style={[s.muted, { marginTop: 8 }]}>
         This address is included in return instructions sent to customers.
       </Text>
-      <Text style={[s.body, { marginTop: 12, marginBottom: 6 }]}>
-        Full address, city, and contact number
-      </Text>
+      <Text style={[s.body, { marginTop: 12, marginBottom: 6 }]}>Full address, city, and contact number</Text>
       <TextInput
         accessibilityLabel="Warehouse return address"
         value={address}
@@ -1046,30 +939,12 @@ function WarehouseAddressSettings({ session }) {
         textAlignVertical="top"
         placeholder="Building and street, area, city, and warehouse phone number"
         placeholderTextColor={palette.muted}
-        style={[
-          s.input,
-          {
-            minHeight: 110,
-            color: palette.text,
-            backgroundColor: palette.elevated,
-            borderColor: palette.border,
-          },
-        ]}
+        style={[s.input, { minHeight: 110, color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
       />
-      {error ? (
-        <Text accessibilityRole="alert" style={s.error}>
-          {error}
-        </Text>
-      ) : null}
+      {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
       {notice ? <Text style={s.success}>{notice}</Text> : null}
       <Button
-        title={
-          loading
-            ? "Loading saved address…"
-            : saving
-              ? "Saving address…"
-              : "Save warehouse address"
-        }
+        title={loading ? "Loading saved address…" : saving ? "Saving address…" : "Save warehouse address"}
         icon="check"
         disabled={loading || saving || address.trim() === savedAddress.trim()}
         onPress={saveAddress}
@@ -1143,16 +1018,7 @@ export default function AdminScreen({
   return (
     <SafeAreaView style={[s.screen, { backgroundColor: palette.background }]}>
       <StatusBar style={theme.isDark ? "light" : "dark"} />
-      <View
-        style={[
-          s.header,
-          s.dashboardHeader,
-          {
-            backgroundColor: palette.surface,
-            borderBottomColor: palette.border,
-          },
-        ]}
-      >
+      <View style={[s.header, s.dashboardHeader, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
         <View style={s.dashboardHeaderMain}>
           <IconButton
             icon="menu"
@@ -1162,9 +1028,7 @@ export default function AdminScreen({
           />
           <View style={s.grow}>
             <Text style={s.eyebrow}>SHOPMART ADMIN</Text>
-            <Text numberOfLines={1} style={s.dashboardTitle}>
-              Dashboard
-            </Text>
+            <Text numberOfLines={1} style={s.dashboardTitle}>Dashboard</Text>
           </View>
         </View>
         <View style={s.dashboardHeaderActions}>
@@ -1227,11 +1091,7 @@ export default function AdminScreen({
         {dashboard.error ? (
           <ErrorMessage message={dashboard.error} onRetry={refresh} />
         ) : dashboard.loading && !data ? (
-          <ActivityIndicator
-            size="large"
-            color={themePalette.accent}
-            style={s.loader}
-          />
+          <ActivityIndicator size="large" color={themePalette.accent} style={s.loader} />
         ) : (
           data && (
             <>
@@ -1239,11 +1099,7 @@ export default function AdminScreen({
                 <View style={s.revenueTop}>
                   <View style={s.inline}>
                     <View style={s.revenueIcon}>
-                      <Icon
-                        name="wallet"
-                        color={themePalette.accent}
-                        size={18}
-                      />
+                      <Icon name="wallet" color={themePalette.accent} size={18} />
                     </View>
                     <Text style={s.revenueLabel}>NET REVENUE</Text>
                   </View>
@@ -1311,7 +1167,7 @@ export default function AdminScreen({
                     label: "Pending orders",
                     value: data.pendingOrders,
                     icon: "clock",
-                    color: themePalette.warningSoft,
+                  color: themePalette.warningSoft,
                     action: () => setOrders({ initialStatus: "PENDING" }),
                   },
                   {
@@ -1526,12 +1382,7 @@ export default function AdminScreen({
                     selected: module === "deliveries",
                     action: () => setModule("deliveries"),
                   },
-                  {
-                    icon: "box",
-                    label: "Preview store",
-                    selected: false,
-                    action: () => onPreviewStore?.(),
-                  },
+                  { icon: "box", label: "Preview store", selected: false, action: () => onPreviewStore?.() },
                   {
                     icon: "returns",
                     label: "Returns & refunds",
@@ -1570,9 +1421,7 @@ export default function AdminScreen({
                     <Icon
                       name={item.icon}
                       size={21}
-                      color={
-                        item.selected ? themePalette.accent : themePalette.muted
-                      }
+                      color={item.selected ? themePalette.accent : themePalette.muted}
                     />
                     <Text
                       style={[
@@ -2082,27 +1931,10 @@ const baseS = StyleSheet.create({
     marginTop: 16,
     marginBottom: 2,
   },
-  riderIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  riderCount: {
-    minWidth: 54,
-    alignItems: "center",
-    paddingVertical: 7,
-    paddingHorizontal: 9,
-    borderRadius: 13,
-  },
+  riderIcon: { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  riderCount: { minWidth: 54, alignItems: "center", paddingVertical: 7, paddingHorizontal: 9, borderRadius: 13 },
   riderCountText: { fontSize: 17, fontWeight: "800" },
-  riderCountLabel: {
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 0.7,
-    marginTop: 2,
-  },
+  riderCountLabel: { fontSize: 7, fontWeight: "800", letterSpacing: 0.7, marginTop: 2 },
   button: {
     backgroundColor: "#7c3aed",
     borderRadius: 14,
@@ -2359,19 +2191,13 @@ const screenStyles = {
   avatarText: (c) => ({ color: c.accent }),
   adminBadge: (c) => ({ backgroundColor: c.accentSoft }),
   accountAction: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
-  dashboardWelcome: (c) => ({
-    backgroundColor: c.accentSoft,
-    borderColor: c.border,
-  }),
+  dashboardWelcome: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.border }),
   hero: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.border }),
   heroIcon: (c) => ({ backgroundColor: c.soft }),
   heroEyebrow: (c) => ({ color: c.accent }),
   heroTitle: (c) => ({ color: c.text }),
   heroBody: (c) => ({ color: c.muted }),
-  cashAlert: (c) => ({
-    backgroundColor: c.warningSoft || c.accentSoft,
-    borderColor: c.border,
-  }),
+  cashAlert: (c) => ({ backgroundColor: c.warningSoft || c.accentSoft, borderColor: c.border }),
   revenue: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.border }),
   revenueIcon: (c) => ({ backgroundColor: c.surface }),
   periodBadge: (c) => ({ backgroundColor: c.surface }),
@@ -2408,9 +2234,7 @@ const screenStyles = {
   metricLabel: (c) => ({ color: c.muted }),
   orderAmount: (c) => ({ color: c.accent }),
   itemName: (c) => ({ color: c.text }),
-  stockBadge: (c) => ({
-    backgroundColor: c.warning === "#fbbf24" ? "#3b3020" : "#fff5de",
-  }),
+  stockBadge: (c) => ({ backgroundColor: c.warning === "#fbbf24" ? "#3b3020" : "#fff5de" }),
   link: (c) => ({ color: c.accent }),
   drawerCount: (c) => ({ backgroundColor: c.accent }),
   iconButton: (c) => ({ backgroundColor: c.soft }),
@@ -2421,30 +2245,12 @@ const screenStyles = {
   error: (c) => ({ color: c.danger }),
   errorBox: (c) => ({ backgroundColor: c.dangerSoft, borderColor: c.border }),
   success: (c) => ({ color: c.success }),
-  input: (c) => ({
-    backgroundColor: c.elevated,
-    borderColor: c.border,
-    color: c.text,
-  }),
-  search: (c) => ({
-    backgroundColor: c.surface,
-    borderColor: c.border,
-    color: c.text,
-  }),
-  riderSearch: (c) => ({
-    backgroundColor: c.surface,
-    borderColor: c.border,
-    color: c.text,
-  }),
+  input: (c) => ({ backgroundColor: c.elevated, borderColor: c.border, color: c.text }),
+  search: (c) => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
+  riderSearch: (c) => ({ backgroundColor: c.surface, borderColor: c.border, color: c.text }),
   riderChoice: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
-  riderSelected: (c) => ({
-    backgroundColor: c.accentSoft,
-    borderColor: c.accent,
-  }),
-  riderPickerMenu: (c) => ({
-    backgroundColor: c.surface,
-    borderColor: c.border,
-  }),
+  riderSelected: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
+  riderPickerMenu: (c) => ({ backgroundColor: c.surface, borderColor: c.border }),
   chip: (c) => ({ backgroundColor: c.soft, borderColor: c.border }),
   chipActive: (c) => ({ backgroundColor: c.accentSoft, borderColor: c.accent }),
   chipText: (c) => ({ color: c.text }),

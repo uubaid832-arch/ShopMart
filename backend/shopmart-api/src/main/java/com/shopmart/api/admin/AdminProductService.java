@@ -32,35 +32,33 @@ public class AdminProductService {
 
     @Transactional(readOnly = true)
     public ProductPage list(UUID adminId, int page, int size) {
-        return list(adminId, page, size, null, false);
+        return list(adminId, page, size, null, false, "");
     }
 
     @Transactional(readOnly = true)
     public ProductPage list(UUID adminId, int page, int size, UUID categoryId, boolean lowStock) {
-        return list(adminId, page, size, categoryId, lowStock, null);
+        return list(adminId, page, size, categoryId, lowStock, "");
     }
 
     @Transactional(readOnly = true)
-    public ProductPage list(UUID adminId, int page, int size, UUID categoryId, boolean lowStock, String q) {
+    public ProductPage list(UUID adminId, int page, int size, UUID categoryId, boolean lowStock, String search) {
         requireAdmin(adminId);
 
         if (page < 0 || size < 1 || size > 100) {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid pagination.");
         }
 
-        String search = q == null ? "" : q.strip();
-        if (search.length() > 100) {
-            throw failure(HttpStatus.BAD_REQUEST, "Search text is too long.");
-        }
-        String term = "%" + search + "%";
+        String query = search == null ? "" : search.strip();
+        String pattern = "%" + query + "%";
         long total = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM public.products p
-                JOIN public.categories c ON c.id=p.category_id
-                WHERE (CAST(? AS uuid) IS NULL OR p.category_id=?)
-                  AND (NOT ? OR (p.active=TRUE AND p.stock<=5))
-                  AND (p.name ILIKE ? OR c.name ILIKE ?
-                    OR p.description ILIKE ?)
-                """, Long.class, categoryId, categoryId, lowStock, term, term, term);
+                SELECT COUNT(*)
+                FROM public.products p
+                JOIN public.categories c ON c.id = p.category_id
+                WHERE (CAST(? AS uuid) IS NULL OR p.category_id = ?)
+                  AND (NOT ? OR (p.active = TRUE AND p.stock <= 5))
+                  AND (? = '' OR LOWER(p.name) LIKE LOWER(?) OR LOWER(c.name) LIKE LOWER(?))
+                """,
+                Long.class, categoryId, categoryId, lowStock, query, pattern, pattern);
 
         List<ProductResponse> items = jdbc.query("""
                 SELECT p.*, c.name AS category_name
@@ -68,12 +66,12 @@ public class AdminProductService {
                 JOIN public.categories c ON c.id = p.category_id
                 WHERE (CAST(? AS uuid) IS NULL OR p.category_id=?)
                   AND (NOT ? OR (p.active=TRUE AND p.stock<=5))
-                  AND (p.name ILIKE ? OR c.name ILIKE ? OR p.description ILIKE ?)
+                  AND (? = '' OR LOWER(p.name) LIKE LOWER(?) OR LOWER(c.name) LIKE LOWER(?))
                 ORDER BY p.name, p.id
                 LIMIT ? OFFSET ?
                 """,
                 this::mapProduct,
-                categoryId, categoryId, lowStock, term, term, term, size,
+                categoryId, categoryId, lowStock, query, pattern, pattern, size,
                 (long) page * size);
 
         return new ProductPage(

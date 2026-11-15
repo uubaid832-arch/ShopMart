@@ -1,3 +1,26 @@
+export async function getAdminCategories(accessToken, signal) {
+  const response = await fetch("/api/admin/categories", {
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      response.status === 403
+        ? "Administrator access is required."
+        : `Could not load categories (HTTP ${response.status}).`,
+    );
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data.items)) {
+    throw new Error("The admin category API returned an unexpected response.");
+  }
+  return data.items;
+}
+
 export async function saveAdminCategory(accessToken, id, name) {
   const csrfResponse = await fetch("/api/auth/csrf", {
     credentials: "same-origin",

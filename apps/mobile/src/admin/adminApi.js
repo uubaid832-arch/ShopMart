@@ -122,12 +122,7 @@ export function imageUrl(value) {
       ? value
       : `${baseUrl}/${value.replace(/^\/+/, "")}`;
 }
-export async function loadCategories(signal) {
-  const response = await fetch(`${baseUrl}/api/categories`, {
-    credentials: "omit",
-    signal,
-  });
-  if (!response.ok)
-    throw new Error("Could not load categories. Refresh and try again.");
-  return (await response.json()).items;
+export async function loadCategories(token, signal) {
+  const response = await adminRequest(token, "/categories", { signal });
+  return response.items;
 }

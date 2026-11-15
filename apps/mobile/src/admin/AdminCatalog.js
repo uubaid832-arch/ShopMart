@@ -25,7 +25,7 @@ import {
   useMutation,
 } from "./adminUi";
 
-function useCategories(revision) {
+function useCategories(token, revision) {
   const [result, setResult] = useState({
     loading: true,
     data: null,
@@ -34,7 +34,7 @@ function useCategories(revision) {
   useEffect(() => {
     const controller = new AbortController();
     setResult({ loading: true, data: null, error: "" });
-    loadCategories(controller.signal)
+    loadCategories(token, controller.signal)
       .then((data) => {
         if (!controller.signal.aborted)
           setResult({ loading: false, data, error: "" });
@@ -44,7 +44,7 @@ function useCategories(revision) {
           setResult({ loading: false, data: null, error: error.message });
       });
     return () => controller.abort();
-  }, [revision]);
+  }, [token, revision]);
   return result;
 }
 function ProductEditor({ product, categories, op, onSaved }) {
@@ -312,10 +312,10 @@ export function ProductsModule({
   const [lowStock, setLowStock] = useState(initialLowStock);
   const result = useAdminResource(
     session.accessToken,
-    `/products?page=${page}&size=15${category ? `&categoryId=${encodeURIComponent(category)}` : ""}&lowStock=${lowStock}`,
+    `/products?page=${page}&size=15${category ? `&categoryId=${encodeURIComponent(category)}` : ""}&lowStock=${lowStock}&search=${encodeURIComponent(search.trim())}`,
     revision,
   );
-  const categories = useCategories(revision);
+  const categories = useCategories(session.accessToken, revision);
   const refresh = () => setRevision((v) => v + 1);
   const op = useMutation(() => {
     refresh();
@@ -356,7 +356,10 @@ export function ProductsModule({
         page={page}
         onPage={setPage}
         search={search}
-        onSearch={setSearch}
+        onSearch={(value) => {
+          setSearch(value);
+          setPage(0);
+        }}
         revision={revision}
         op={op}
         onClose={onClose}
@@ -457,17 +460,61 @@ export function ProductsModule({
     </Page>
   );
 }
+function CategoryProducts({ session, category, onClose, onBack, revision }) {
+  const [page, setPage] = useState(0);
+  const [reload, setReload] = useState(0);
+  const result = useAdminResource(
+    session.accessToken,
+    `/products?page=${page}&size=15&categoryId=${encodeURIComponent(category.id)}`,
+    revision + reload,
+  );
+  return (
+    <Page
+      title={`${category.name} products`}
+      onClose={onClose}
+      onBack={onBack}
+      onRefresh={() => setReload((current) => current + 1)}
+    >
+      <PagedList
+        result={result}
+        page={page}
+        onPage={setPage}
+        renderItem={(product) => (
+          <Card
+            title={product.name}
+            subtitle={`PKR ${Number(product.price).toLocaleString("en-PK")} · ${product.stock > 0 ? `${product.stock} in stock` : "Out of stock"} · ${product.active ? "Visible in store" : "Hidden"}`}
+          >
+            {product.description ? <Text style={ui.muted}>{product.description}</Text> : null}
+          </Card>
+        )}
+      />
+    </Page>
+  );
+}
+
 export function CategoriesModule({ session, onClose, onChanged }) {
   const [revision, setRevision] = useState(0);
   const [editor, setEditor] = useState(null);
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
-  const result = useCategories(revision);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const result = useCategories(session.accessToken, revision);
   const refresh = () => setRevision((v) => v + 1);
   const op = useMutation(() => {
     refresh();
     onChanged();
   });
+  if (selectedCategory) {
+    return (
+      <CategoryProducts
+        session={session}
+        category={selectedCategory}
+        revision={revision}
+        onClose={onClose}
+        onBack={() => setSelectedCategory(null)}
+      />
+    );
+  }
   return (
     <Page
       footerAction={
@@ -551,7 +598,13 @@ export function CategoriesModule({ session, onClose, onChanged }) {
             search={search}
             onSearch={setSearch}
             renderItem={(item) => (
-              <Card title={item.name}>
+              <Card title={item.name} subtitle={`${item.productCount ?? 0} products`}>
+                <Button
+                  title="View products"
+                  icon="box"
+                  secondary
+                  onPress={() => setSelectedCategory(item)}
+                />
                 <View style={ui.row}>
                   <Button
                     title="Edit"

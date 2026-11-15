@@ -2,6 +2,7 @@ package com.shopmart.api.admin;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,28 +38,25 @@ public class AdminOrderService {
 
   @Transactional(readOnly = true)
   public OrderPage list(UUID adminId, int page, int size) {
-    return list(adminId, page, size, null);
+    return list(adminId, page, size, "");
   }
 
   @Transactional(readOnly = true)
-  public OrderPage list(UUID adminId, int page, int size, String q) {
+  public OrderPage list(UUID adminId, int page, int size, String search) {
     requireAdmin(adminId);
 
     if (page < 0 || size < 1 || size > 50) {
       throw failure(HttpStatus.BAD_REQUEST, "Invalid pagination.");
     }
 
-    String search = q == null ? "" : q.strip();
-    if (search.length() > 100) {
-      throw failure(HttpStatus.BAD_REQUEST, "Search text is too long.");
-    }
-    String term = "%" + search + "%";
+    String query = search == null ? "" : search.strip().toLowerCase(Locale.ROOT);
+    String pattern = "%" + query + "%";
     long total = jdbc.queryForObject("""
-        SELECT COUNT(*) FROM public.orders o
-        JOIN public.users u ON u.id=o.user_id
-        WHERE COALESCE(o.order_number,'') ILIKE ? OR u.name ILIKE ?
-          OR CAST(o.id AS text) ILIKE ? OR o.status ILIKE ?
-        """, Long.class, term, term, term, term);
+        SELECT COUNT(*)
+        FROM public.orders o
+        JOIN public.users u ON u.id = o.user_id
+        WHERE (? = '' OR LOWER(o.order_number) LIKE ? OR LOWER(u.name) LIKE ?)
+        """, Long.class, query, pattern, pattern);
 
     List<OrderSummary> items = jdbc.query("""
         SELECT o.id, o.order_number, u.name AS customer_name,
@@ -66,8 +64,7 @@ public class AdminOrderService {
                o.total, o.currency, o.created_at
         FROM public.orders o
         JOIN public.users u ON u.id = o.user_id
-        WHERE COALESCE(o.order_number,'') ILIKE ? OR u.name ILIKE ?
-          OR CAST(o.id AS text) ILIKE ? OR o.status ILIKE ?
+        WHERE (? = '' OR LOWER(o.order_number) LIKE ? OR LOWER(u.name) LIKE ?)
         ORDER BY o.created_at DESC, o.id DESC
         LIMIT ? OFFSET ?
         """,
@@ -81,7 +78,7 @@ public class AdminOrderService {
             rs.getBigDecimal("total").toPlainString(),
             rs.getString("currency"),
             rs.getTimestamp("created_at").toInstant()),
-        term, term, term, term, size, (long) page * size);
+        query, pattern, pattern, size, (long) page * size);
 
     return new OrderPage(
         items, page, size, total,

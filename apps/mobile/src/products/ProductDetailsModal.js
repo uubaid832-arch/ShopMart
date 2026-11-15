@@ -138,7 +138,7 @@ export default function ProductDetailsModal({ product, session, onClose, onRatin
           <View style={[styles.stock, { backgroundColor: palette.soft }]}>
             <Text style={{ color: palette.text }}>
               {product.stock > 0
-                ? `In stock · ${product.stock} available`
+                ? "In stock"
                 : "Out of stock"}
             </Text>
           </View>

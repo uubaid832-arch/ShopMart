@@ -1,7 +1,6 @@
 package com.shopmart.api.admin;
 
 import java.util.UUID;
-import java.util.List;
 import jakarta.validation.Valid;
 
 import org.springframework.http.CacheControl;
@@ -23,11 +22,11 @@ public class AdminCategoryController {
   }
 
   @GetMapping
-  public ResponseEntity<List<AdminCategoryService.CategoryWithCount>> list(
-      @AuthenticationPrincipal Jwt jwt,
-      @RequestParam(required = false) String q) {
-    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-        .body(categories.listWithCounts(userId(jwt), q));
+  public ResponseEntity<AdminCategoryService.CategoryListResponse> list(
+      @AuthenticationPrincipal Jwt jwt) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(categories.list(userId(jwt)));
   }
 
   @PostMapping

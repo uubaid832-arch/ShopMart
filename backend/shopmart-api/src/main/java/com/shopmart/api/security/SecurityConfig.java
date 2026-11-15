@@ -131,6 +131,8 @@ public class SecurityConfig {
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.GET, "/api/admin/products")
                                                 .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.GET, "/api/admin/categories")
+                                                .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.POST, "/api/admin/products")
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.PUT, "/api/admin/products/*")
@@ -239,10 +241,6 @@ public class SecurityConfig {
                                                 .requestMatchers(
                                                                 HttpMethod.POST,
                                                                 "/api/admin/products/*/images")
-                                                .hasRole("ADMIN")
-                                                .requestMatchers(
-                                                                HttpMethod.POST,
-                                                                "/api/admin/products/*/images/import-catalog/*")
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(
                                                                 HttpMethod.PATCH,

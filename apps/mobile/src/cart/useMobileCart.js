@@ -21,7 +21,7 @@ function normalize(saved, products) {
       Math.min(
         (quantities.get(entry.id) ?? 0) + entry.quantity,
         product.stock,
-        999,
+        5,
       ),
     );
   }
@@ -101,7 +101,7 @@ export function useMobileCart(products, userId, enabled = true) {
         return [...current, { ...product, quantity: 1 }];
       }
 
-      if (existing.quantity >= Math.min(product.stock, 999)) {
+      if (existing.quantity >= Math.min(product.stock, 5)) {
         return current;
       }
 
@@ -116,7 +116,7 @@ export function useMobileCart(products, userId, enabled = true) {
 
     updateItems((current) =>
       current.map((item) =>
-        item.id === id && quantity <= Math.min(item.stock, 999)
+        item.id === id && quantity <= Math.min(item.stock, 5)
           ? { ...item, quantity }
           : item,
       ),

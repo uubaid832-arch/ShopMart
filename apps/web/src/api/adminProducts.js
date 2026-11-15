@@ -73,6 +73,25 @@ export async function getAdminProducts(accessToken, signal) {
   return items;
 }
 
+export async function getAdminCategoryProducts(accessToken, categoryId, signal) {
+  const items = [];
+  let page = 0;
+  let totalPages;
+
+  do {
+    const result = await productRequest(
+      accessToken,
+      `?page=${page}&size=100&categoryId=${encodeURIComponent(categoryId)}`,
+      { signal },
+    );
+    items.push(...result.items);
+    totalPages = result.totalPages;
+    page += 1;
+  } while (page < totalPages);
+
+  return items;
+}
+
 export function saveAdminProduct(accessToken, productId, values) {
   return productRequest(accessToken, productId ? `/${productId}` : "", {
     method: productId ? "PUT" : "POST",

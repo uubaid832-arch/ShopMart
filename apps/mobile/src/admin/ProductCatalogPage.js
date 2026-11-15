@@ -164,9 +164,7 @@ export default function ProductCatalogPage({
         ];
   const selected = picker === "category" ? category : lowStock ? "LOW" : "ALL";
   const query = search.trim().toLowerCase();
-  const filtered = items.filter(
-    (p) => !query || `${p.name} ${p.category}`.toLowerCase().includes(query),
-  );
+  const filtered = items;
   const totalPages = Math.max(1, result.data?.totalPages || 1);
   return (
     <>
@@ -225,10 +223,10 @@ export default function ProductCatalogPage({
         <View style={s.search}>
           <Icon name="search" size={23} />
           <TextInput
-            accessibilityLabel="Search products on this page"
+            accessibilityLabel="Search all products"
             value={search}
             onChangeText={onSearch}
-            placeholder="Search products"
+            placeholder="Search all products"
             placeholderTextColor={catalogPalette.muted}
             style={s.searchInput}
             autoCorrect={false}
@@ -270,7 +268,7 @@ export default function ProductCatalogPage({
         </View>
         <Text style={s.count}>
           {query
-            ? `${filtered.length} matches on this page`
+            ? `${result.data?.totalItems ?? 0} matching products`
             : `${result.data?.totalItems ?? 0} products`}
         </Text>
         {result.loading ? (

@@ -23,27 +23,21 @@ public class AdminCategoryService {
     this.jdbc = jdbc;
   }
 
-
   @Transactional(readOnly = true)
-  public List<CategoryWithCount> listWithCounts(UUID adminId, String q) {
+  public CategoryListResponse list(UUID adminId) {
     requireAdmin(adminId);
-    String search = q == null ? "" : q.strip();
-    if (search.length() > 100) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search text is too long.");
-    }
-    return jdbc.query("""
+    List<CategorySummary> items = jdbc.query("""
         SELECT c.id, c.name, COUNT(p.id) AS product_count
         FROM public.categories c
-        LEFT JOIN public.products p ON p.category_id=c.id
-        WHERE c.name ILIKE ?
+        LEFT JOIN public.products p ON p.category_id = c.id
         GROUP BY c.id, c.name
-        ORDER BY c.name
-        """, (rs, row) -> new CategoryWithCount(
-          rs.getObject("id", UUID.class), rs.getString("name"), rs.getLong("product_count")),
-          "%" + search + "%");
+        ORDER BY c.name, c.id
+        """, (rs, row) -> new CategorySummary(
+            rs.getObject("id", UUID.class),
+            rs.getString("name"),
+            rs.getLong("product_count")));
+    return new CategoryListResponse(items);
   }
-
-  public record CategoryWithCount(UUID id, String name, long productCount) {}
 
   @Transactional
   public CategoryResponse create(UUID adminId, CategoryRequest request) {
@@ -169,5 +163,11 @@ public class AdminCategoryService {
   }
 
   public record CategoryResponse(UUID id, String name) {
+  }
+
+  public record CategorySummary(UUID id, String name, long productCount) {
+  }
+
+  public record CategoryListResponse(List<CategorySummary> items) {
   }
 }

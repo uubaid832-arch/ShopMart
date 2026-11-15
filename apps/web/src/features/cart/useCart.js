@@ -26,7 +26,7 @@ function restoreCart(products, storageKey) {
 
       quantities.set(
         product.id,
-        Math.min(previousQuantity + entry.quantity, product.stock),
+        Math.min(previousQuantity + entry.quantity, product.stock, 5),
       );
     }
 
@@ -61,7 +61,7 @@ export function useCart(products, userId = null) {
         return [...current, { ...currentProduct, quantity: 1 }];
       }
 
-      if (existing.quantity >= currentProduct.stock) return current;
+      if (existing.quantity >= Math.min(currentProduct.stock, 5)) return current;
 
       return current.map((item) =>
         item.id === currentProduct.id
@@ -76,7 +76,7 @@ export function useCart(products, userId = null) {
 
     setItems((current) =>
       current.map((item) => {
-        if (item.id !== id || quantity > item.stock) return item;
+        if (item.id !== id || quantity > Math.min(item.stock, 5)) return item;
 
         return { ...item, quantity };
       }),

@@ -99,7 +99,7 @@ export default function CartModal({ cart, onClose, onCheckout }) {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Increase ${item.name} quantity`}
-                      disabled={item.quantity >= Math.min(item.stock, 999)}
+                      disabled={item.quantity >= Math.min(item.stock, 5)}
                       onPress={() =>
                         cart.changeQuantity(item.id, item.quantity + 1)
                       }

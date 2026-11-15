@@ -213,17 +213,34 @@ function ShopMart() {
 
   const loading = result?.reload !== reload;
   const error = loading ? "" : result.error;
-  const query = search.trim().toLowerCase();
+  const query = search.trim().normalize("NFKC").toLocaleLowerCase();
+  const searchWords = [...new Set(query.split(/\s+/).filter(Boolean))];
   const categories = [
     "All",
     ...new Set((result?.items || []).map((item) => item.category)),
   ];
-  const products = (loading ? [] : result.items).filter(
-    (product) =>
-      (!wishlistOnly || wishlist.hasItem(product.id)) &&
-      (category === "All" || product.category === category) &&
-      `${product.name} ${product.category}`.toLowerCase().includes(query),
-  );
+  const products = (loading ? [] : result.items)
+    .map((product, index) => {
+      const name = String(product.name || "").normalize("NFKC").toLocaleLowerCase();
+      const categoryName = String(product.category || "").normalize("NFKC").toLocaleLowerCase();
+      const searchable = `${name} ${categoryName} ${product.description || ""}`;
+      const score = query
+        ? (name === query ? 100 : name.startsWith(query) ? 70 : name.includes(query) ? 50 : 0) +
+          searchWords.reduce((total, word) => total + (name.includes(word) ? 10 : categoryName.includes(word) ? 5 : 1), 0)
+        : 0;
+      return {
+        product,
+        index,
+        score,
+        matches:
+          searchWords.every((word) => searchable.includes(word)) &&
+          (!wishlistOnly || wishlist.hasItem(product.id)) &&
+          (category === "All" || product.category === category),
+      };
+    })
+    .filter((entry) => entry.matches)
+    .sort((a, b) => (query ? b.score - a.score || a.index - b.index : a.index - b.index))
+    .map(({ product }) => product);
 
   function pop(value) {
     value.setValue(0.72);
@@ -323,6 +340,7 @@ function ShopMart() {
 
   const header = (
     <View>
+      {!search.trim() && (
       <View style={[styles.hero, { backgroundColor: theme.isDark ? palette.elevated : "#efe8fc", borderColor: palette.border }]}>
         <View pointerEvents="none" style={[styles.heroOrb, { backgroundColor: theme.isDark ? palette.accentSoft : "#e7dcfa" }]} />
         <View style={styles.heroCopy}>
@@ -342,6 +360,7 @@ function ShopMart() {
           </View>
         </View>
       </View>
+      )}
       <View style={[styles.searchBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
         <Icon name="search" color={palette.muted} size={21} />
         <TextInput
@@ -523,7 +542,7 @@ function ShopMart() {
         renderItem={({ item }) => {
           const quantity = cart.quantityFor(item.id);
           const unavailable = item.stock <= 0;
-          const atLimit = quantity >= Math.min(item.stock, 999);
+          const atLimit = quantity >= Math.min(item.stock, 5);
           const saved = wishlist.hasItem(item.id);
           return (
             <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
