@@ -57,12 +57,15 @@ const paths = {
   minus: "M5 12h14",
   cart: "M2 3h3l3 12h11l3-9H6M9 20h.01M18 20h.01",
   close: "m6 6 12 12M6 18 18 6",
+  arrow: "m9 5 7 7-7 7",
+  back: "m15 5-7 7 7 7",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
   chat: "M21 11a9 9 0 0 1-9 9H5l-4 3 2-7a9 9 0 1 1 18-5Z",
   palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 
 const CUSTOMER_PRODUCTS_PER_PAGE = 10;
+const CUSTOMER_HOME_PRODUCT_LIMIT = 6;
 
 function Icon({ name, size = 22, color = "#17203b", filled = false }) {
   return (
@@ -144,6 +147,7 @@ function ShopMart() {
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
   const [productPage, setProductPage] = useState(0);
+  const [catalogOpen, setCatalogOpen] = useState(false);
   const productsListRef = useRef(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [category, setCategory] = useState("All");
@@ -250,10 +254,13 @@ function ShopMart() {
     Math.ceil(products.length / CUSTOMER_PRODUCTS_PER_PAGE),
   );
   const currentProductPage = Math.min(productPage, productPageCount - 1);
-  const visibleProducts = products.slice(
+  const catalogPageProducts = products.slice(
     currentProductPage * CUSTOMER_PRODUCTS_PER_PAGE,
     (currentProductPage + 1) * CUSTOMER_PRODUCTS_PER_PAGE,
   );
+  const visibleProducts = catalogOpen
+    ? catalogPageProducts
+    : products.slice(0, CUSTOMER_HOME_PRODUCT_LIMIT);
 
   function changeProductPage(nextPage) {
     setProductPage(nextPage);
@@ -263,6 +270,16 @@ function ShopMart() {
   function resetProductPage() {
     setProductPage(0);
     productsListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }
+
+  function openCatalog() {
+    setCatalogOpen(true);
+    resetProductPage();
+  }
+
+  function closeCatalog() {
+    setCatalogOpen(false);
+    resetProductPage();
   }
 
   function pop(value) {
@@ -361,101 +378,116 @@ function ShopMart() {
     );
   }
 
-  const header = (
-    <View>
-      {!search.trim() && (
-      <View style={[styles.hero, { backgroundColor: theme.isDark ? palette.elevated : "#efe8fc", borderColor: palette.border }]}>
-        <View pointerEvents="none" style={[styles.heroOrb, { backgroundColor: theme.isDark ? palette.accentSoft : "#e7dcfa" }]} />
-        <View style={styles.heroCopy}>
-          <Text style={[styles.heroEyebrow, { color: palette.accent }]}>YOUR EVERYDAY EDIT</Text>
-          <Text style={[styles.greeting, { color: palette.text }]} numberOfLines={1}>
-            Hi, {auth.session?.user.name?.split(" ")[0] || "there"}
-          </Text>
-          <Text style={[styles.heroText, { color: palette.muted }]}>
-            Everyday finds. A little more you.
-          </Text>
-          <Text style={[styles.heroCaption, { color: palette.muted }]}>Explore the things you love.</Text>
-        </View>
-        <View style={[styles.heroArt, { backgroundColor: palette.accentSoft, borderColor: palette.border }]}>
-          <Icon name="bag" size={48} color={palette.accent} />
-          <View style={styles.spark}>
-            <Icon name="plus" size={17} color={palette.accent} />
-          </View>
-        </View>
-      </View>
-      )}
-      <View style={[styles.searchBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-        <Icon name="search" color={palette.muted} size={21} />
-        <TextInput
-          accessibilityLabel="Search products"
-          value={search}
-          onChangeText={(value) => {
-            setSearch(value);
+  const searchBar = (
+    <View style={[styles.searchBox, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+      <Icon name="search" color={palette.muted} size={21} />
+      <TextInput
+        accessibilityLabel="Search products"
+        value={search}
+        onChangeText={(value) => {
+          setSearch(value);
+          resetProductPage();
+        }}
+        placeholder="Search products, brands, categories"
+        placeholderTextColor={palette.muted}
+        autoCorrect={false}
+        style={[styles.search, { color: palette.text }]}
+      />
+      {search ? (
+        <IconButton
+          name="close"
+          label="Clear search"
+          onPress={() => {
+            setSearch("");
             resetProductPage();
           }}
-          placeholder="What are you looking for?"
-          placeholderTextColor="#9299ac"
-          autoCorrect={false}
-          style={[styles.search, { color: palette.text }]}
         />
-        {search ? (
-          <IconButton
-            name="close"
-            label="Clear search"
-            onPress={() => {
-              setSearch("");
-              resetProductPage();
-            }}
+      ) : null}
+    </View>
+  );
+
+  const categorySlider = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chips}
+    >
+      {categories.map((name) => (
+        <Pressable
+          key={name}
+          accessibilityRole="button"
+          accessibilityState={{ selected: category === name }}
+          onPress={() => {
+            setCategory(name);
+            resetProductPage();
+          }}
+          style={[
+            styles.chip,
+            { backgroundColor: palette.soft, borderColor: palette.border },
+            category === name && { backgroundColor: palette.accent, borderColor: palette.accent },
+          ]}
+        >
+          <Icon
+            name={
+              name === "All"
+                ? "grid"
+                : /electronic/i.test(name)
+                  ? "laptop"
+                  : /fashion|cloth/i.test(name)
+                    ? "shirt"
+                    : /home/i.test(name)
+                      ? "home"
+                      : "box"
+            }
+            size={15}
+            color={category === name ? "#fff" : palette.muted}
           />
-        ) : null}
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
-        {categories.map((name) => (
-          <Pressable
-            key={name}
-            accessibilityRole="button"
-            accessibilityState={{ selected: category === name }}
-            onPress={() => {
-              setCategory(name);
-              resetProductPage();
-            }}
-              style={[styles.chip, { backgroundColor: palette.soft, borderColor: palette.border }, category === name && { backgroundColor: palette.accent, borderColor: palette.accent }]}
-          >
-            <Icon
-              name={
-                name === "All"
-                  ? "grid"
-                  : /electronic/i.test(name)
-                    ? "laptop"
-                    : /fashion|cloth/i.test(name)
-                      ? "shirt"
-                      : /home/i.test(name)
-                        ? "home"
-                        : "box"
-              }
-              size={15}
-              color={category === name ? "#fff" : palette.muted}
-            />
-            <Text style={[styles.chipText, category === name && styles.white]}>
-              {name}
-            </Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-      <View style={styles.section}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.sectionTitle, { color: palette.text }]}>
-            {wishlistOnly ? "Your wishlist" : "Discover products"}
+          <Text style={[styles.chipText, category === name && styles.white]}>
+            {name}
           </Text>
-          <Text style={[styles.sectionCaption, { color: palette.muted }]}>
-            {loading
-              ? "Finding your favorites..."
-              : `${products.length} ${products.length === 1 ? "find" : "finds"} for you`}
-          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+
+  const homeHeader = (
+    <View style={styles.homeHeader}>
+      {!search.trim() && !wishlistOnly ? (
+        <View
+          style={[
+            styles.homeHero,
+            { backgroundColor: theme.isDark ? palette.elevated : "#eaf2ff", borderColor: palette.border },
+          ]}
+        >
+          <View style={styles.homeHeroText}>
+            <Text style={[styles.heroEyebrow, { color: palette.accent }]}>SHOPMART PICKS</Text>
+            <Text style={[styles.homeHeroTitle, { color: palette.text }]}>Find something you'll love.</Text>
+            <Text style={[styles.homeHeroCaption, { color: palette.muted }]}>Fresh finds for your everyday.</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Discover all products"
+              onPress={openCatalog}
+              style={[styles.homeHeroButton, { backgroundColor: palette.accent }]}
+            >
+              <Text style={styles.homeHeroButtonText}>Explore ShopMart</Text>
+              <Icon name="arrow" size={17} color="#fff" />
+            </Pressable>
+          </View>
+          <View style={[styles.homeHeroArt, { backgroundColor: palette.accentSoft }]}>
+            <Icon name="bag" size={42} color={palette.accent} />
+            <View style={[styles.homeHeroSpark, { backgroundColor: palette.surface }]}>
+              <Icon name="plus" size={15} color={palette.accent} />
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {searchBar}
+
+      <View style={styles.homeCategoryHeader}>
+        <View>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>Shop by category</Text>
+          <Text style={[styles.sectionCaption, { color: palette.muted }]}>Pick a section to narrow your finds</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -464,12 +496,20 @@ function ShopMart() {
           onPress={() => setReload((value) => value + 1)}
           style={[styles.refresh, { backgroundColor: palette.accentSoft }]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={palette.accent} />
-          ) : (
-            <Icon name="refresh" size={19} color={palette.accent} />
-          )}
+          {loading ? <ActivityIndicator size="small" color={palette.accent} /> : <Icon name="refresh" size={19} color={palette.accent} />}
         </Pressable>
+      </View>
+      {categorySlider}
+
+      <View style={styles.homeProductsHeading}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.sectionTitle, { color: palette.text }]}>
+            {wishlistOnly ? "Your wishlist" : search.trim() ? "Best matches" : "Picked for you"}
+          </Text>
+          <Text style={[styles.sectionCaption, { color: palette.muted }]}>
+            {loading ? "Finding your favorites..." : `${products.length} ${products.length === 1 ? "product" : "products"}${wishlistOnly ? " saved" : " to explore"}`}
+          </Text>
+        </View>
       </View>
       {auth.error || wishlist.error ? (
         <Text accessibilityRole="alert" style={styles.error}>
@@ -478,6 +518,40 @@ function ShopMart() {
       ) : null}
     </View>
   );
+
+  const catalogHeader = (
+    <View style={styles.catalogHeader}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back to home"
+        onPress={closeCatalog}
+        style={[styles.backHomeButton, { backgroundColor: palette.accentSoft }]}
+      >
+        <Icon name="back" size={19} color={palette.accent} />
+        <Text style={[styles.backHomeText, { color: palette.accent }]}>Back to home</Text>
+      </Pressable>
+      <View style={styles.catalogTitleBlock}>
+        <Text style={[styles.heroEyebrow, { color: palette.accent }]}>THE FULL COLLECTION</Text>
+        <Text style={[styles.catalogTitle, { color: palette.text }]}>
+          {wishlistOnly ? "Wishlist" : "Discover more"}
+        </Text>
+        <Text style={[styles.sectionCaption, { color: palette.muted }]}>
+          {loading ? "Loading products..." : `${products.length} ${products.length === 1 ? "product" : "products"} available`}
+        </Text>
+      </View>
+      {searchBar}
+      <Text style={[styles.categoryLabel, { color: palette.text }]}>Browse categories</Text>
+      {categorySlider}
+      <View style={styles.catalogListHeading}>
+        <Text style={[styles.sectionTitle, { color: palette.text }]}>
+          {search.trim() ? "Search results" : category === "All" ? "All products" : category}
+        </Text>
+        <Text style={[styles.sectionCaption, { color: palette.muted }]}>Page {currentProductPage + 1} of {productPageCount}</Text>
+      </View>
+    </View>
+  );
+
+  const header = catalogOpen ? catalogHeader : homeHeader;
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
@@ -550,6 +624,89 @@ function ShopMart() {
         contentContainerStyle={styles.list}
         columnWrapperStyle={styles.row}
         ListHeaderComponent={header}
+        ListFooterComponent={
+          catalogOpen ? (
+            productPageCount > 1 ? (
+              <View
+                style={[
+                  styles.catalogPagination,
+                  { backgroundColor: palette.surface, borderTopColor: palette.border },
+                ]}
+              >
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous product page"
+                  disabled={currentProductPage === 0}
+                  onPress={() => changeProductPage(currentProductPage - 1)}
+                  style={[
+                    styles.catalogPageButton,
+                    { backgroundColor: palette.accentSoft },
+                    currentProductPage === 0 && styles.dim,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.catalogPageButtonText,
+                      { color: currentProductPage === 0 ? palette.muted : palette.accent },
+                    ]}
+                  >
+                    Previous
+                  </Text>
+                </Pressable>
+                <Text style={[styles.catalogPageNumber, { color: palette.text }]}>
+                  {currentProductPage + 1} / {productPageCount}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Next product page"
+                  disabled={currentProductPage + 1 >= productPageCount}
+                  onPress={() => changeProductPage(currentProductPage + 1)}
+                  style={[
+                    styles.catalogPageButton,
+                    { backgroundColor: palette.accentSoft },
+                    currentProductPage + 1 >= productPageCount && styles.dim,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.catalogPageButtonText,
+                      { color: currentProductPage + 1 >= productPageCount ? palette.muted : palette.accent },
+                    ]}
+                  >
+                    Next
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null
+          ) : products.length > CUSTOMER_HOME_PRODUCT_LIMIT ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={wishlistOnly ? "View all saved products" : "Discover all available products"}
+              onPress={openCatalog}
+              style={[
+                styles.discoverMoreCard,
+                { backgroundColor: theme.isDark ? palette.elevated : "#edf3ff", borderColor: palette.border },
+              ]}
+            >
+              <View style={[styles.discoverMoreIcon, { backgroundColor: palette.accentSoft }]}>
+                <Icon name={wishlistOnly ? "heart" : "grid"} size={23} color={palette.accent} />
+              </View>
+              <View style={styles.discoverMoreCopy}>
+                <Text style={[styles.discoverMoreTitle, { color: palette.text }]}>
+                  {wishlistOnly ? "See all your saved items" : "Discover more"}
+                </Text>
+                <Text style={[styles.discoverMoreCaption, { color: palette.muted }]}>
+                  {wishlistOnly
+                    ? `Browse all ${products.length} wishlist items`
+                    : search.trim()
+                      ? `See all ${products.length} matching products`
+                      : `Explore all ${products.length} products`}
+                </Text>
+              </View>
+              <Icon name="arrow" size={21} color={palette.accent} />
+            </Pressable>
+          ) : null
+        }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -721,67 +878,6 @@ function ShopMart() {
         }}
       />
 
-      {!loading && products.length > CUSTOMER_PRODUCTS_PER_PAGE ? (
-        <View
-          style={[
-            styles.catalogPagination,
-            { backgroundColor: palette.surface, borderTopColor: palette.border },
-          ]}
-        >
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Previous product page"
-            disabled={currentProductPage === 0}
-            onPress={() => changeProductPage(currentProductPage - 1)}
-            style={[
-              styles.catalogPageButton,
-              { backgroundColor: palette.accentSoft },
-              currentProductPage === 0 && styles.dim,
-            ]}
-          >
-            <Text
-              style={[
-                styles.catalogPageButtonText,
-                { color: currentProductPage === 0 ? palette.muted : palette.accent },
-              ]}
-            >
-              Previous
-            </Text>
-          </Pressable>
-          <Text
-            accessibilityRole="text"
-            style={[styles.catalogPageNumber, { color: palette.text }]}
-          >
-            {currentProductPage + 1} / {productPageCount}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Next product page"
-            disabled={currentProductPage + 1 >= productPageCount}
-            onPress={() => changeProductPage(currentProductPage + 1)}
-            style={[
-              styles.catalogPageButton,
-              { backgroundColor: palette.accentSoft },
-              currentProductPage + 1 >= productPageCount && styles.dim,
-            ]}
-          >
-            <Text
-              style={[
-                styles.catalogPageButtonText,
-                {
-                  color:
-                    currentProductPage + 1 >= productPageCount
-                      ? palette.muted
-                      : palette.accent,
-                },
-              ]}
-            >
-              Next
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-
       <View style={[styles.bottomBar, { backgroundColor: palette.surface, borderTopColor: palette.border }]}>
         {[
           {
@@ -789,6 +885,7 @@ function ShopMart() {
             label: "Home",
             active: !wishlistOnly,
             action: () => {
+              setCatalogOpen(false);
               setWishlistOnly(false);
               setCategory("All");
               setSearch("");
@@ -800,6 +897,7 @@ function ShopMart() {
             label: "Wishlist",
             active: wishlistOnly,
             action: () => {
+              setCatalogOpen(false);
               setWishlistOnly(true);
               setCategory("All");
               setSearch("");
@@ -1038,10 +1136,108 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   list: { paddingHorizontal: 20, paddingBottom: 26 },
+  homeHeader: { paddingBottom: 4 },
+  homeHero: {
+    minHeight: 190,
+    marginBottom: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderRadius: 26,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    overflow: "hidden",
+  },
+  homeHeroText: { flex: 1, minWidth: 0, zIndex: 1 },
+  homeHeroTitle: { fontSize: 25, lineHeight: 30, fontWeight: "900", letterSpacing: -0.7 },
+  homeHeroCaption: { marginTop: 7, fontSize: 12, lineHeight: 18 },
+  homeHeroButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+    paddingHorizontal: 13,
+    minHeight: 39,
+    borderRadius: 13,
+  },
+  homeHeroButtonText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  homeHeroArt: {
+    width: 73,
+    height: 86,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "-10deg" }],
+  },
+  homeHeroSpark: {
+    position: "absolute",
+    top: -7,
+    right: -7,
+    width: 27,
+    height: 27,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  homeCategoryHeader: {
+    marginTop: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  homeProductsHeading: { marginTop: 1, marginBottom: 2 },
+  catalogHeader: { paddingBottom: 8 },
+  backHomeButton: {
+    alignSelf: "flex-start",
+    minHeight: 40,
+    paddingHorizontal: 13,
+    borderRadius: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  backHomeText: { fontSize: 12, fontWeight: "800" },
+  catalogTitleBlock: { marginTop: 13, marginBottom: 2 },
+  catalogTitle: { fontSize: 29, lineHeight: 35, fontWeight: "900", letterSpacing: -0.7 },
+  categoryLabel: { marginTop: 15, fontSize: 13, fontWeight: "800" },
+  catalogListHeading: {
+    marginTop: 2,
+    marginBottom: 7,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  discoverMoreCard: {
+    minHeight: 82,
+    marginTop: 1,
+    marginBottom: 18,
+    padding: 15,
+    borderWidth: 1,
+    borderRadius: 21,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  discoverMoreIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  discoverMoreCopy: { flex: 1, minWidth: 0 },
+  discoverMoreTitle: { fontSize: 14, fontWeight: "900" },
+  discoverMoreCaption: { marginTop: 4, fontSize: 11 },
   catalogPagination: {
-    minHeight: 58,
+    minHeight: 66,
+    marginTop: 8,
+    marginBottom: 14,
     paddingHorizontal: 14,
     paddingVertical: 8,
+    borderRadius: 17,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
