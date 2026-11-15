@@ -1,19 +1,8 @@
+import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
 import SafepayCheckout from "../payments/SafepayCheckout";
 import { sameCart } from "../payments/useSafepay";
 import { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Animated,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
 import { placeMobileOrder } from "../api/orders";

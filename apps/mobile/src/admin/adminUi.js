@@ -1,23 +1,10 @@
+import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
 import { cloneElement, useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { readable } from "./adminApi";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
-import AppearanceModal from "../appearance/AppearanceModal";
 
 let activePalette = null;
 export function setAdminPalette(palette) {
@@ -274,7 +261,6 @@ export function Page({
   footerAction,
 }) {
   const { theme } = useMobileAppearance();
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
   setAdminPalette(theme.colors);
   const palette = theme.colors;
   return (
@@ -312,14 +298,6 @@ export function Page({
           )}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Change app theme"
-            style={[ui.iconButton, { backgroundColor: palette.soft }]}
-            onPress={() => setAppearanceOpen(true)}
-          >
-            <Icon name="palette" />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
             accessibilityLabel="Close module"
             disabled={busy}
             style={[ui.iconButton, { backgroundColor: palette.soft }]}
@@ -348,10 +326,6 @@ export function Page({
         {children}
       </SafeAreaView>
     </Modal>
-    <AppearanceModal
-      visible={appearanceOpen}
-      onClose={() => setAppearanceOpen(false)}
-    />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useId, useState, useSyncExternalStore } from "react";
 import { Palette, Sun, Moon, Monitor, X, RotateCcw } from "lucide-react";
 import Modal from "./Modal";
+import { useLanguage } from "../features/language/useLanguage";
 import {
   getAppearance,
   subscribeAppearance,
@@ -20,7 +21,7 @@ const accents = [
   { value: "orange", label: "Orange", color: "#c2410c" },
 ];
 
-export default function AppearanceMenu() {
+export default function AppearanceMenu({ settings = false }) {
   const [open, setOpen] = useState(false);
   const appearance = useSyncExternalStore(
     subscribeAppearance,
@@ -28,18 +29,23 @@ export default function AppearanceMenu() {
     getAppearance,
   );
   const id = useId();
+  const { language } = useLanguage();
+  const text = (en, ur) => language === "ur" ? ur : en;
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Appearance"
-        aria-label="Change appearance"
+        title={text("Appearance", "ظاہری شکل")}
+        aria-label={text("Change appearance", "ظاہری شکل تبدیل کریں")}
         aria-haspopup="dialog"
-        className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-transparent text-slate-600 hover:bg-violet-50 hover:text-violet-700"
+        className={settings
+          ? "flex w-full items-center gap-3 rounded-xl border border-solid border-slate-200 bg-white p-3 text-start text-slate-700 hover:bg-violet-50"
+          : "grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-transparent text-slate-600 hover:bg-violet-50 hover:text-violet-700"}
       >
         <Palette size={21} strokeWidth={1.8} aria-hidden="true" />
+        {settings && <span><strong className="block text-sm">{text("Appearance", "ظاہری شکل")}</strong><small className="mt-1 block text-xs text-slate-500">{text("Change theme and accent colour", "تھیم اور رنگ تبدیل کریں")}</small></span>}
       </button>
 
       {open && (
@@ -52,17 +58,17 @@ export default function AppearanceMenu() {
             <header className="flex items-start justify-between gap-4">
               <div>
                 <p className="m-0 text-xs font-bold tracking-widest text-violet-600">
-                  MAKE IT YOURS
+                  {text("MAKE IT YOURS", "اپنی پسند کے مطابق")}
                 </p>
                 <h2 id={`${id}-title`} className="mb-0 mt-2 text-2xl font-bold">
-                  Appearance
+                  {text("Appearance", "ظاہری شکل")}
                 </h2>
               </div>
 
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close appearance"
+                aria-label={text("Close appearance", "ظاہری شکل بند کریں")}
                 className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-slate-600 hover:bg-violet-100"
               >
                 <X size={20} aria-hidden="true" />
@@ -70,7 +76,7 @@ export default function AppearanceMenu() {
             </header>
 
             <fieldset className="m-0 min-w-0 border-0 p-0">
-              <legend className="mb-3 text-sm font-bold">Display mode</legend>
+              <legend className="mb-3 text-sm font-bold">{text("Display mode", "ڈسپلے موڈ")}</legend>
 
               <div className="grid grid-cols-3 gap-2">
                 {modes.map(({ value, label, Icon }) => (
@@ -96,7 +102,7 @@ export default function AppearanceMenu() {
             </fieldset>
 
             <fieldset className="m-0 min-w-0 border-0 p-0">
-              <legend className="mb-3 text-sm font-bold">Accent colour</legend>
+              <legend className="mb-3 text-sm font-bold">{text("Accent colour", "نمایاں رنگ")}</legend>
 
               <div className="grid grid-cols-4 gap-2">
                 {accents.map(({ value, label, color }) => (
@@ -143,7 +149,7 @@ export default function AppearanceMenu() {
               className="flex items-center justify-center gap-2 rounded-xl border-0 bg-violet-50 p-3 text-sm font-semibold text-violet-700 hover:bg-violet-100"
             >
               <RotateCcw size={16} aria-hidden="true" />
-              Reset appearance
+              {text("Reset appearance", "ظاہری شکل ری سیٹ کریں")}
             </button>
           </div>
         </Modal>

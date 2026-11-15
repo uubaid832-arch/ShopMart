@@ -3,6 +3,7 @@ import Modal from "../../components/Modal";
 import SavedAddresses from "./SavedAddresses";
 import { useLanguage } from "../language/useLanguage";
 import ChangePasswordButton from "../auth/ChangePasswordButton";
+import AppearanceMenu from "../../components/AppearanceMenu";
 
 function ProfileForm({ profile, onSave }) {
   const { language } = useLanguage();
@@ -140,7 +141,7 @@ export default function ProfileModal({
   onClose,
   onLogout,
 }) {
-  const { language, direction } = useLanguage();
+  const { language, setLanguage, direction } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
 
   return (
@@ -186,6 +187,19 @@ export default function ProfileModal({
           </p>
         ) : (
           <div className="grid gap-6">
+            <section className="grid gap-3 border-0 border-b border-solid border-slate-200 pb-5">
+              <h3 className="m-0 text-sm font-bold text-slate-700">{text("App settings", "ایپ کی ترتیبات")}</h3>
+              <button
+                type="button"
+                onClick={() => setLanguage(language === "en" ? "ur" : "en")}
+                aria-label={text("Switch app language", "ایپ کی زبان تبدیل کریں")}
+                className="flex w-full items-center justify-between gap-3 rounded-xl border border-solid border-slate-200 bg-white p-3 text-start hover:bg-violet-50"
+              >
+                <span><strong className="block text-sm">{text("App language", "ایپ کی زبان")}</strong><small className="mt-1 block text-xs text-slate-500">{text("Choose English or Urdu for ShopMart", "شاپ مارٹ کے لیے انگریزی یا اردو منتخب کریں")}</small></span>
+                <span className="rounded-lg bg-violet-100 px-3 py-2 text-sm font-bold text-violet-700">{language === "ur" ? "اردو" : "English"}</span>
+              </button>
+              <AppearanceMenu settings />
+            </section>
             <ProfileForm key={profile.id} profile={profile} onSave={onSave} />
             <ChangePasswordButton />
             {accessToken && (

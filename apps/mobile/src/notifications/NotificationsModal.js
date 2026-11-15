@@ -1,14 +1,7 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { notificationReadChanged } from "./NotificationBell";
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 

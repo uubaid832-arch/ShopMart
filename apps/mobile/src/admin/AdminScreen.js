@@ -1,18 +1,6 @@
+import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  AppState,
-  FlatList,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, AppState, FlatList, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Path } from "react-native-svg";
@@ -35,6 +23,7 @@ import BiometricSettingsModal from "../account/BiometricSecurity";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 import { setAdminPalette } from "./adminUi";
 import AppearanceModal from "../appearance/AppearanceModal";
+import { useMobileLanguage } from "../i18n/MobileLanguage";
 
 let themePalette = {
   background: "#f8f9fc", surface: "#fff", elevated: "#fff", soft: "#f3f5f8",
@@ -63,6 +52,7 @@ const paths = {
     "M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-2l2 3M4 16l2 3a7 7 0 0 0 12-2",
   bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4",
   arrow: "m9 5 7 7-7 7",
+  languages: "M4 5h12M10 3v2m4 0c-.6 4-3.2 7-7 9m-3-5c2.3 3.4 5 5.4 9 7M14 20l4-9 4 9m-6.7-3h5.4",
   down: "m5 9 7 7 7-7",
   up: "m5 15 7-7 7 7",
   back: "m15 5-7 7 7 7",
@@ -965,6 +955,7 @@ export default function AdminScreen({
 }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
+  const languageSettings = useMobileLanguage();
   themePalette = palette;
   setAdminPalette(palette);
   const [revision, setRevision] = useState(0);
@@ -1039,12 +1030,6 @@ export default function AdminScreen({
             surfaceColor={palette.surface}
             borderColor={palette.border}
             onPress={() => setPanel("notifications")}
-          />
-          <IconButton
-            icon="palette"
-            label="Change app theme"
-            compact
-            onPress={() => setAppearanceOpen(true)}
           />
           <IconButton
             icon="user"
@@ -1544,11 +1529,6 @@ export default function AdminScreen({
                 <Text style={s.title}>My account</Text>
               </View>
               <IconButton
-                icon="palette"
-                label="Change app theme"
-                onPress={() => setAppearanceOpen(true)}
-              />
-              <IconButton
                 icon="close"
                 label="Close admin account"
                 onPress={() => setPanel("")}
@@ -1568,6 +1548,30 @@ export default function AdminScreen({
                 </View>
               </View>
               <WarehouseAddressSettings session={session} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => languageSettings.setLanguage(languageSettings.language === "en" ? "ur" : "en")}
+                style={s.accountAction}
+              >
+                <View style={s.metricIcon}><Icon name="languages" /></View>
+                <View style={s.grow}>
+                  <Text style={s.cardTitle}>App language</Text>
+                  <Text style={s.muted}>ShopMart language · {languageSettings.language === "ur" ? "اردو" : "English"}</Text>
+                </View>
+                <Text style={s.link}>{languageSettings.language === "ur" ? "English" : "اردو"}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setAppearanceOpen(true)}
+                style={s.accountAction}
+              >
+                <View style={s.metricIcon}><Icon name="palette" /></View>
+                <View style={s.grow}>
+                  <Text style={s.cardTitle}>Appearance</Text>
+                  <Text style={s.muted}>Change theme and accent colour</Text>
+                </View>
+                <Icon name="arrow" />
+              </Pressable>
               {[
                 {
                   icon: "user",

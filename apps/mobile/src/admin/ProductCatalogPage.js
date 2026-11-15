@@ -1,21 +1,11 @@
+import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Image, Modal, Pressable, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { apiBaseUrl, imageUrl } from "./adminApi";
 import { Notice } from "./adminUi";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
-import AppearanceModal from "../appearance/AppearanceModal";
 
 let catalogPalette = null;
 
@@ -112,7 +102,6 @@ export default function ProductCatalogPage({
   const { theme } = useMobileAppearance();
   catalogPalette = theme.colors;
   const [picker, setPicker] = useState("");
-  const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [photos, setPhotos] = useState({ key: "", values: {} });
   const items = result.data?.items || [];
   const ids = items
@@ -177,14 +166,6 @@ export default function ProductCatalogPage({
     >
       <SafeAreaView style={s.screen}>
         <View style={s.topActions}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Change app theme"
-            onPress={() => setAppearanceOpen(true)}
-            style={s.iconButton}
-          >
-            <Icon name="palette" />
-          </Pressable>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Refresh products"
@@ -442,10 +423,6 @@ export default function ProductCatalogPage({
         </Modal>
       )}
     </Modal>
-    <AppearanceModal
-      visible={appearanceOpen}
-      onClose={() => setAppearanceOpen(false)}
-    />
     </>
   );
 }

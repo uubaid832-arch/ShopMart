@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
+import { Pressable, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 export default function VoucherField({ voucher, disabled }) {
   const { theme } = useMobileAppearance();

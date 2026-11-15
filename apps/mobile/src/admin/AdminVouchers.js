@@ -1,5 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Text as NativeText, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { adminRequest, dateLabel, money, useAdminResource } from "./adminApi";
 import {

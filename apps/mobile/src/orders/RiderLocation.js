@@ -1,13 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  AppState,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import RiderMap from "./RiderMap";
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()

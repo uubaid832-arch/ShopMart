@@ -1,14 +1,5 @@
-import {
-  Alert,
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Text } from "../i18n/LocalizedNativeComponents.js";
+import { Alert, ActivityIndicator, FlatList, Image, Modal, Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useMobileAppearance } from "../appearance/MobileAppearance";

@@ -3,7 +3,7 @@ import { useSession } from "../auth/useSession";
 import {
   getAdminReturns,
   updateAdminReturnStatus,
-  recordManualRefund,
+  recordCodRefund,
   refundSafepay,
 } from "../../api/adminReturns";
 import CustomerContact from "./CustomerContact";
@@ -380,14 +380,14 @@ export default function AdminReturns() {
 
                 {request.status === "APPROVED" &&
                   request.refundStatus === "NOT_INITIATED" &&
-                  ["COD", "BANK_TRANSFER"].includes(request.paymentMethod) && (
+                  request.paymentMethod === "COD" && (
                     <button
                       type="button"
                       disabled={Boolean(savingId)}
                       onClick={() => setRefundRequest(request)}
                       className="mt-3 rounded-xl border-0 bg-emerald-600 px-4 py-3 text-sm font-semibold text-white enabled:hover:bg-emerald-700 disabled:opacity-50"
                     >
-                      Record {request.paymentMethod === "BANK_TRANSFER" ? "bank transfer" : "COD"} refund
+                      Record COD refund
                     </button>
                   )}
                 {request.status === "APPROVED" && request.paymentProvider === "SAFEPAY" && request.refundStatus !== "REFUNDED" && (
@@ -440,7 +440,7 @@ export default function AdminReturns() {
           key={refundRequest.id}
           request={refundRequest}
           onSave={async (reference) => {
-            await recordManualRefund(token, refundRequest.id, reference);
+            await recordCodRefund(token, refundRequest.id, reference);
             setFeedback("Refund recorded.");
             setReload((current) => current + 1);
           }}

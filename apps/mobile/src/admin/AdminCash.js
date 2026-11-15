@@ -1,5 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useState } from "react";
-import { ActivityIndicator, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Switch, Text as NativeText, View } from "react-native";
 import {
   adminRequest,
   dateLabel,

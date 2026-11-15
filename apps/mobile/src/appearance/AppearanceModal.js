@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Text } from "../i18n/LocalizedNativeComponents.js";
+import { Modal, Pressable, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useMobileAppearance } from "./MobileAppearance";
 

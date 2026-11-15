@@ -1,14 +1,6 @@
+import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useRef, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-} from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text as NativeText, TextInput as NativeTextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 

@@ -1,11 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  AppState,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, AppState, StyleSheet, Text as NativeText, View } from "react-native";
 import { adminRequest, dateLabel, readable } from "./adminApi";
 import RiderLocation from "../orders/RiderLocation";
 import { useMobileAppearance } from "../appearance/MobileAppearance";

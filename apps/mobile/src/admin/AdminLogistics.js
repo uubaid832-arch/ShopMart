@@ -1,6 +1,7 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import CustomerContact from "./CustomerContact";
 import { useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Text as NativeText, View } from "react-native";
 import {
   adminRequest,
   dateLabel,

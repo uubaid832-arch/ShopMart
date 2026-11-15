@@ -3,11 +3,14 @@ import { KeyRound, MapPinned, UserRound } from "lucide-react";
 import { getWarehouseReturnAddress, saveWarehouseReturnAddress } from "../../api/adminStoreSettings";
 import ChangePasswordButton from "../auth/ChangePasswordButton";
 import { useSession } from "../auth/useSession";
+import { useLanguage } from "../language/useLanguage";
+import AppearanceMenu from "../../components/AppearanceMenu";
 
 const inputClass = "box-border w-full rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 text-sm text-slate-800";
 
 export default function AdminAccount() {
   const { session, saveProfile } = useSession();
+  const { language, setLanguage } = useLanguage();
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
@@ -96,6 +99,15 @@ export default function AdminAccount() {
         <h1 className="m-0 text-3xl font-bold">My account</h1>
         <p className="mb-0 mt-2 text-sm text-slate-500">Edit your account, password, and the address customers use for returns.</p>
       </header>
+
+      <section className="grid gap-3 rounded-2xl border border-solid border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="m-0 text-lg font-bold">App settings</h2>
+        <button type="button" onClick={() => setLanguage(language === "en" ? "ur" : "en")} className="flex w-full items-center justify-between gap-3 rounded-xl border border-solid border-slate-200 bg-white p-3 text-start hover:bg-violet-50">
+          <span><strong className="block text-sm">App language</strong><small className="mt-1 block text-xs text-slate-500">Choose English or Urdu for ShopMart</small></span>
+          <span className="rounded-lg bg-violet-100 px-3 py-2 text-sm font-bold text-violet-700">{language === "ur" ? "اردو" : "English"}</span>
+        </button>
+        <AppearanceMenu settings />
+      </section>
 
       <section className="rounded-2xl border border-solid border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-3">

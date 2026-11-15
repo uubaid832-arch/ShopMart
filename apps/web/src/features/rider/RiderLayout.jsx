@@ -3,12 +3,16 @@ import { NavLink, Outlet, useNavigate } from "react-router";
 import { Bike, Truck, Wallet, LogOut, ArrowUpRight } from "lucide-react";
 import { useSession } from "../auth/useSession";
 import NotificationBell from "../notifications/NotificationBell";
-import AppearanceMenu from "../../components/AppearanceMenu";
 import ChangePasswordButton from "../auth/ChangePasswordButton";
+import Modal from "../../components/Modal";
+import AppearanceMenu from "../../components/AppearanceMenu";
+import { useLanguage } from "../language/useLanguage";
 
 export default function RiderLayout() {
   const { session, restoring, error, signOut } = useSession();
   const [signingOut, setSigningOut] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const { language, setLanguage } = useLanguage();
   const navigate = useNavigate();
 
   async function handleSignOut() {
@@ -116,26 +120,13 @@ export default function RiderLayout() {
               <ArrowUpRight size={16} aria-hidden="true" />
             </NavLink>
 
-            <AppearanceMenu />
-            <ChangePasswordButton />
             <NotificationBell />
 
             <div className="ml-1 flex items-center gap-3 border-0 border-l border-solid border-slate-200 pl-3">
-              <span
-                aria-hidden="true"
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-violet-100 text-xs font-extrabold text-violet-700"
-              >
-                {initials}
-              </span>
-
-              <div className="hidden sm:block">
-                <p className="m-0 max-w-40 truncate text-sm font-bold">
-                  {session.user.name}
-                </p>
-                <p className="mb-0 mt-0.5 text-xs text-slate-400">
-                  Delivery rider
-                </p>
-              </div>
+              <button type="button" onClick={() => setAccountOpen(true)} aria-label="Open my account settings" className="flex items-center gap-3 rounded-xl border-0 bg-transparent p-1 text-start hover:bg-violet-50">
+                <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-violet-100 text-xs font-extrabold text-violet-700">{initials}</span>
+                <span className="hidden sm:block"><span className="block max-w-40 truncate text-sm font-bold">{session.user.name}</span><span className="mt-0.5 block text-xs text-slate-400">Delivery rider</span></span>
+              </button>
 
               <button
                 type="button"
@@ -187,6 +178,17 @@ export default function RiderLayout() {
         )}
         <Outlet />
       </main>
+      {accountOpen && (
+        <Modal onClose={() => setAccountOpen(false)} labelledBy="rider-account-title" size="sm">
+          <div className="grid gap-4 p-5">
+            <header><p className="m-0 text-xs font-bold uppercase tracking-widest text-violet-600">Rider settings</p><h2 id="rider-account-title" className="mb-0 mt-2 text-2xl font-bold">My account</h2><p className="mb-0 mt-2 text-sm text-slate-500">{session.user.name} · {session.user.email}</p></header>
+            <button type="button" onClick={() => setLanguage(language === "en" ? "ur" : "en")} className="flex w-full items-center justify-between gap-3 rounded-xl border border-solid border-slate-200 bg-white p-3 text-start hover:bg-violet-50"><span><strong className="block text-sm">App language</strong><small className="mt-1 block text-xs text-slate-500">Choose English or Urdu for ShopMart</small></span><span className="rounded-lg bg-violet-100 px-3 py-2 text-sm font-bold text-violet-700">{language === "ur" ? "اردو" : "English"}</span></button>
+            <AppearanceMenu settings />
+            <section className="rounded-xl border border-solid border-slate-200 p-3"><h3 className="mb-3 mt-0 text-sm font-bold">Password</h3><ChangePasswordButton /></section>
+            <button type="button" onClick={() => setAccountOpen(false)} className="rounded-xl border-0 bg-slate-100 p-3 font-semibold text-slate-700 hover:bg-slate-200">Close</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

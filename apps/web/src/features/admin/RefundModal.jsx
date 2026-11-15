@@ -47,7 +47,7 @@ export default function RefundModal({ request, onSave, onClose }) {
       <div className="p-5">
         <header className="flex items-center justify-between gap-3">
           <h2 id="refund-title" className="m-0 text-xl font-bold">
-            Record {request.paymentMethod === "BANK_TRANSFER" ? "bank transfer" : "COD"} refund
+            Record COD refund
           </h2>
 
           <button
@@ -74,7 +74,8 @@ export default function RefundModal({ request, onSave, onClose }) {
         </section>
 
         <p className="rounded-xl bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-          Receive and inspect the returned goods first. Then pay the customer by {request.paymentMethod === "BANK_TRANSFER" ? "bank transfer" : "COD"} and enter the receipt reference here. This records the refund in ShopMart; it does not transfer money.
+          This records a refund paid outside ShopMart. It does not transfer
+          money. Record it only after the customer has been paid.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -105,7 +106,7 @@ export default function RefundModal({ request, onSave, onClose }) {
                 required
                 className="mt-1 size-4 shrink-0 accent-violet-600"
               />
-              I confirm that I paid {amount} to the customer after approving the inspected return.
+              I confirm that the customer has received {amount}.
             </label>
 
             <button

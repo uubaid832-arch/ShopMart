@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Text } from "../i18n/LocalizedNativeComponents.js";
+import { Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import { ProductsModule, CategoriesModule } from "./AdminCatalog";
 import PeopleModule from "./AdminPeople";
 import LogisticsModule from "./AdminLogistics";

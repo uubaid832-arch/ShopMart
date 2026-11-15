@@ -1,14 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMobileOrders, getMobileTracking, getMobileOrder } from "../api/orders";

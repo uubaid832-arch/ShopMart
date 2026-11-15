@@ -1,5 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text as NativeText } from "react-native";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { apiBaseUrl } from "../admin/adminApi";

@@ -1,5 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import ProfileModal from "../account/ProfileModal";
 import ChangePasswordModal from "../account/ChangePasswordModal";

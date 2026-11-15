@@ -1,14 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Linking,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Path } from "react-native-svg";
@@ -22,6 +14,7 @@ import NotificationsModal from "../notifications/NotificationsModal";
 import NotificationBell from "../notifications/NotificationBell";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 import AppearanceModal from "../appearance/AppearanceModal";
+import { useMobileLanguage } from "../i18n/MobileLanguage";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
@@ -92,6 +85,7 @@ export default function RiderScreen({
 }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
+  const languageSettings = useMobileLanguage();
   riderPalette = palette;
   const token = session.accessToken;
   const [view, setView] = useState("dashboard");
@@ -255,14 +249,6 @@ export default function RiderScreen({
         session={session}
         onPress={() => setNotificationsOpen(true)}
       />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Change app theme"
-        onPress={() => setAppearanceOpen(true)}
-        style={styles.iconButton}
-      >
-        <Icon name="palette" color={palette.accent} />
-      </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Sign out"
@@ -656,15 +642,33 @@ export default function RiderScreen({
               onOpenDeliveries={() => setView("deliveries")}
             />
           ) : (
-            <RiderProfile
-              session={session}
-              onUpdateUser={onUpdateUser}
-              security={security}
-              onPasswordChanged={async () => {
-                await gps.stop(false);
-                await onPasswordChanged();
-              }}
-            />
+            <>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => languageSettings.setLanguage(languageSettings.language === "en" ? "ur" : "en")}
+                style={[styles.profileSetting, { backgroundColor: palette.surface, borderColor: palette.border }]}
+              >
+                <Text style={[styles.profileSettingTitle, { color: palette.text }]}>App language · {languageSettings.language === "ur" ? "اردو" : "English"}</Text>
+                <Text style={[styles.profileSettingAction, { color: palette.accent }]}>{languageSettings.language === "ur" ? "English" : "اردو"}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setAppearanceOpen(true)}
+                style={[styles.profileSetting, { backgroundColor: palette.surface, borderColor: palette.border }]}
+              >
+                <Text style={[styles.profileSettingTitle, { color: palette.text }]}>Appearance</Text>
+                <Text style={[styles.profileSettingAction, { color: palette.accent }]}>Change theme and accent colour</Text>
+              </Pressable>
+              <RiderProfile
+                session={session}
+                onUpdateUser={onUpdateUser}
+                security={security}
+                onPasswordChanged={async () => {
+                  await gps.stop(false);
+                  await onPasswordChanged();
+                }}
+              />
+            </>
           )}
         </>
       )}
@@ -769,6 +773,21 @@ const baseStyles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  profileSetting: {
+    minHeight: 58,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  profileSettingTitle: { flex: 1, fontSize: 14, fontWeight: "800" },
+  profileSettingAction: { fontSize: 13, fontWeight: "800" },
   welcomeName: { fontSize: 23, fontWeight: "900", color: "#2c2450" },
   welcomeText: { color: "#50476c", lineHeight: 21, fontSize: 14, marginTop: 5 },
   truck: {

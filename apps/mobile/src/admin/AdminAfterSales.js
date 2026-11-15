@@ -1,6 +1,7 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import CustomerContact from "./CustomerContact";
 import { useState } from "react";
-import { Switch, Text, View } from "react-native";
+import { Switch, Text as NativeText, View } from "react-native";
 import {
   adminRequest,
   dateLabel,
@@ -27,19 +28,20 @@ import {
 function RefundEditor({ request, op, onSave }) {
   const [reference, setReference] = useState("");
   const [paid, setPaid] = useState(false);
-  const paymentLabel = request.paymentMethod === "BANK_TRANSFER" ? "bank transfer" : "COD";
   return (
     <Form>
       <Notice op={op} />
       <Card
-        title={`Record a paid ${paymentLabel} refund`}
+        title="Record a paid COD refund"
         subtitle={`${request.orderNumber} · ${request.productName} × ${request.quantity}`}
       >
         <Text style={ui.body}>{request.customerName}</Text>
         <Text style={ui.amount}>{money(request.refundAmount)}</Text>
         <View style={ui.info}>
           <Text style={ui.body}>
-            Receive and inspect the returned goods first. Then pay the customer by {paymentLabel} and enter the receipt reference here. This records the refund in ShopMart; it does not transfer money.
+            This records money you have already refunded outside ShopMart. It
+            does not transfer money. Pay the customer first and keep the
+            receipt.
           </Text>
         </View>
         <Field
@@ -51,7 +53,7 @@ function RefundEditor({ request, op, onSave }) {
         />
         <View style={ui.switchRow}>
           <Text style={[ui.body, ui.grow]}>
-            I paid this refund to the customer after approving the inspected return.
+            I have paid this refund to the customer.
           </Text>
           <Switch
             accessibilityLabel="Customer has received this refund"
@@ -61,7 +63,7 @@ function RefundEditor({ request, op, onSave }) {
           />
         </View>
         <Button
-          title={`Record paid ${paymentLabel} refund`}
+          title="Record paid refund"
           icon="check"
           disabled={op.blocked || !paid || !reference.trim()}
           onPress={() =>
@@ -354,10 +356,10 @@ export function ReturnsModule({ session, onClose, onChanged }) {
                   </Card>
                 )}
                 {item.status === "APPROVED" &&
-                  ["COD", "BANK_TRANSFER"].includes(item.paymentMethod) &&
-                  item.refundStatus === "NOT_INITIATED" && (
+                  item.paymentMethod === "COD" &&
+                  item.refundStatus !== "REFUNDED" && (
                     <Button
-                      title={`Record ${item.paymentMethod === "BANK_TRANSFER" ? "bank transfer" : "COD"} refund`}
+                      title="Record paid refund"
                       icon="wallet"
                       disabled={op.blocked}
                       onPress={() => {

@@ -55,7 +55,7 @@ export const getAdminReturns = (token, page, signal) =>
 export const updateAdminReturnStatus = (token, id, status, rejectionReason) =>
   adminReturnRequest(token, `/${id}/status`, { status, rejectionReason });
 
-export async function recordManualRefund(token, id, reference) {
+export async function recordCodRefund(token, id, reference) {
   const csrfResponse = await fetch("/api/auth/csrf", {
     credentials: "same-origin",
     cache: "no-store",
@@ -94,9 +94,6 @@ export async function recordManualRefund(token, id, reference) {
     );
   }
 }
-
-// Backward-compatible export for callers that still use the COD-specific name.
-export const recordCodRefund = recordManualRefund;
 
 export async function refundSafepay(token, id) {
   const csrfResponse = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store" });

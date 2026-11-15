@@ -1,14 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ProductReviews from "./ProductReviews";
 import { useMobileAppearance } from "../appearance/MobileAppearance";

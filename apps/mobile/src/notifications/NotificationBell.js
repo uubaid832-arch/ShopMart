@@ -1,5 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import { AppState, Pressable, StyleSheet, Text, View } from "react-native";
+import { AppState, Pressable, StyleSheet, Text as NativeText, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 

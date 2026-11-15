@@ -1,4 +1,5 @@
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Text } from "../i18n/LocalizedNativeComponents.js";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
@@ -10,6 +11,8 @@ const paths = {
   close: "m6 6 12 12M6 18 18 6",
   mail: "M3 5h18v14H3V5Zm0 0 9 8 9-8",
   lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4",
+  languages: "M4 5h12M10 3v2m4 0c-.6 4-3.2 7-7 9m-3-5c2.3 3.4 5 5.4 9 7M14 20l4-9 4 9m-6.7-3h5.4",
+  palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 
 function Icon({ name, color = "#7c3aed", size = 21 }) {
@@ -32,6 +35,9 @@ export default function AccountModal({
   onEditProfile,
   onChangePassword,
   onOpenBiometrics,
+  language = "en",
+  onToggleLanguage,
+  onAppearance,
   onSignOut,
   onClose,
 }) {
@@ -42,7 +48,7 @@ export default function AccountModal({
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <SafeAreaView style={styles.overlay}>
-        <View style={[styles.sheet, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <ScrollView style={[styles.sheet, { backgroundColor: palette.surface, borderColor: palette.border }]} contentContainerStyle={styles.sheetContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View>
               <Text style={[styles.eyebrow, { color: palette.muted }]}>YOUR SHOPMART SPACE</Text>
@@ -81,6 +87,41 @@ export default function AccountModal({
           </View>
 
           <Text style={[styles.sectionLabel, { color: palette.muted }]}>ACCOUNT SETTINGS</Text>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Change app language. Current language: ${language === "ur" ? "Urdu" : "English"}`}
+            onPress={onToggleLanguage}
+            style={({ pressed }) => [styles.action, { backgroundColor: palette.surface, borderColor: palette.border }, pressed && styles.pressed]}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: palette.accentSoft }]}>
+              <Icon name="languages" color={palette.accent} />
+            </View>
+            <View style={styles.actionCopy}>
+              <Text style={[styles.actionTitle, { color: palette.text }]}>App language</Text>
+              <Text style={[styles.actionDescription, { color: palette.muted }]}>
+                {language === "ur" ? "ابھی اردو منتخب ہے" : "English is selected"}
+              </Text>
+            </View>
+            <View style={[styles.languagePill, { backgroundColor: palette.accentSoft }]}>
+              <Text style={[styles.languagePillText, { color: palette.accent }]}>{language === "ur" ? "English" : "اردو"}</Text>
+            </View>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAppearance}
+            style={({ pressed }) => [styles.action, { backgroundColor: palette.surface, borderColor: palette.border }, pressed && styles.pressed]}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: palette.accentSoft }]}>
+              <Icon name="palette" color={palette.accent} />
+            </View>
+            <View style={styles.actionCopy}>
+              <Text style={[styles.actionTitle, { color: palette.text }]}>Appearance</Text>
+              <Text style={[styles.actionDescription, { color: palette.muted }]}>Change theme and accent colour</Text>
+            </View>
+            <Icon name="arrow" size={17} color={palette.muted} />
+          </Pressable>
 
           <Pressable
             accessibilityRole="button"
@@ -194,7 +235,7 @@ export default function AccountModal({
           >
             <Text style={styles.closeText}>Continue shopping</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );
@@ -210,8 +251,10 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: "#fff",
     borderRadius: 28,
-    padding: 22,
+    borderWidth: 1,
+    maxHeight: "94%",
   },
+  sheetContent: { padding: 22 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -323,6 +366,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 4,
   },
+  languagePill: { paddingHorizontal: 11, paddingVertical: 8, borderRadius: 11 },
+  languagePillText: { fontSize: 11, fontWeight: "800" },
   logoutAction: { borderColor: "#f8e8ec", backgroundColor: "#fffcfd" },
   logoutIcon: { backgroundColor: "#fff0f3" },
   logoutText: { color: "#d14b68" },

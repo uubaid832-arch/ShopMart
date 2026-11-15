@@ -11,7 +11,6 @@ import {
   Info,
 } from "lucide-react";
 import NotificationBell from "../features/notifications/NotificationBell";
-import AppearanceMenu from "./AppearanceMenu";
 import VoiceSearchButton from "./VoiceSearchButton";
 import { useLanguage } from "../features/language/useLanguage";
 
@@ -31,7 +30,7 @@ export default function Navbar({
   onAbout,
   onSignOut,
 }) {
-  const { language, setLanguage, t, direction } = useLanguage();
+  const { t, direction } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartJustChanged, setCartJustChanged] = useState(false);
   const previousCartCount = useRef(cartCount);
@@ -146,20 +145,6 @@ export default function Navbar({
           aria-label="Main navigation"
           className="flex shrink-0 items-center gap-1 sm:gap-2"
         >
-          <label className="sr-only" htmlFor="store-language">
-            {t("language")}
-          </label>
-
-          <select
-            id="store-language"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value)}
-            className="h-10 min-w-0 rounded-xl border border-solid border-slate-200 bg-white px-2 text-sm text-slate-600"
-          >
-            <option value="en">English</option>
-            <option value="ur">اردو</option>
-          </select>
-          <AppearanceMenu />
           <NotificationBell />
           {actions.map(({ label, Icon, onClick, count }) => (
             <button

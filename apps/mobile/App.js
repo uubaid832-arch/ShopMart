@@ -1,18 +1,6 @@
+import { Text, TextInput } from "./src/i18n/LocalizedNativeComponents.js";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  ActivityIndicator,
-  Animated,
-  FlatList,
-  Image,
-  Modal,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, ActivityIndicator, Animated, FlatList, Image, Modal, ScrollView, Pressable, StyleSheet, View } from "react-native";
 import ChatModal from "./src/chatbot/ChatModal";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -40,6 +28,7 @@ import BiometricSettingsModal, {
 } from "./src/account/BiometricSecurity";
 import AppearanceModal from "./src/appearance/AppearanceModal";
 import { MobileAppearanceProvider, useMobileAppearance } from "./src/appearance/MobileAppearance";
+import { MobileLanguageProvider, useMobileLanguage } from "./src/i18n/MobileLanguage";
 
 const paths = {
   grid: "M3 3h7v7H3V3Zm11 0h7v7h-7V3ZM3 14h7v7H3v-7Zm11 0h7v7h-7v-7",
@@ -140,6 +129,7 @@ function ProductPhoto({ uri, name }) {
 function ShopMart() {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
+  const languageSettings = useMobileLanguage();
   const auth = useMobileSession();
   const [authOpen, setAuthOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -608,20 +598,6 @@ function ShopMart() {
           Shop<Text style={[styles.violet, { color: palette.accent }]}>Mart</Text>
         </Text>
         <View style={styles.headerActions}>
-          <IconButton
-            name="palette"
-            label="Change appearance"
-            color={palette.accent}
-            style={{ backgroundColor: palette.surface, borderColor: palette.border }}
-            onPress={() => setAppearanceOpen(true)}
-          />
-          <IconButton
-            name="chat"
-            label="Shopping assistant"
-            color={palette.text}
-            style={{ backgroundColor: palette.surface, borderColor: palette.border }}
-            onPress={() => setChatOpen(true)}
-          />
           <NotificationBell
             session={auth.session}
             onPress={() => openSignedIn(() => setNotificationsOpen(true))}
@@ -987,6 +963,15 @@ function ShopMart() {
         ))}
       </View>
 
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open ShopMart assistant"
+        onPress={() => setChatOpen(true)}
+        style={[styles.assistantFab, { backgroundColor: palette.accent, borderColor: palette.background }]}
+      >
+        <Icon name="chat" size={25} color="#fff" />
+      </Pressable>
+
       <Modal
         visible={categoryPickerOpen}
         animationType="slide"
@@ -1169,6 +1154,9 @@ function ShopMart() {
           busy={auth.signingOut}
           error={auth.error}
           onClose={() => setAccountOpen(false)}
+          language={languageSettings.language}
+          onToggleLanguage={() => languageSettings.setLanguage(languageSettings.language === "en" ? "ur" : "en")}
+          onAppearance={() => { setAccountOpen(false); setAppearanceOpen(true); }}
           onEditProfile={() => {
             setAccountOpen(false);
             setProfileOpen(true);
@@ -1194,9 +1182,11 @@ function ShopMart() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <MobileAppearanceProvider>
-        <ShopMart />
-      </MobileAppearanceProvider>
+      <MobileLanguageProvider>
+        <MobileAppearanceProvider>
+          <ShopMart />
+        </MobileAppearanceProvider>
+      </MobileLanguageProvider>
     </SafeAreaProvider>
   );
 }
@@ -1648,6 +1638,23 @@ const styles = StyleSheet.create({
     paddingBottom: 7,
     backgroundColor: "#fff",
     gap: 5,
+  },
+  assistantFab: {
+    position: "absolute",
+    right: 18,
+    bottom: 88,
+    zIndex: 20,
+    width: 58,
+    height: 58,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 29,
+    borderWidth: 3,
+    elevation: 6,
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
   },
   bottomItem: {
     flex: 1,

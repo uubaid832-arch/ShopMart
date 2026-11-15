@@ -1,5 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Text as NativeText, View } from "react-native";
 import { adminRequest } from "./adminApi";
 import { Button, Card, Choice, Field, Form, Page, ui } from "./adminUi";
 import { customerContactUrl, customerMessage } from "./contactMessages";

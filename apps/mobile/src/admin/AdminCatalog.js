@@ -1,6 +1,7 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import ProductCatalogPage from "./ProductCatalogPage";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Switch, Text, View } from "react-native";
+import { ActivityIndicator, Image, Switch, Text as NativeText, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { File } from "expo-file-system";

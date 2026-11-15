@@ -1,12 +1,6 @@
+import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text as NativeText, View } from "react-native";
 import { codRequest, money } from "./codApi";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
 
