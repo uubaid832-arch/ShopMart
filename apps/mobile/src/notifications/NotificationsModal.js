@@ -105,7 +105,7 @@ export default function NotificationsModal({ session, onClose, onOpenOrder }) {
   }, [token, session.user.id]);
 
   useEffect(() => {
-    if (isAdmin || !current || !data || data.unreadCount < 1 || autoReadStarted.current) return;
+    if (!current || !data || data.unreadCount < 1 || autoReadStarted.current) return;
     autoReadStarted.current = true;
     void markRead();
   }, [current, data, isAdmin, markRead]);

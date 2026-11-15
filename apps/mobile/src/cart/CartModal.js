@@ -1,4 +1,5 @@
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
   Image,
@@ -46,14 +47,33 @@ export default function CartModal({ cart, onClose, onCheckout }) {
       <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <View style={[styles.header, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
           <Text style={[styles.title, { color: palette.text }]}>Shopping cart</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close cart"
-            onPress={onClose}
-            style={[styles.close, { backgroundColor: palette.soft }]}
-          >
-            <Text style={[styles.closeText, { color: palette.muted }]}>×</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            {!cart.loading && cart.items.length > 0 && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear all items from cart"
+                onPress={() => Alert.alert(
+                  "Clear cart?",
+                  "Remove every item from your cart?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Clear cart", style: "destructive", onPress: cart.clearCart },
+                  ],
+                )}
+                style={[styles.clearButton, { backgroundColor: theme.isDark ? "#442330" : "#fff0f3" }]}
+              >
+                <Text style={[styles.clearText, { color: palette.danger }]}>Clear cart</Text>
+              </Pressable>
+            )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close cart"
+              onPress={onClose}
+              style={[styles.close, { backgroundColor: palette.soft }]}
+            >
+              <Text style={[styles.closeText, { color: palette.muted }]}>×</Text>
+            </Pressable>
+          </View>
         </View>
 
         {cart.loading ? (
@@ -167,6 +187,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 25, fontWeight: "800", color: "#0f172a" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  clearButton: { minHeight: 40, paddingHorizontal: 12, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  clearText: { fontSize: 12, fontWeight: "800" },
   close: {
     width: 40,
     height: 40,

@@ -85,10 +85,17 @@ export function useMobileWishlist(userId, enabled = true) {
     });
   }
 
+  function clearAll() {
+    if (loading) return;
+    setError("");
+    setSaved((current) => current?.key === key ? { key, ids: [] } : current);
+  }
+
   return {
     loading,
     error,
     hasItem: (id) => ids.includes(id),
     toggleItem,
+    clearAll,
   };
 }

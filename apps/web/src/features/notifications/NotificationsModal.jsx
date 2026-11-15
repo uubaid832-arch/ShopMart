@@ -119,7 +119,7 @@ export default function NotificationsModal({
   }, [accessToken, isAdmin, onChanged, onClose, navigate]);
 
   useEffect(() => {
-    if (isAdmin || !current || !data || data.unreadCount < 1 || autoReadStarted.current) return;
+    if (!current || !data || data.unreadCount < 1 || autoReadStarted.current) return;
     autoReadStarted.current = true;
     void updateRead(null);
   }, [current, data, isAdmin, updateRead]);

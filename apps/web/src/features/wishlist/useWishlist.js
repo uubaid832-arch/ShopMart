@@ -38,6 +38,10 @@ export function useWishlist(products, userId = null) {
     setIds((current) => current.filter((savedId) => savedId !== id));
   }
 
+  function clearAll() {
+    setIds([]);
+  }
+
   const items = products.filter((product) => ids.includes(product.id));
 
   return {
@@ -46,5 +50,6 @@ export function useWishlist(products, userId = null) {
     hasItem: (id) => ids.includes(id),
     toggleItem,
     removeItem,
+    clearAll,
   };
 }

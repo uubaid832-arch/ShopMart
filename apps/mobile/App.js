@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   Animated,
   FlatList,
@@ -510,6 +511,24 @@ function ShopMart() {
             {loading ? "Finding your favorites..." : `${products.length} ${products.length === 1 ? "product" : "products"}${wishlistOnly ? " saved" : " to explore"}`}
           </Text>
         </View>
+        {wishlistOnly && products.length > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear wishlist"
+            disabled={wishlist.loading}
+            onPress={() => Alert.alert(
+              "Clear wishlist?",
+              "Remove every saved product from your wishlist?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Clear wishlist", style: "destructive", onPress: wishlist.clearAll },
+              ],
+            )}
+            style={[styles.clearWishlistButton, { backgroundColor: theme.isDark ? "#442330" : "#fff0f3" }, wishlist.loading && styles.dim]}
+          >
+            <Text style={[styles.clearWishlistText, { color: palette.danger }]}>Clear wishlist</Text>
+          </Pressable>
+        ) : null}
       </View>
       {auth.error || wishlist.error ? (
         <Text accessibilityRole="alert" style={styles.error}>
@@ -1187,7 +1206,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  homeProductsHeading: { marginTop: 1, marginBottom: 2 },
+  homeProductsHeading: { marginTop: 1, marginBottom: 2, flexDirection: "row", alignItems: "center", gap: 8 },
+  clearWishlistButton: { minHeight: 39, paddingHorizontal: 10, borderRadius: 12, justifyContent: "center" },
+  clearWishlistText: { fontSize: 10, fontWeight: "800" },
   catalogHeader: { paddingBottom: 8 },
   backHomeButton: {
     alignSelf: "flex-start",

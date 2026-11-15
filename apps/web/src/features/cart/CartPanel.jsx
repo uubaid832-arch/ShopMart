@@ -41,16 +41,31 @@ export default function CartPanel({
           </h2>
         </div>
 
-        <button
-          type="button"
-          aria-label={text("Close cart", "ٹوکری بند کریں")}
-          onClick={onClose}
-          className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-slate-600 hover:bg-violet-100"
-        >
-          <span aria-hidden="true" className="text-2xl">
-            ×
-          </span>
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {cart.items.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(text("Remove every item from your cart?", "کیا ٹوکری سے تمام مصنوعات ہٹا دیں؟"))) {
+                  cart.clearCart();
+                }
+              }}
+              className="rounded-xl border-0 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+            >
+              {text("Clear cart", "ٹوکری خالی کریں")}
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label={text("Close cart", "ٹوکری بند کریں")}
+            onClick={onClose}
+            className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-slate-600 hover:bg-violet-100"
+          >
+            <span aria-hidden="true" className="text-2xl">
+              ×
+            </span>
+          </button>
+        </div>
       </header>
 
       <div

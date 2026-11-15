@@ -39,16 +39,31 @@ export default function WishlistModal({
           </h2>
         </div>
 
-        <button
-          type="button"
-          aria-label={text("Close wishlist", "پسندیدہ مصنوعات بند کریں")}
-          onClick={onClose}
-          className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-slate-600 hover:bg-violet-100"
-        >
-          <span aria-hidden="true" className="text-2xl">
-            ×
-          </span>
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {items.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm(text("Remove every saved item from your wishlist?", "کیا پسندیدہ فہرست سے تمام مصنوعات ہٹا دیں؟"))) {
+                  wishlist.clearAll();
+                }
+              }}
+              className="rounded-xl border-0 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+            >
+              {text("Clear wishlist", "پسندیدہ فہرست خالی کریں")}
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label={text("Close wishlist", "پسندیدہ مصنوعات بند کریں")}
+            onClick={onClose}
+            className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-slate-600 hover:bg-violet-100"
+          >
+            <span aria-hidden="true" className="text-2xl">
+              ×
+            </span>
+          </button>
+        </div>
       </header>
 
       <div
