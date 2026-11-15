@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { LanguageContext } from "./useLanguage";
-import { translateBatchToUrdu } from "../../api/translation";
+import { translateTextToUrdu } from "../../api/translation";
 
 const storageKey = "shopmart-language";
 
@@ -66,69 +66,18 @@ export default function LanguageProvider({ children }) {
 
     const translatedText = new Map();
     const translatedAttributes = new Map();
-    const translationCache = new Map();
     const attributeNames = ["placeholder", "title", "aria-label", "alt"];
-    const pending = new Map();
-    let timer = null;
-    let stopped = false;
-
-    function textNeedsTranslation(value) {
-      return typeof value === "string" && /[A-Za-z]/.test(value) && !/[\u0590-\u08ff]/.test(value);
-    }
-
-    function rememberCandidate(source, apply) {
-      if (!textNeedsTranslation(source)) return;
-      const original = source;
-      const key = original.trim();
-      if (!key) return;
-      const cached = translationCache.get(key);
-      if (cached) {
-        apply(original, cached);
-        return;
-      }
-      const callbacks = pending.get(key) ?? [];
-      callbacks.push((translation) => apply(original, translation));
-      pending.set(key, callbacks);
-      if (!timer) timer = window.setTimeout(flush, 40);
-    }
-
-    async function flush() {
-      timer = null;
-      if (stopped || !pending.size) return;
-      const batch = [];
-      let total = 0;
-      for (const key of pending.keys()) {
-        if (batch.length >= 50 || total + key.length > 3500) break;
-        batch.push(key);
-        total += key.length;
-      }
-      if (!batch.length) return;
-      const callbacks = new Map(batch.map((key) => [key, pending.get(key)]));
-      batch.forEach((key) => pending.delete(key));
-      try {
-        const results = await translateBatchToUrdu(batch);
-        if (stopped) return;
-        batch.forEach((key, index) => {
-          const translation = results[index] || key;
-          translationCache.set(key, translation);
-          callbacks.get(key)?.forEach((apply) => apply(translation));
-        });
-      } catch {
-        // Keep the current English text visible if the translation service is unavailable.
-      }
-      if (pending.size && !timer && !stopped) timer = window.setTimeout(flush, 40);
-    }
 
     function visitText(node) {
       const current = node.data;
       const previous = translatedText.get(node);
       if (previous?.translated === current) return;
-      if (!textNeedsTranslation(current)) return;
-      rememberCandidate(current, (original, translation) => {
-        if (!node.isConnected || node.data !== original) return;
-        node.data = translation;
-        translatedText.set(node, { original, translated: translation });
-      });
+      const translation = translateTextToUrdu(current);
+      if (!translation || translation === current.trim()) return;
+      const prefix = current.match(/^\s*/)?.[0] ?? "";
+      const suffix = current.match(/\s*$/)?.[0] ?? "";
+      node.data = `${prefix}${translation}${suffix}`;
+      translatedText.set(node, { original: current, translated: node.data });
     }
 
     function visitElement(element) {
@@ -139,13 +88,12 @@ export default function LanguageProvider({ children }) {
         if (current === null) continue;
         const previous = translatedAttributes.get(element)?.get(name);
         if (previous?.translated === current) continue;
-        rememberCandidate(current, (original, translation) => {
-          if (!element.isConnected || element.getAttribute(name) !== original) return;
-          element.setAttribute(name, translation);
-          const values = translatedAttributes.get(element) ?? new Map();
-          values.set(name, { original, translated: translation });
-          translatedAttributes.set(element, values);
-        });
+        const translation = translateTextToUrdu(current);
+        if (!translation || translation === current.trim()) continue;
+        element.setAttribute(name, translation);
+        const values = translatedAttributes.get(element) ?? new Map();
+        values.set(name, { original: current, translated: translation });
+        translatedAttributes.set(element, values);
       }
       for (const child of element.childNodes) {
         if (child.nodeType === Node.TEXT_NODE) visitText(child);
@@ -176,9 +124,7 @@ export default function LanguageProvider({ children }) {
     scan(document.body);
 
     return () => {
-      stopped = true;
       observer.disconnect();
-      if (timer) window.clearTimeout(timer);
       for (const [node, record] of translatedText) {
         if (node.isConnected && node.data === record.translated) node.data = record.original;
       }
@@ -193,20 +139,15 @@ export default function LanguageProvider({ children }) {
 
   useEffect(() => {
     function syncLanguage(event) {
-      if (event.key === storageKey || event.key === null) {
-        setLanguageState(readLanguage());
-      }
+      if (event.key === storageKey || event.key === null) setLanguageState(readLanguage());
     }
-
     window.addEventListener("storage", syncLanguage);
     return () => window.removeEventListener("storage", syncLanguage);
   }, []);
 
   function setLanguage(value) {
     if (!["en", "ur"].includes(value)) return;
-
     setLanguageState(value);
-
     try {
       localStorage.setItem(storageKey, value);
     } catch {
@@ -219,14 +160,7 @@ export default function LanguageProvider({ children }) {
   }
 
   return (
-    <LanguageContext.Provider
-      value={{
-        language,
-        setLanguage,
-        t,
-        direction: language === "ur" ? "rtl" : "ltr",
-      }}
-    >
+    <LanguageContext.Provider value={{ language, setLanguage, t, direction: language === "ur" ? "rtl" : "ltr" }}>
       {children}
     </LanguageContext.Provider>
   );

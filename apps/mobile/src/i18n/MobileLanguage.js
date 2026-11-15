@@ -1,15 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { translateBatchToUrdu } from "../api/translation";
+import urduTranslations from "./urduTranslations.json";
 
 const LANGUAGE_KEY = "shopmart-mobile-language-v1";
 const MobileLanguageContext = createContext(null);
+const urduLookup = new Map(
+  Object.entries(urduTranslations).map(([source, translation]) => [
+    source.trim().replace(/\s+/g, " ").toLocaleLowerCase(),
+    translation,
+  ]),
+);
+
+function translateTextToUrdu(value) {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (!normalized || /[\u0590-\u08ff]/.test(normalized)) return value;
+  return urduLookup.get(normalized.toLocaleLowerCase()) ?? value;
+}
 
 export function MobileLanguageProvider({ children }) {
   const [language, setLanguageState] = useState("en");
-  const cacheRef = useRef(new Map());
-  const pendingRef = useRef(new Map());
-  const timerRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -27,53 +37,7 @@ export function MobileLanguageProvider({ children }) {
     AsyncStorage.setItem(LANGUAGE_KEY, value).catch(() => {});
   }, []);
 
-  const flushQueue = useCallback(async () => {
-    timerRef.current = null;
-    const entries = [...pendingRef.current.entries()];
-    const batch = [];
-    let total = 0;
-    for (const [text] of entries) {
-      if (batch.length >= 50 || total + text.length > 3500) break;
-      batch.push(text);
-      total += text.length;
-    }
-    if (!batch.length && entries.length) batch.push(entries[0][0]);
-    const resolvers = new Map(batch.map((text) => [text, pendingRef.current.get(text)]));
-    batch.forEach((text) => pendingRef.current.delete(text));
-
-    try {
-      const translations = await translateBatchToUrdu(batch);
-      batch.forEach((text, index) => {
-        const translated = translations[index] || text;
-        cacheRef.current.set(text, translated);
-        resolvers.get(text)?.forEach((resolveValue) => resolveValue(translated));
-      });
-    } catch {
-      batch.forEach((text) => resolvers.get(text)?.forEach((resolveValue) => resolveValue(text)));
-    }
-
-    if (pendingRef.current.size && !timerRef.current) {
-      timerRef.current = setTimeout(flushQueue, 45);
-    }
-  }, []);
-
-  const translateText = useCallback((value) => {
-    const source = String(value ?? "").trim();
-    if (!source || !/[A-Za-z]/.test(source) || /[\u0590-\u08ff]/.test(source)) {
-      return Promise.resolve(value);
-    }
-    if (cacheRef.current.has(source)) return Promise.resolve(cacheRef.current.get(source));
-
-    return new Promise((resolve) => {
-      const existing = pendingRef.current.get(source);
-      if (existing) existing.push(resolve);
-      else pendingRef.current.set(source, [resolve]);
-
-      if (!timerRef.current) {
-        timerRef.current = setTimeout(flushQueue, 45);
-      }
-    });
-  }, [flushQueue]);
+  const translateText = useCallback(translateTextToUrdu, []);
 
   const value = { language, setLanguage, translateText, direction: language === "ur" ? "rtl" : "ltr" };
   return <MobileLanguageContext.Provider value={value}>{children}</MobileLanguageContext.Provider>;

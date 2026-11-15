@@ -1,24 +1,20 @@
-const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "").trim().replace(/\/+$/, "");
+import urduTranslations from "../i18n/urduTranslations.json";
 
+const urduLookup = new Map(
+  Object.entries(urduTranslations).map(([source, translation]) => [
+    source.trim().replace(/\s+/g, " ").toLocaleLowerCase(),
+    translation,
+  ]),
+);
+
+function translateTextToUrdu(value) {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().replace(/\s+/g, " ");
+  if (!normalized || /[\u0590-\u08ff]/.test(normalized)) return value;
+  return urduLookup.get(normalized.toLocaleLowerCase()) ?? value;
+}
+
+// Kept for callers that translate groups of labels. This only reads bundled text.
 export async function translateBatchToUrdu(texts) {
-  const values = [...new Set(texts.map((value) => String(value ?? "").trim()).filter(Boolean))];
-  if (!values.length) return [];
-  if (values.length > 50 || values.reduce((sum, value) => sum + value.length, 0) > 4000) {
-    throw new Error("Translate a smaller batch of text at a time.");
-  }
-  if (!baseUrl) throw new Error("Set EXPO_PUBLIC_API_URL in the mobile .env file.");
-
-  const response = await fetch(`${baseUrl}/api/mobile/translate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ texts: values }),
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.detail || data.message || "Could not translate ShopMart right now.");
-  }
-  if (!Array.isArray(data.translatedTexts) || data.translatedTexts.length !== values.length) {
-    throw new Error("The translation service returned an unexpected response.");
-  }
-  return data.translatedTexts;
+  return texts.map(translateTextToUrdu);
 }
