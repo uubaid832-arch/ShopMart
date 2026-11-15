@@ -162,6 +162,10 @@ public class OrderService {
 
             var product = products.get(0);
             int quantity = entry.getValue();
+            if (quantity < 1 || quantity > 5) {
+                throw failure(HttpStatus.BAD_REQUEST,
+                    "You can purchase a maximum of 5 units per product.");
+            }
 
             if (!Boolean.TRUE.equals(product.get("active"))
                     || !"PKR".equals(product.get("currency"))

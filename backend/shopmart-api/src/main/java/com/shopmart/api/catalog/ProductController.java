@@ -25,18 +25,23 @@ public class ProductController {
   @GetMapping
   public ProductListResponse getProducts(
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "12") int size) {
+      @RequestParam(defaultValue = "12") int size,
+      @RequestParam(required = false) String q) {
     if (page < 0 || size < 1 || size > 100) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST,
           "Page must be non-negative and size must be between 1 and 100.");
     }
 
-    Page<Product> result = repository.findByActiveTrue(
-        PageRequest.of(
-            page,
-            size,
-            Sort.by("name").ascending().and(Sort.by("id"))));
+    String search = q == null ? "" : q.strip();
+    if (search.length() > 100) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search text is too long.");
+    }
+    Page<Product> result = search.isEmpty()
+      ? repository.findByActiveTrue(PageRequest.of(
+          page, size, Sort.by("name").ascending().and(Sort.by("id"))))
+      : repository.searchActive(search, PageRequest.of(
+          page, size, Sort.by("name").ascending().and(Sort.by("id"))));
 
     List<Product> products = result.getContent();
     Map<UUID, ProductRepository.ProductReviewSummary> reviews = products.isEmpty()

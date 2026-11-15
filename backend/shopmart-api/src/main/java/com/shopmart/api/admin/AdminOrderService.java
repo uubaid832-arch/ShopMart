@@ -37,14 +37,28 @@ public class AdminOrderService {
 
   @Transactional(readOnly = true)
   public OrderPage list(UUID adminId, int page, int size) {
+    return list(adminId, page, size, null);
+  }
+
+  @Transactional(readOnly = true)
+  public OrderPage list(UUID adminId, int page, int size, String q) {
     requireAdmin(adminId);
 
     if (page < 0 || size < 1 || size > 50) {
       throw failure(HttpStatus.BAD_REQUEST, "Invalid pagination.");
     }
 
-    long total = jdbc.queryForObject(
-        "SELECT COUNT(*) FROM public.orders", Long.class);
+    String search = q == null ? "" : q.strip();
+    if (search.length() > 100) {
+      throw failure(HttpStatus.BAD_REQUEST, "Search text is too long.");
+    }
+    String term = "%" + search + "%";
+    long total = jdbc.queryForObject("""
+        SELECT COUNT(*) FROM public.orders o
+        JOIN public.users u ON u.id=o.user_id
+        WHERE COALESCE(o.order_number,'') ILIKE ? OR u.name ILIKE ?
+          OR CAST(o.id AS text) ILIKE ? OR o.status ILIKE ?
+        """, Long.class, term, term, term, term);
 
     List<OrderSummary> items = jdbc.query("""
         SELECT o.id, o.order_number, u.name AS customer_name,
@@ -52,6 +66,8 @@ public class AdminOrderService {
                o.total, o.currency, o.created_at
         FROM public.orders o
         JOIN public.users u ON u.id = o.user_id
+        WHERE COALESCE(o.order_number,'') ILIKE ? OR u.name ILIKE ?
+          OR CAST(o.id AS text) ILIKE ? OR o.status ILIKE ?
         ORDER BY o.created_at DESC, o.id DESC
         LIMIT ? OFFSET ?
         """,
@@ -65,7 +81,7 @@ public class AdminOrderService {
             rs.getBigDecimal("total").toPlainString(),
             rs.getString("currency"),
             rs.getTimestamp("created_at").toInstant()),
-        size, (long) page * size);
+        term, term, term, term, size, (long) page * size);
 
     return new OrderPage(
         items, page, size, total,

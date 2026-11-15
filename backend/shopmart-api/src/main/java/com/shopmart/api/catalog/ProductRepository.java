@@ -16,6 +16,16 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
   Page<Product> findByActiveTrue(Pageable pageable);
 
   @EntityGraph(attributePaths = "category")
+  @Query("""
+      SELECT p FROM Product p JOIN p.category c
+      WHERE p.active = true AND
+        (lower(p.name) LIKE lower(concat('%', :q, '%'))
+        OR lower(c.name) LIKE lower(concat('%', :q, '%'))
+        OR lower(p.description) LIKE lower(concat('%', :q, '%')))
+      """)
+  Page<Product> searchActive(@Param("q") String q, Pageable pageable);
+
+  @EntityGraph(attributePaths = "category")
   Optional<Product> findByIdAndActiveTrue(UUID id);
 
   @Query(value = """

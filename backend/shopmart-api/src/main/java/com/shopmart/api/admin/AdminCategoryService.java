@@ -1,6 +1,7 @@
 package com.shopmart.api.admin;
 
 import java.util.UUID;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -21,6 +22,28 @@ public class AdminCategoryService {
   public AdminCategoryService(JdbcTemplate jdbc) {
     this.jdbc = jdbc;
   }
+
+
+  @Transactional(readOnly = true)
+  public List<CategoryWithCount> listWithCounts(UUID adminId, String q) {
+    requireAdmin(adminId);
+    String search = q == null ? "" : q.strip();
+    if (search.length() > 100) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search text is too long.");
+    }
+    return jdbc.query("""
+        SELECT c.id, c.name, COUNT(p.id) AS product_count
+        FROM public.categories c
+        LEFT JOIN public.products p ON p.category_id=c.id
+        WHERE c.name ILIKE ?
+        GROUP BY c.id, c.name
+        ORDER BY c.name
+        """, (rs, row) -> new CategoryWithCount(
+          rs.getObject("id", UUID.class), rs.getString("name"), rs.getLong("product_count")),
+          "%" + search + "%");
+  }
+
+  public record CategoryWithCount(UUID id, String name, long productCount) {}
 
   @Transactional
   public CategoryResponse create(UUID adminId, CategoryRequest request) {

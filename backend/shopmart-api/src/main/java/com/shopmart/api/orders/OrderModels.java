@@ -29,7 +29,7 @@ public final class OrderModels {
 
     public record ItemRequest(
             @NotNull UUID productId,
-            @Min(1) @Max(999) int quantity) {
+            @Min(1) @Max(5) int quantity) {
     }
 
     public record OrderLine(

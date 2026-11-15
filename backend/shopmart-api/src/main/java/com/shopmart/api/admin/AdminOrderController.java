@@ -27,10 +27,11 @@ public class AdminOrderController {
   public ResponseEntity<AdminOrderService.OrderPage> list(
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) String q) {
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(orders.list(userId(jwt), page, size));
+        .body(orders.list(userId(jwt), page, size, q));
   }
 
   @GetMapping("/{id}")
