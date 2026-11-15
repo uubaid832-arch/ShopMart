@@ -20,6 +20,7 @@ import Recommendations from "./features/recommendations/Recommendations";
 import { useSession } from "./features/auth/useSession";
 import { useLanguage } from "./features/language/useLanguage";
 import AboutModal from "./components/AboutModal";
+import Modal from "./components/Modal";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-PK", {
@@ -404,6 +405,8 @@ function Storefront({ products, onRatingSummaryChange }) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
   const [notice, setNotice] = useState(null);
+  const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -444,6 +447,13 @@ function Storefront({ products, onRatingSummaryChange }) {
   const selectedCategory = categories.includes(filters.category)
     ? filters.category
     : "All";
+  const quickCategories = categories.slice(0, 8);
+  if (selectedCategory !== "All" && !quickCategories.includes(selectedCategory)) {
+    quickCategories[quickCategories.length - 1] = selectedCategory;
+  }
+  const matchingCategories = categories.filter((category) =>
+    normalize(category).includes(normalize(categorySearch)),
+  );
 
   const query = normalize(filters.search);
   const words = [...new Set(query.split(" ").filter(Boolean))];
@@ -790,7 +800,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                 )}
                 className="flex flex-wrap gap-2"
               >
-                {categories.map((category) => (
+                {quickCategories.map((category) => (
                   <button
                     key={category}
                     type="button"
@@ -809,6 +819,19 @@ function Storefront({ products, onRatingSummaryChange }) {
                     </bdi>
                   </button>
                 ))}
+                {categories.length > quickCategories.length && (
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setCategorySearch("");
+                      setIsCategoryPickerOpen(true);
+                    }}
+                    className="rounded-xl border border-solid border-violet-200 bg-white px-4 py-2 text-sm font-bold text-violet-700 hover:bg-violet-50"
+                  >
+                    {text("View all", "تمام اقسام دیکھیں")} <span aria-hidden="true">↗</span>
+                  </button>
+                )}
               </div>
 
               <label className="flex items-center gap-2 text-sm text-slate-500">
@@ -1191,6 +1214,75 @@ function Storefront({ products, onRatingSummaryChange }) {
       </ProductDetails>
 
       {isAboutOpen && <AboutModal onClose={() => setIsAboutOpen(false)} />}
+
+      {isCategoryPickerOpen && (
+        <Modal
+          onClose={() => setIsCategoryPickerOpen(false)}
+          labelledBy="category-picker-title"
+          size="lg"
+        >
+          <div className="sticky top-0 z-10 border-0 border-b border-solid border-slate-200 bg-white p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="m-0 text-xs font-bold tracking-widest text-violet-600">
+                  {text("BROWSE SHOPMART", "شاپ مارٹ دیکھیں")}
+                </p>
+                <h2 id="category-picker-title" className="mb-0 mt-2 text-2xl font-extrabold">
+                  {text("All categories", "تمام اقسام")}
+                </h2>
+                <p className="mb-0 mt-1 text-sm text-slate-500">
+                  {text(`${categories.length - 1} categories available`, `${categories.length - 1} اقسام دستیاب ہیں`)}
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label={text("Close categories", "اقسام بند کریں")}
+                onClick={() => setIsCategoryPickerOpen(false)}
+                className="grid size-10 shrink-0 place-items-center rounded-xl border-0 bg-slate-100 text-xl text-slate-600 hover:bg-violet-100"
+              >
+                ×
+              </button>
+            </div>
+            <label className="mt-4 block">
+              <span className="sr-only">{text("Search categories", "اقسام تلاش کریں")}</span>
+              <input
+                autoFocus
+                type="search"
+                value={categorySearch}
+                onChange={(event) => setCategorySearch(event.target.value)}
+                placeholder={text("Search categories…", "اقسام تلاش کریں…")}
+                className={filterInput}
+              />
+            </label>
+          </div>
+          <div className="grid gap-2 p-5 sm:grid-cols-2 sm:p-6">
+            {matchingCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                aria-pressed={selectedCategory === category}
+                onClick={() => {
+                  updateFilters({ category });
+                  setIsCategoryPickerOpen(false);
+                }}
+                className={`flex min-h-12 items-center justify-between rounded-xl border border-solid px-4 py-3 text-start text-sm font-semibold ${
+                  selectedCategory === category
+                    ? "border-violet-600 bg-violet-600 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-violet-300 hover:bg-violet-50"
+                }`}
+              >
+                <bdi>{category === "All" ? text("All products", "تمام مصنوعات") : category}</bdi>
+                <span aria-hidden="true">{selectedCategory === category ? "✓" : "›"}</span>
+              </button>
+            ))}
+            {matchingCategories.length === 0 && (
+              <p className="col-span-full m-0 rounded-xl bg-slate-50 p-5 text-center text-sm text-slate-500">
+                {text("No categories match your search.", "تلاش سے کوئی قسم نہیں ملی۔")}
+              </p>
+            )}
+          </div>
+        </Modal>
+      )}
 
       <footer
         dir={direction}

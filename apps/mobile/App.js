@@ -5,6 +5,7 @@ import {
   Animated,
   FlatList,
   Image,
+  Modal,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -58,6 +59,7 @@ const paths = {
   minus: "M5 12h14",
   cart: "M2 3h3l3 12h11l3-9H6M9 20h.01M18 20h.01",
   close: "m6 6 12 12M6 18 18 6",
+  check: "m5 12 4 4L19 6",
   arrow: "m9 5 7 7-7 7",
   back: "m15 5-7 7 7 7",
   logout: "M9 3H4v18h5m6-15 6 6-6 6M9 12h12",
@@ -152,6 +154,8 @@ function ShopMart() {
   const productsListRef = useRef(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [category, setCategory] = useState("All");
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState("");
   const [accountOpen, setAccountOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [wishlistOnly, setWishlistOnly] = useState(false);
@@ -226,8 +230,16 @@ function ShopMart() {
   const searchWords = [...new Set(query.split(/\s+/).filter(Boolean))];
   const categories = [
     "All",
-    ...new Set((result?.items || []).map((item) => item.category)),
+    ...[...new Set((result?.items || []).map((item) => item.category).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b)),
   ];
+  const quickCategories = categories.slice(0, 8);
+  if (category !== "All" && categories.includes(category) && !quickCategories.includes(category)) {
+    quickCategories[quickCategories.length - 1] = category;
+  }
+  const matchingCategories = categories.filter((name) =>
+    name.toLocaleLowerCase().includes(categorySearch.trim().toLocaleLowerCase()),
+  );
   const products = (loading ? [] : result.items)
     .map((product, index) => {
       const name = String(product.name || "").normalize("NFKC").toLocaleLowerCase();
@@ -413,7 +425,7 @@ function ShopMart() {
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.chips}
     >
-      {categories.map((name) => (
+      {quickCategories.map((name) => (
         <Pressable
           key={name}
           accessibilityRole="button"
@@ -448,6 +460,21 @@ function ShopMart() {
           </Text>
         </Pressable>
       ))}
+      {categories.length > quickCategories.length ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="View all categories"
+          onPress={() => {
+            setCategorySearch("");
+            setCategoryPickerOpen(true);
+          }}
+          style={[styles.chip, styles.viewAllCategoryChip, { backgroundColor: palette.accentSoft, borderColor: palette.accent }]}
+        >
+          <Icon name="grid" size={15} color={palette.accent} />
+          <Text style={[styles.chipText, { color: palette.accent }]}>View all</Text>
+          <Icon name="arrow" size={13} color={palette.accent} />
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 
@@ -960,6 +987,90 @@ function ShopMart() {
         ))}
       </View>
 
+      <Modal
+        visible={categoryPickerOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setCategoryPickerOpen(false)}
+      >
+        <SafeAreaView style={[styles.categoryPickerScreen, { backgroundColor: palette.background }]}>
+          <View style={[styles.categoryPickerHeader, { backgroundColor: palette.surface, borderBottomColor: palette.border }]}>
+            <View style={styles.categoryPickerHeading}>
+              <Text style={[styles.heroEyebrow, { color: palette.accent }]}>SHOPMART COLLECTION</Text>
+              <Text style={[styles.catalogTitle, { color: palette.text }]}>All categories</Text>
+              <Text style={[styles.sectionCaption, { color: palette.muted }]}>
+                {categories.length - 1} categories available
+              </Text>
+            </View>
+            <IconButton
+              name="close"
+              label="Close categories"
+              color={palette.text}
+              style={{ backgroundColor: palette.accentSoft, borderColor: palette.border }}
+              onPress={() => setCategoryPickerOpen(false)}
+            />
+          </View>
+          <View style={[styles.categoryPickerSearch, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+            <Icon name="search" size={20} color={palette.muted} />
+            <TextInput
+              accessibilityLabel="Search categories"
+              value={categorySearch}
+              onChangeText={setCategorySearch}
+              placeholder="Search categories..."
+              placeholderTextColor={palette.muted}
+              autoCorrect={false}
+              style={[styles.search, { color: palette.text }]}
+            />
+            {categorySearch ? (
+              <IconButton
+                name="close"
+                label="Clear category search"
+                onPress={() => setCategorySearch("")}
+              />
+            ) : null}
+          </View>
+          <FlatList
+            data={matchingCategories}
+            keyExtractor={(name) => name}
+            contentContainerStyle={styles.categoryPickerList}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={(
+              <View style={styles.empty}>
+                <Icon name="search" size={34} color={palette.accent} />
+                <Text style={[styles.emptyText, { color: palette.muted }]}>No categories match your search.</Text>
+              </View>
+            )}
+            renderItem={({ item: name }) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: category === name }}
+                onPress={() => {
+                  setCategory(name);
+                  resetProductPage();
+                  setCategoryPickerOpen(false);
+                }}
+                style={[
+                  styles.categoryPickerItem,
+                  { backgroundColor: palette.surface, borderColor: palette.border },
+                  category === name && { backgroundColor: palette.accentSoft, borderColor: palette.accent },
+                ]}
+              >
+                <View style={[styles.categoryPickerIcon, { backgroundColor: palette.accentSoft }]}>
+                  <Icon name={name === "All" ? "grid" : /home/i.test(name) ? "home" : /fashion|cloth/i.test(name) ? "shirt" : "box"} size={19} color={palette.accent} />
+                </View>
+                <Text style={[styles.categoryPickerName, { color: palette.text }]}>
+                  {name === "All" ? "All products" : name}
+                </Text>
+                <Text style={[styles.categoryPickerCount, { color: palette.muted }]}>
+                  {name === "All" ? (result?.items || []).length : (result?.items || []).filter((item) => item.category === name).length}
+                </Text>
+                <Icon name={category === name ? "check" : "arrow"} size={17} color={palette.accent} />
+              </Pressable>
+            )}
+          />
+        </SafeAreaView>
+      </Modal>
+
       {selectedProduct && (
         <ProductDetailsModal
           key={selectedProduct.id}
@@ -1210,6 +1321,43 @@ const styles = StyleSheet.create({
   clearWishlistButton: { minHeight: 39, paddingHorizontal: 10, borderRadius: 12, justifyContent: "center" },
   clearWishlistText: { fontSize: 10, fontWeight: "800" },
   catalogHeader: { paddingBottom: 8 },
+  categoryPickerScreen: { flex: 1 },
+  categoryPickerHeader: {
+    minHeight: 104,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    borderBottomWidth: 1,
+  },
+  categoryPickerHeading: { flex: 1, minWidth: 0 },
+  categoryPickerSearch: {
+    minHeight: 52,
+    marginHorizontal: 16,
+    marginTop: 15,
+    paddingLeft: 14,
+    paddingRight: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: 15,
+  },
+  categoryPickerList: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 28, gap: 9 },
+  categoryPickerItem: {
+    minHeight: 66,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 16,
+  },
+  categoryPickerIcon: { width: 40, height: 40, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  categoryPickerName: { flex: 1, fontSize: 14, fontWeight: "800" },
+  categoryPickerCount: { minWidth: 26, textAlign: "right", fontSize: 12, fontWeight: "700" },
   backHomeButton: {
     alignSelf: "flex-start",
     minHeight: 40,
@@ -1352,6 +1500,7 @@ const styles = StyleSheet.create({
     color: "#343047",
   },
   chips: { gap: 9, paddingTop: 18, paddingBottom: 22 },
+  viewAllCategoryChip: { borderStyle: "dashed" },
   chip: {
     borderRadius: 15,
     paddingHorizontal: 16,
