@@ -64,7 +64,8 @@ export default function AdminCategories() {
   const filtered = categories.filter((category) =>
     category.name.toLowerCase().includes(query),
   );
-  const productsCurrent = categoryProductsResult?.id === selectedCategory?.id;
+  const productsCurrent = Boolean(selectedCategory) &&
+    categoryProductsResult?.id === selectedCategory.id;
   const categoryProducts = productsCurrent ? categoryProductsResult.items : [];
   const categoryProductsError = productsCurrent ? categoryProductsResult.error : "";
   const categoryProductsLoading = Boolean(selectedCategory) && !productsCurrent;

@@ -62,6 +62,8 @@ const paths = {
   palette: "M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a1.5 1.5 0 0 1 0-3h3a6 6 0 0 0 6-6c0-2.8-4-5-9-5ZM7.5 10h.01M10 6.5h.01M15 6.5h.01M17.5 10h.01",
 };
 
+const CUSTOMER_PRODUCTS_PER_PAGE = 10;
+
 function Icon({ name, size = 22, color = "#17203b", filled = false }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -141,6 +143,8 @@ function ShopMart() {
   const isStorePreview = canPreviewStore(auth.session?.user.role, auth.session?.user.id, previewAdminId);
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
+  const [productPage, setProductPage] = useState(0);
+  const productsListRef = useRef(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [category, setCategory] = useState("All");
   const [accountOpen, setAccountOpen] = useState(false);
@@ -241,6 +245,25 @@ function ShopMart() {
     .filter((entry) => entry.matches)
     .sort((a, b) => (query ? b.score - a.score || a.index - b.index : a.index - b.index))
     .map(({ product }) => product);
+  const productPageCount = Math.max(
+    1,
+    Math.ceil(products.length / CUSTOMER_PRODUCTS_PER_PAGE),
+  );
+  const currentProductPage = Math.min(productPage, productPageCount - 1);
+  const visibleProducts = products.slice(
+    currentProductPage * CUSTOMER_PRODUCTS_PER_PAGE,
+    (currentProductPage + 1) * CUSTOMER_PRODUCTS_PER_PAGE,
+  );
+
+  function changeProductPage(nextPage) {
+    setProductPage(nextPage);
+    productsListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }
+
+  function resetProductPage() {
+    setProductPage(0);
+    productsListRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }
 
   function pop(value) {
     value.setValue(0.72);
@@ -366,7 +389,10 @@ function ShopMart() {
         <TextInput
           accessibilityLabel="Search products"
           value={search}
-          onChangeText={setSearch}
+          onChangeText={(value) => {
+            setSearch(value);
+            resetProductPage();
+          }}
           placeholder="What are you looking for?"
           placeholderTextColor="#9299ac"
           autoCorrect={false}
@@ -376,7 +402,10 @@ function ShopMart() {
           <IconButton
             name="close"
             label="Clear search"
-            onPress={() => setSearch("")}
+            onPress={() => {
+              setSearch("");
+              resetProductPage();
+            }}
           />
         ) : null}
       </View>
@@ -390,7 +419,10 @@ function ShopMart() {
             key={name}
             accessibilityRole="button"
             accessibilityState={{ selected: category === name }}
-            onPress={() => setCategory(name)}
+            onPress={() => {
+              setCategory(name);
+              resetProductPage();
+            }}
               style={[styles.chip, { backgroundColor: palette.soft, borderColor: palette.border }, category === name && { backgroundColor: palette.accent, borderColor: palette.accent }]}
           >
             <Icon
@@ -510,7 +542,8 @@ function ShopMart() {
       ) : null}
 
       <FlatList
-        data={products}
+        ref={productsListRef}
+        data={visibleProducts}
         numColumns={2}
         keyExtractor={(item) => item.id}
         style={{ flex: 1 }}
@@ -688,6 +721,67 @@ function ShopMart() {
         }}
       />
 
+      {!loading && products.length > CUSTOMER_PRODUCTS_PER_PAGE ? (
+        <View
+          style={[
+            styles.catalogPagination,
+            { backgroundColor: palette.surface, borderTopColor: palette.border },
+          ]}
+        >
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Previous product page"
+            disabled={currentProductPage === 0}
+            onPress={() => changeProductPage(currentProductPage - 1)}
+            style={[
+              styles.catalogPageButton,
+              { backgroundColor: palette.accentSoft },
+              currentProductPage === 0 && styles.dim,
+            ]}
+          >
+            <Text
+              style={[
+                styles.catalogPageButtonText,
+                { color: currentProductPage === 0 ? palette.muted : palette.accent },
+              ]}
+            >
+              Previous
+            </Text>
+          </Pressable>
+          <Text
+            accessibilityRole="text"
+            style={[styles.catalogPageNumber, { color: palette.text }]}
+          >
+            {currentProductPage + 1} / {productPageCount}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next product page"
+            disabled={currentProductPage + 1 >= productPageCount}
+            onPress={() => changeProductPage(currentProductPage + 1)}
+            style={[
+              styles.catalogPageButton,
+              { backgroundColor: palette.accentSoft },
+              currentProductPage + 1 >= productPageCount && styles.dim,
+            ]}
+          >
+            <Text
+              style={[
+                styles.catalogPageButtonText,
+                {
+                  color:
+                    currentProductPage + 1 >= productPageCount
+                      ? palette.muted
+                      : palette.accent,
+                },
+              ]}
+            >
+              Next
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={[styles.bottomBar, { backgroundColor: palette.surface, borderTopColor: palette.border }]}>
         {[
           {
@@ -698,6 +792,7 @@ function ShopMart() {
               setWishlistOnly(false);
               setCategory("All");
               setSearch("");
+              resetProductPage();
             },
           },
           {
@@ -708,6 +803,7 @@ function ShopMart() {
               setWishlistOnly(true);
               setCategory("All");
               setSearch("");
+              resetProductPage();
             },
           },
           {
@@ -942,6 +1038,26 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   list: { paddingHorizontal: 20, paddingBottom: 26 },
+  catalogPagination: {
+    minHeight: 58,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    borderTopWidth: 1,
+  },
+  catalogPageButton: {
+    minWidth: 94,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  catalogPageButtonText: { fontSize: 12, fontWeight: "800" },
+  catalogPageNumber: { fontSize: 13, fontWeight: "800" },
   hero: {
     borderRadius: 25,
     backgroundColor: "#efe8fc",
