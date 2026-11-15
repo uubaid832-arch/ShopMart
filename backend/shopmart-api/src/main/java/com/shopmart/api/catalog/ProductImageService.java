@@ -8,6 +8,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -174,6 +175,70 @@ public class ProductImageService {
 
     return images(productId);
   }
+
+  /**
+   * Import one staged image at a time to avoid a long-running 120-file request.
+   * The image UUID is deterministic so retries do not create duplicates.
+   * All existing image rows and assets remain untouched.
+   */
+  @Transactional
+  public CatalogImportResult importCatalogImage(UUID adminId, UUID productId, int sourcePosition) {
+    requireAdmin(adminId);
+    if (sourcePosition < 1 || sourcePosition > 3) {
+      throw failure(HttpStatus.BAD_REQUEST, "Catalog photo position must be 1, 2 or 3.");
+    }
+    if (!cloudinary.enabled()) {
+      throw failure(HttpStatus.SERVICE_UNAVAILABLE, "Enable Cloudinary before importing catalog photos.");
+    }
+    requireProduct(productId, true);
+
+    // The staging table is created by ShopMart_120_Image_URLs_OPTIONAL_Staging.sql.
+    // A SKU match prevents a staged URL being associated with the wrong product.
+    List<String> sourceUrls = jdbc.query("""
+        SELECT s.image_url
+        FROM public.shopmart_catalog_image_urls s
+        JOIN public.products p ON p.id = s.product_id
+        WHERE s.product_id = ? AND s.position = ?
+          AND p.description LIKE ('%' || 'Catalog SKU: ' || s.source_sku || '%')
+          AND s.source_sku LIKE 'SHOP-%'
+        """, (rs, row) -> rs.getString("image_url"), productId, sourcePosition);
+    if (sourceUrls.size() != 1) {
+      throw failure(HttpStatus.NOT_FOUND, "No matching staged catalog image for this product.");
+    }
+    // Validate first, even when an import might already have been performed.
+    String address = CloudinaryImageStore.validatedCatalogUrl(sourceUrls.get(0));
+    UUID imageId = UUID.nameUUIDFromBytes(
+        ("shopmart/catalog/" + productId + "/" + sourcePosition).getBytes(StandardCharsets.UTF_8));
+
+    List<ProductImage> current = images(productId);
+    for (ProductImage existing : current) {
+      if (existing.id().equals(imageId)) {
+        return new CatalogImportResult(productId, imageId, sourcePosition, "ALREADY_IMPORTED",
+            existing.url(), current.size());
+      }
+    }
+    if (current.size() >= MAX_IMAGES) {
+      throw failure(HttpStatus.CONFLICT, "This product already has six images. No images were changed.");
+    }
+
+    int nextPosition = current.stream().mapToInt(ProductImage::position).max().orElse(-1) + 1;
+    cloudinary.uploadFromCatalogUrl(imageId, address);
+    // Register cleanup only AFTER successful upload, so retries never delete a pre-existing asset.
+    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+      @Override public void afterCompletion(int status) {
+        if (status != STATUS_COMMITTED) deleteStoredImageQuietly(imageId);
+      }
+    });
+    jdbc.update("""
+        INSERT INTO public.product_images(id, product_id, position) VALUES (?, ?, ?)
+        """, imageId, productId, nextPosition);
+    return new CatalogImportResult(productId, imageId, sourcePosition, "IMPORTED",
+        cloudinary.url(imageId), current.size() + 1);
+  }
+
+  public record CatalogImportResult(
+      UUID productId, UUID imageId, int sourcePosition, String status,
+      String url, int imageCount) { }
 
   @Transactional
   public List<ProductImage> makePrimary(

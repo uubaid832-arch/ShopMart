@@ -109,6 +109,59 @@ public class CloudinaryImageStore {
     }
   }
 
+  /**
+   * Import a catalog image from the fixed, public DummyJSON image CDN.
+   * Cloudinary fetches the original WebP; ShopMart serves it as JPEG using its
+   * existing .jpg image delivery URL. Only the fixed CDN is allowed here.
+   */
+  public void uploadFromCatalogUrl(UUID id, String address) {
+    requireEnabled();
+    String safeAddress = validatedCatalogUrl(address);
+    Map<String, String> params = Map.of("overwrite", "false", "public_id", publicId(id),
+        "timestamp", Long.toString(clock.instant().getEpochSecond()));
+    var form = new LinkedMultiValueMap<String, String>();
+    params.forEach(form::add);
+    form.add("api_key", key);
+    form.add("signature", signature(params, secret));
+    form.add("file", safeAddress);
+    try {
+      Map<?, ?> result = client.post().uri("/upload")
+          .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+          .body(form).retrieve().body(Map.class);
+      if (result == null || !publicId(id).equals(result.get("public_id"))
+          || !safeUrl(result.get("secure_url"))) {
+        throw unavailable();
+      }
+    } catch (RestClientException failure) {
+      logStatus(failure);
+      throw unavailable();
+    }
+  }
+
+  static String validatedCatalogUrl(String address) {
+    if (address == null || address.length() > 2048) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid catalog image URL.");
+    }
+    try {
+      URI uri = URI.create(address);
+      String path = uri.getRawPath();
+      if (!"https".equalsIgnoreCase(uri.getScheme())
+          || !"cdn.dummyjson.com".equalsIgnoreCase(uri.getHost())
+          || uri.getPort() != -1 || uri.getRawUserInfo() != null
+          || uri.getRawQuery() != null || uri.getRawFragment() != null
+          || path == null || !path.startsWith("/product-images/")
+          || !(path.endsWith(".webp") || path.endsWith(".png")
+              || path.endsWith(".jpg") || path.endsWith(".jpeg"))
+          || path.contains("..") || path.contains("%")) {
+        throw new IllegalArgumentException("Unsupported image source");
+      }
+      return address;
+    } catch (IllegalArgumentException failure) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Only public product images on cdn.dummyjson.com are supported.");
+    }
+  }
+
   public void delete(UUID id) {
     requireEnabled();
     Map<String, String> params = Map.of("invalidate", "true", "public_id", publicId(id),

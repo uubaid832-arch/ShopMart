@@ -72,6 +72,15 @@ public class ProductImageController {
         .body(images.upload(userId(jwt), productId, files));
   }
 
+  @PostMapping("/admin/products/{productId}/images/import-catalog/{position}")
+  public ResponseEntity<ProductImageService.CatalogImportResult> importCatalog(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID productId,
+      @PathVariable int position) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(images.importCatalogImage(userId(jwt), productId, position));
+  }
+
   @PatchMapping({"/admin/products/{productId}/images/{imageId}/primary", "/mobile/admin/products/{productId}/images/{imageId}/primary"})
   public ResponseEntity<List<ProductImageService.ProductImage>> primary(
       @AuthenticationPrincipal Jwt jwt,

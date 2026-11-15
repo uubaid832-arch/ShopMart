@@ -241,6 +241,10 @@ public class SecurityConfig {
                                                                 "/api/admin/products/*/images")
                                                 .hasRole("ADMIN")
                                                 .requestMatchers(
+                                                                HttpMethod.POST,
+                                                                "/api/admin/products/*/images/import-catalog/*")
+                                                .hasRole("ADMIN")
+                                                .requestMatchers(
                                                                 HttpMethod.PATCH,
                                                                 "/api/admin/products/*/images/*/primary")
                                                 .hasRole("ADMIN")
