@@ -18,6 +18,18 @@ const initial = () => ({
   perUserLimit: 1,
   validDays: 30,
 });
+const editValues = (item) => ({
+  id: item.id,
+  version: item.version,
+  code: item.code,
+  kind: item.kind,
+  value: String(item.value),
+  minSubtotal: String(item.minSubtotal),
+  maxDiscount: item.maxDiscount == null ? "" : String(item.maxDiscount),
+  usageLimit: Number(item.usageLimit),
+  perUserLimit: Number(item.perUserLimit),
+  validDays: Math.min(3650, Math.max(1, Math.ceil((new Date(item.expiresAt).getTime() - Date.now()) / 86400000))),
+});
 export default function AdminVouchers() {
   const { session } = useSession();
   const token = session.accessToken;
@@ -169,24 +181,27 @@ export default function AdminVouchers() {
         <form
           onSubmit={(event) => {
             event.preventDefault();
+            const { id, version, requestId, ...fields } = form;
+            const editing = Boolean(id);
             mutate(
               () =>
-                voucherRequest(token, "/admin/vouchers", {
-                  method: "POST",
+                voucherRequest(token, editing ? `/admin/vouchers/${id}` : "/admin/vouchers", {
+                  method: editing ? "PUT" : "POST",
                   values: {
-                    ...form,
-                    maxDiscount: form.maxDiscount || null,
-                    usageLimit: Number(form.usageLimit),
-                    perUserLimit: Number(form.perUserLimit),
-                    validDays: Number(form.validDays),
+                    ...fields,
+                    ...(editing ? { version } : { requestId }),
+                    maxDiscount: fields.maxDiscount || null,
+                    usageLimit: Number(fields.usageLimit),
+                    perUserLimit: Number(fields.perUserLimit),
+                    validDays: Number(fields.validDays),
                   },
                 }),
-              "Voucher created.",
+              editing ? "Voucher updated." : "Voucher created.",
             );
           }}
           className="rounded-2xl border border-solid border-violet-100 bg-violet-50 p-5"
         >
-          <h2 className="mt-0 text-lg font-bold">New voucher</h2>
+          <h2 className="mt-0 text-lg font-bold">{form.id ? "Edit voucher" : "New voucher"}</h2>
           <fieldset
             disabled={busy || uncertain}
             className="m-0 grid gap-4 border-0 p-0 sm:grid-cols-2"
@@ -250,7 +265,7 @@ export default function AdminVouchers() {
           </p>
           <div className="flex gap-2">
             <button disabled={busy || uncertain} className={button}>
-              {busy ? "Saving..." : "Create voucher"}
+              {busy ? "Saving..." : form.id ? "Save voucher" : "Create voucher"}
             </button>
             <button
               type="button"
@@ -310,6 +325,14 @@ export default function AdminVouchers() {
                 <p className="text-xs text-slate-500">
                   Expires {new Date(item.expiresAt).toLocaleString("en-PK")}
                 </p>
+                <button
+                  type="button"
+                  disabled={busy || uncertain}
+                  className="mr-2 rounded-xl border border-solid border-violet-200 bg-white px-4 py-3 text-sm font-bold text-violet-700 disabled:opacity-50"
+                  onClick={() => { setError(""); setNotice(""); setForm(editValues(item)); }}
+                >
+                  Edit voucher
+                </button>
                 <button
                   type="button"
                   disabled={busy || uncertain}

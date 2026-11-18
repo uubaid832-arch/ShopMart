@@ -335,14 +335,14 @@ function ProductCard({
         <p className="m-0 text-xs text-slate-500">
           <bdi>{product.category}</bdi>
         </p>
-        {product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName && (
+        {product.discountedPrice != null && product.discountCampaignId && (
           <button
             type="button"
             onClick={() => onCampaignClick({ id: product.discountCampaignId, name: product.discountCampaignName })}
             className="mt-2 inline-flex max-w-full items-center gap-2 self-start rounded-full border border-solid border-amber-200 bg-linear-to-r from-amber-50 to-orange-100 px-3 py-1.5 text-start text-xs font-extrabold text-amber-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            aria-label={`Shop campaign ${product.discountCampaignName}`}
+            aria-label={`Shop ${product.discountCampaignName || "sale"} products`}
           >
-            <span aria-hidden="true">✦</span><span className="truncate">{product.discountCampaignName}</span><span aria-hidden="true">↗</span>
+            <span aria-hidden="true">✦</span><span className="truncate">{product.discountCampaignName || "Sale"}</span><span aria-hidden="true">↗</span>
           </button>
         )}
 
@@ -456,6 +456,16 @@ function Storefront({ products, onRatingSummaryChange }) {
   const wishlist = useWishlist(products, session?.user.id);
 
   const catalog = products.filter((product) => product.active !== false);
+  const namedPromotions = [...new Map(catalog
+    .filter((product) => product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName)
+    .map((product) => [product.discountCampaignId, {
+      id: product.discountCampaignId,
+      name: product.discountCampaignName,
+      productCount: 1,
+    }]))].map(([id, promotion]) => ({
+      ...promotion,
+      productCount: catalog.filter((product) => product.discountCampaignId === id && product.discountedPrice != null).length,
+    }));
 
   const categories = [
     "All",
@@ -723,6 +733,26 @@ function Storefront({ products, onRatingSummaryChange }) {
         dir={direction}
         className="mx-auto max-w-7xl scroll-mt-48 px-4 lg:px-6"
       >
+        {!query && !selectedCampaign && namedPromotions.length > 0 && (
+          <section aria-label="Current product promotions" className="my-5 grid gap-3 sm:grid-cols-2">
+            {namedPromotions.map((promotion, index) => (
+              <button
+                key={promotion.id}
+                type="button"
+                onClick={() => handleCampaignClick(promotion)}
+                aria-label={`Shop ${promotion.name} promotion with ${promotion.productCount} products`}
+                className={`group flex min-h-32 w-full items-center justify-between gap-4 rounded-3xl border border-solid p-5 text-start shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${index % 2 ? "border-violet-200 bg-linear-to-r from-violet-50 to-fuchsia-100" : "border-amber-200 bg-linear-to-r from-amber-50 via-orange-50 to-rose-100"}`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">ShopMart promotion</span>
+                  <span className="mt-2 block truncate text-xl font-black text-slate-900 sm:text-2xl">{promotion.name}</span>
+                  <span className="mt-1 block text-sm font-semibold text-slate-600">{promotion.productCount} sale {promotion.productCount === 1 ? "product" : "products"} · Tap to shop</span>
+                </span>
+                <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-white/80 text-2xl font-black text-orange-700 shadow-sm transition group-hover:translate-x-1">↗</span>
+              </button>
+            ))}
+          </section>
+        )}
         {!query && (
         <section
           aria-labelledby="hero-title"
@@ -812,7 +842,7 @@ function Storefront({ products, onRatingSummaryChange }) {
               </p>
 
               <h2 id="products-title" className="mb-0 mt-2 text-3xl font-bold">
-                {selectedCampaign?.name || text("Find your favourites", "اپنی پسند کی مصنوعات تلاش کریں")}
+                {selectedCampaign?.name || (selectedCampaign ? text("Sale products", "سیل کی مصنوعات") : text("Find your favourites", "اپنی پسند کی مصنوعات تلاش کریں"))}
               </h2>
             </div>
 
@@ -830,7 +860,7 @@ function Storefront({ products, onRatingSummaryChange }) {
             <section className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-amber-200 bg-linear-to-r from-amber-50 via-orange-50 to-rose-50 p-5 shadow-sm">
               <div>
                 <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Shop the promotion</p>
-                <h3 className="mb-1 mt-1 text-xl font-extrabold text-slate-900">{selectedCampaign.name}</h3>
+                <h3 className="mb-1 mt-1 text-xl font-extrabold text-slate-900">{selectedCampaign.name || text("Sale promotion", "سیل پروموشن")}</h3>
                 <p className="m-0 text-sm text-slate-600">{totalItems} campaign {totalItems === 1 ? "product" : "products"} with special prices</p>
               </div>
               <button type="button" onClick={clearCampaign} className="rounded-xl border border-solid border-amber-300 bg-white px-4 py-2 font-bold text-orange-800 hover:bg-amber-100">View all products</button>

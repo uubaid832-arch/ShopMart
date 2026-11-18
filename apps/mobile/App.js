@@ -254,6 +254,16 @@ function ShopMart() {
     .filter((entry) => entry.matches)
     .sort((a, b) => (query ? b.score - a.score || a.index - b.index : a.index - b.index))
     .map(({ product }) => product);
+  const namedPromotions = [...new Map((loading ? [] : result.items)
+    .filter((product) => product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName)
+    .map((product) => [product.discountCampaignId, {
+      id: product.discountCampaignId,
+      name: product.discountCampaignName,
+      productCount: 0,
+    }]))].map(([id, promotion]) => ({
+      ...promotion,
+      productCount: result.items.filter((product) => product.discountCampaignId === id && product.discountedPrice != null).length,
+    }));
   const productPageCount = Math.max(
     1,
     Math.ceil(products.length / CUSTOMER_PRODUCTS_PER_PAGE),
@@ -537,10 +547,34 @@ function ShopMart() {
       </View>
       {categorySlider}
 
+      {!loading && !search.trim() && !wishlistOnly && !selectedCampaign && namedPromotions.length > 0 ? (
+        <View style={{ marginTop: 18 }}>
+          <Text style={[styles.sectionTitle, { color: palette.text, marginBottom: 10 }]}>Current promotions</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 20 }}>
+            {namedPromotions.map((promotion, index) => (
+              <Pressable
+                key={promotion.id}
+                accessibilityRole="button"
+                accessibilityLabel={`Shop ${promotion.name} promotion with ${promotion.productCount} products`}
+                onPress={() => openCampaign(promotion)}
+                style={({ pressed }) => ({ width: 280, minHeight: 132, padding: 18, borderRadius: 22, borderWidth: 1, borderColor: index % 2 ? "#d8c5f6" : "#f3c66d", backgroundColor: index % 2 ? (theme.isDark ? "#29213c" : "#f4edff") : (theme.isDark ? "#3b2a16" : "#fff4dc"), opacity: pressed ? 0.86 : 1 })}
+              >
+                <Text style={{ color: index % 2 ? palette.accent : (theme.isDark ? "#ffd276" : "#a14b0b"), fontSize: 10, fontWeight: "900", letterSpacing: 1.5 }}>SHOPMART PROMOTION</Text>
+                <Text numberOfLines={2} style={{ color: palette.text, fontSize: 19, fontWeight: "900", marginTop: 7 }}>{promotion.name}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+                  <Text style={{ color: palette.muted, fontSize: 12 }}>{promotion.productCount} sale {promotion.productCount === 1 ? "product" : "products"}</Text>
+                  <Text style={{ color: index % 2 ? palette.accent : "#a14b0b", fontWeight: "900" }}>Shop now ›</Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
       <View style={styles.homeProductsHeading}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.sectionTitle, { color: palette.text }]}>
-            {wishlistOnly ? "Your wishlist" : search.trim() ? "Best matches" : "Picked for you"}
+              {wishlistOnly ? "Your wishlist" : search.trim() ? "Best matches" : selectedCampaign?.name || (selectedCampaign ? "Sale products" : "Picked for you")}
           </Text>
           <Text style={[styles.sectionCaption, { color: palette.muted }]}>
             {loading ? "Finding your favorites..." : `${products.length} ${products.length === 1 ? "product" : "products"}${wishlistOnly ? " saved" : " to explore"}`}
@@ -587,7 +621,7 @@ function ShopMart() {
       <View style={styles.catalogTitleBlock}>
         <Text style={[styles.heroEyebrow, { color: palette.accent }]}>THE FULL COLLECTION</Text>
         <Text style={[styles.catalogTitle, { color: palette.text }]}>
-          {wishlistOnly ? "Wishlist" : selectedCampaign?.name || "Discover more"}
+          {wishlistOnly ? "Wishlist" : selectedCampaign ? (selectedCampaign.name || "Sale products") : "Discover more"}
         </Text>
         <Text style={[styles.sectionCaption, { color: palette.muted }]}>
           {loading ? "Loading products..." : `${products.length} ${products.length === 1 ? "product" : "products"} available`}
@@ -596,7 +630,7 @@ function ShopMart() {
       {selectedCampaign ? (
         <View style={{ marginTop: 14, padding: 16, borderRadius: 20, backgroundColor: theme.isDark ? "#3b2a16" : "#fff4dc", borderWidth: 1, borderColor: "#f3c66d" }}>
           <Text style={{ color: "#b45309", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 }}>SHOP THE PROMOTION</Text>
-          <Text style={{ color: theme.isDark ? "#fff0c2" : "#713f12", fontSize: 20, lineHeight: 26, fontWeight: "900", marginTop: 5 }}>{selectedCampaign.name}</Text>
+          <Text style={{ color: theme.isDark ? "#fff0c2" : "#713f12", fontSize: 20, lineHeight: 26, fontWeight: "900", marginTop: 5 }}>{selectedCampaign.name || "Sale promotion"}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
             <Text style={{ color: theme.isDark ? "#e9d8b3" : "#785b35", flex: 1 }}>{products.length} promotional {products.length === 1 ? "product" : "products"}</Text>
             <Pressable accessibilityRole="button" onPress={clearCampaign} style={{ backgroundColor: theme.isDark ? "#583d1a" : "#fff", borderRadius: 12, paddingHorizontal: 13, paddingVertical: 9 }}>
@@ -865,15 +899,15 @@ function ShopMart() {
                   <Text style={[styles.category, { color: palette.muted }]} numberOfLines={1}>
                   {item.category}
                 </Text>
-                {item.discountedPrice != null && item.discountCampaignId && item.discountCampaignName ? (
+          {item.discountedPrice != null && item.discountCampaignId ? (
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Shop campaign ${item.discountCampaignName}`}
-                    onPress={() => openCampaign({ id: item.discountCampaignId, name: item.discountCampaignName })}
+                    accessibilityLabel={`Shop ${item.discountCampaignName || "sale"} products`}
+                    onPress={() => openCampaign({ id: item.discountCampaignId, name: item.discountCampaignName || null })}
                     style={{ alignSelf: "flex-start", maxWidth: "100%", flexDirection: "row", alignItems: "center", gap: 6, marginTop: 7, marginBottom: 4, borderRadius: 99, borderWidth: 1, borderColor: "#f3c66d", backgroundColor: theme.isDark ? "#3b2a16" : "#fff4dc", paddingHorizontal: 11, paddingVertical: 6 }}
                   >
                     <Text style={{ color: "#c05614", fontWeight: "900" }}>✦</Text>
-                    <Text style={{ color: theme.isDark ? "#ffdf98" : "#713f12", fontSize: 12, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{item.discountCampaignName}</Text>
+                    <Text style={{ color: theme.isDark ? "#ffdf98" : "#713f12", fontSize: 12, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{item.discountCampaignName || "Sale"}</Text>
                     <Text style={{ color: "#c05614", fontWeight: "900" }}>›</Text>
                   </Pressable>
                 ) : null}

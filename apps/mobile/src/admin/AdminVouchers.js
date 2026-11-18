@@ -19,9 +19,9 @@ import {
   useMutation,
 } from "./adminUi";
 import ProductDiscountsModule from "./ProductDiscountsModule";
-function VoucherEditor({ op, onSave }) {
+function VoucherEditor({ op, onSave, initialValues, editing }) {
   const requestId = useRef(Crypto.randomUUID());
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(initialValues || {
     code: `SHOP-${Crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     kind: "PERCENT",
     value: "10",
@@ -53,11 +53,11 @@ function VoucherEditor({ op, onSave }) {
     <Form>
       <Notice op={op} />
       <Card
-        title="Generate a voucher"
+        title={editing ? "Edit voucher" : "Generate a voucher"}
         subtitle="Codes work on both website and mobile checkout."
       >
         {field("code", "Voucher code", "default")}
-        <Button
+        {!editing && <Button
           title="Generate another code"
           secondary
           disabled={op.blocked}
@@ -67,7 +67,7 @@ function VoucherEditor({ op, onSave }) {
               code: `SHOP-${Crypto.randomUUID().slice(0, 8).toUpperCase()}`,
             })
           }
-        />
+        />}
         <Choice
           label="Discount type"
           value={form.kind}
@@ -94,13 +94,13 @@ function VoucherEditor({ op, onSave }) {
           allowances.
         </Text>
         <Button
-          title="Create voucher"
+          title={editing ? "Save voucher" : "Create voucher"}
           icon="check"
           disabled={op.blocked}
           onPress={() =>
             onSave({
               ...form,
-              requestId: requestId.current,
+              ...(editing ? { id: form.id, version: form.version } : { requestId: requestId.current }),
               code: form.code.trim(),
               maxDiscount: form.maxDiscount.trim() || null,
               usageLimit: Number(form.usageLimit),
@@ -118,6 +118,7 @@ export default function VouchersModule({ session, onClose, onChanged }) {
   const [revision, setRevision] = useState(0);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState(null);
   const [filter, setFilter] = useState("ALL");
   const [tab, setTab] = useState("VOUCHERS");
   const refresh = () => setRevision((v) => v + 1);
@@ -145,13 +146,14 @@ export default function VouchersModule({ session, onClose, onChanged }) {
           />
         ) : null
       }
-      title={creating ? "Create voucher" : tab === "PRODUCTS" ? "Product discounts" : "Vouchers & discounts"}
+      title={creating ? (editingVoucher ? "Edit voucher" : "Create voucher") : tab === "PRODUCTS" ? "Product discounts" : "Vouchers & discounts"}
       onClose={onClose}
       busy={op.busy}
       onBack={
         creating
           ? () => {
               op.reset();
+              setEditingVoucher(null);
               setCreating(false);
             }
           : undefined
@@ -171,7 +173,21 @@ export default function VouchersModule({ session, onClose, onChanged }) {
       </View>}
       {tab === "PRODUCTS" && !creating ? <ProductDiscountsModule session={session} onChanged={onChanged} /> : creating ? (
         <VoucherEditor
+          key={editingVoucher?.id || "new-voucher"}
           op={op}
+          editing={Boolean(editingVoucher)}
+          initialValues={editingVoucher ? {
+            id: editingVoucher.id,
+            version: editingVoucher.version,
+            code: editingVoucher.code,
+            kind: editingVoucher.kind,
+            value: String(editingVoucher.value),
+            minSubtotal: String(editingVoucher.minSubtotal),
+            maxDiscount: editingVoucher.maxDiscount == null ? "" : String(editingVoucher.maxDiscount),
+            usageLimit: String(editingVoucher.usageLimit),
+            perUserLimit: String(editingVoucher.perUserLimit),
+            validDays: String(Math.min(3650, Math.max(1, Math.ceil((new Date(editingVoucher.expiresAt).getTime() - Date.now()) / 86400000)))),
+          } : undefined}
           onSave={(values) =>
             op.run(
               () => {
@@ -213,13 +229,15 @@ export default function VouchersModule({ session, onClose, onChanged }) {
                     values.validDays <= 3650,
                   "Validity must be 1–3650 days.",
                 );
-                return adminRequest(session.accessToken, "/vouchers", {
-                  method: "POST",
-                  values,
+                const { id, version, requestId, ...fields } = values;
+                const isEditing = Boolean(id);
+                return adminRequest(session.accessToken, isEditing ? `/vouchers/${id}` : "/vouchers", {
+                  method: isEditing ? "PUT" : "POST",
+                  values: { ...fields, ...(isEditing ? { version } : { requestId }) },
                 });
               },
-              "Voucher created.",
-              () => setCreating(false),
+              editingVoucher ? "Voucher updated." : "Voucher created.",
+              () => { setCreating(false); setEditingVoucher(null); },
             )
           }
         />
@@ -295,6 +313,7 @@ export default function VouchersModule({ session, onClose, onChanged }) {
                 <Text style={ui.muted}>
                   Expires {dateLabel(item.expiresAt)}
                 </Text>
+                <Button title="Edit voucher" secondary disabled={op.blocked} onPress={() => { op.reset(); setEditingVoucher(item); setCreating(true); }} />
                 <Button
                   title={item.enabled ? "Disable voucher" : "Enable voucher"}
                   danger={item.enabled}

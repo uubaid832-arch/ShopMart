@@ -23,6 +23,13 @@ public class AdminVoucherService {
       @NotNull @DecimalMin("0") @Digits(integer=10,fraction=2) BigDecimal minSubtotal,
       @DecimalMin("0.01") @Digits(integer=10,fraction=2) BigDecimal maxDiscount,
       @Min(1) @Max(1000000) int usageLimit,@Min(1) @Max(1000000) int perUserLimit,@Min(1) @Max(3650) int validDays) {}
+  public record EditRequest(@NotBlank @Size(max=40) String code,
+      @NotBlank @Pattern(regexp="FIXED|PERCENT") String kind,
+      @NotNull @DecimalMin("0.01") @Digits(integer=10,fraction=2) BigDecimal value,
+      @NotNull @DecimalMin("0") @Digits(integer=10,fraction=2) BigDecimal minSubtotal,
+      @DecimalMin("0.01") @Digits(integer=10,fraction=2) BigDecimal maxDiscount,
+      @Min(1) @Max(1000000) int usageLimit,@Min(1) @Max(1000000) int perUserLimit,
+      @Min(1) @Max(3650) int validDays,@NotNull @Min(0) Long version) {}
   public record ToggleRequest(@NotNull Boolean enabled,@NotNull @Min(0) Long version) {}
   public record Voucher(UUID id,String code,String kind,String value,String minSubtotal,String maxDiscount,
       int usageLimit,int perUserLimit,long used,Instant expiresAt,boolean enabled,long version,Instant createdAt) {}
@@ -56,6 +63,27 @@ public class AdminVoucherService {
         ||request.perUserLimit()!=((Number)row.get("per_user_limit")).intValue()||request.validDays()!=((Number)row.get("valid_days")).intValue())
       throw new VoucherService.Rejected("This creation request was already used for different voucher settings.");
     return map(row);
+  }
+  @Transactional
+  public Voucher edit(UUID user,UUID id,EditRequest request) {
+    requireAdmin(user);
+    String code=VoucherService.normalize(request.code());
+    if("PERCENT".equals(request.kind())&&request.value().compareTo(new BigDecimal("99"))>0)throw new VoucherService.Rejected("Percentage vouchers must be between 0.01% and 99%.");
+    if(request.perUserLimit()>request.usageLimit())throw new VoucherService.Rejected("Per-customer uses cannot exceed the total usage limit.");
+    var rows=jdbc.queryForList("SELECT version FROM public.vouchers WHERE id=? FOR UPDATE",id);
+    if(rows.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Voucher not found.");
+    if(((Number)rows.get(0).get("version")).longValue()!=request.version())throw new VoucherService.Rejected("This voucher changed. Refresh before editing it.");
+    long used=jdbc.queryForObject("SELECT COUNT(*) FROM public.voucher_redemptions WHERE voucher_id=?",Long.class,id);
+    long mostUsedByOne=jdbc.queryForObject("SELECT COALESCE(MAX(uses),0) FROM (SELECT COUNT(*) AS uses FROM public.voucher_redemptions WHERE voucher_id=? GROUP BY user_id) counts",Long.class,id);
+    if(request.usageLimit()<used||request.perUserLimit()<mostUsedByOne)throw new VoucherService.Rejected("Usage limits cannot be lower than the voucher's existing uses.");
+    try {
+      int updated=jdbc.update("""
+          UPDATE public.vouchers SET code=?,kind=?,value=?,min_subtotal=?,max_discount=?,usage_limit=?,per_user_limit=?,valid_days=?,expires_at=?,version=version+1
+          WHERE id=? AND version=?
+          """,code,request.kind(),request.value(),request.minSubtotal(),request.maxDiscount(),request.usageLimit(),request.perUserLimit(),request.validDays(),Timestamp.from(Instant.now().plus(request.validDays(),ChronoUnit.DAYS)),id,request.version());
+      if(updated!=1)throw new VoucherService.Rejected("This voucher changed. Refresh before editing it.");
+    } catch(DuplicateKeyException failure) {throw new VoucherService.Rejected("That voucher code already exists. Choose another code.");}
+    return map(jdbc.queryForMap("SELECT v.*,(SELECT COUNT(*) FROM public.voucher_redemptions r WHERE r.voucher_id=v.id) AS used FROM public.vouchers v WHERE v.id=?",id));
   }
   private static boolean same(BigDecimal a,BigDecimal b){return a==null?b==null:b!=null&&a.compareTo(b)==0;}
   @Transactional

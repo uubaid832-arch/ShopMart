@@ -23,10 +23,20 @@ public class AdminProductDiscountController {
       @Valid @RequestBody ProductDiscountService.CreateRequest request) {
     return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore()).body(service.create(VoucherController.user(jwt),request));
   }
+  @PutMapping("/{id}")
+  public ResponseEntity<ProductDiscountService.Campaign> edit(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id,
+      @Valid @RequestBody ProductDiscountService.EditRequest request) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.edit(VoucherController.user(jwt),id,request));
+  }
   @PatchMapping("/{id}")
   public ResponseEntity<Void> toggle(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id,
       @Valid @RequestBody ProductDiscountService.ToggleRequest request) {
     service.toggle(VoucherController.user(jwt),id,request);
+    return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+  }
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteDisabled(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id) {
+    service.deleteDisabled(VoucherController.user(jwt),id);
     return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
   }
 }

@@ -28,7 +28,11 @@ public class VoucherService {
   }
   public record Pricing(UUID voucherId,String code,BigDecimal subtotal,BigDecimal discount,List<BigDecimal> lineDiscounts) {}
   public record Quote(String code,String subtotal,String discountAmount,String total,String currency,
-      String automaticDiscountAmount,String voucherDiscountAmount) {}
+      String automaticDiscountAmount,String voucherDiscountAmount) {
+    public Quote(String code,String subtotal,String discountAmount,String total,String currency) {
+      this(code,subtotal,discountAmount,total,currency,"0.00",discountAmount);
+    }
+  }
   public record QuoteRequest(@NotBlank @Size(max=40) String code,@NotEmpty @Size(max=50) List<@NotNull @Valid ItemRequest> items) {}
 
   @Transactional(readOnly=true)

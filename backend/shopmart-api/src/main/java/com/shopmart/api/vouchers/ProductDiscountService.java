@@ -19,7 +19,9 @@ public class ProductDiscountService {
 
   public record Rule(@NotNull UUID productId, @NotBlank @Pattern(regexp="FIXED|PERCENT") String kind,
       @NotNull @DecimalMin("0.01") @Digits(integer=10, fraction=2) BigDecimal value) {}
-  public record CreateRequest(@NotNull UUID requestId, @NotBlank @Size(max=100) String name,
+  public record CreateRequest(@NotNull UUID requestId, @Size(max=100) String name,
+      @NotEmpty @Size(max=100) List<@NotNull @Valid Rule> products) {}
+  public record EditRequest(@Size(max=100) String name, @NotNull @Min(0) Long version,
       @NotEmpty @Size(max=100) List<@NotNull @Valid Rule> products) {}
   public record ToggleRequest(@NotNull Boolean enabled, @NotNull @Min(0) Long version) {}
   public record Offer(String kind, String value, String discountAmount, String discountedPrice,
@@ -82,8 +84,7 @@ public class ProductDiscountService {
   @Transactional
   public Campaign create(UUID user, CreateRequest request) {
     requireAdmin(user);
-    String name=request.name().strip();
-    if (name.isEmpty()) throw new VoucherService.Rejected("Enter a campaign name.");
+    String name=normalizeName(request.name());
     Set<UUID> unique=new HashSet<>();
     for (Rule rule:request.products().stream().sorted(Comparator.comparing(Rule::productId)).toList()) {
       if (!unique.add(rule.productId())) throw new VoucherService.Rejected("Choose each product only once.");
@@ -99,12 +100,67 @@ public class ProductDiscountService {
     try {
       jdbc.update("INSERT INTO public.product_discount_campaigns(id,name,created_by) VALUES(?,?,?) ON CONFLICT(id) DO NOTHING",request.requestId(),name,user);
       var stored=jdbc.queryForMap("SELECT name,created_by FROM public.product_discount_campaigns WHERE id=?",request.requestId());
-      if(!user.equals(stored.get("created_by"))||!name.equals(stored.get("name"))) throw new VoucherService.Rejected("This campaign request was already used for different settings.");
+      if(!user.equals(stored.get("created_by"))||!Objects.equals(name,stored.get("name"))) throw new VoucherService.Rejected("This campaign request was already used for different settings.");
       for(Rule rule:request.products().stream().sorted(Comparator.comparing(Rule::productId)).toList()) jdbc.update("INSERT INTO public.product_discount_items(id,campaign_id,product_id,kind,value) VALUES(?,?,?,?,?)",UUID.randomUUID(),request.requestId(),rule.productId(),rule.kind(),rule.value());
     } catch(org.springframework.dao.DuplicateKeyException ex) {
       throw new VoucherService.Rejected("One of the products already has an active discount. Refresh and try again.");
     }
     return list(user).stream().filter(c->c.id().equals(request.requestId())).findFirst().orElseThrow();
+  }
+
+  @Transactional
+  public Campaign edit(UUID user, UUID id, EditRequest request) {
+    requireAdmin(user);
+    var campaignRows=jdbc.queryForList("SELECT enabled,version FROM public.product_discount_campaigns WHERE id=? FOR UPDATE",id);
+    if(campaignRows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Campaign not found.");
+    var current=campaignRows.get(0);
+    if(((Number)current.get("version")).longValue()!=request.version()) throw new VoucherService.Rejected("This campaign changed. Refresh before editing it.");
+    boolean enabled=Boolean.TRUE.equals(current.get("enabled"));
+    List<Rule> rules=request.products().stream().sorted(Comparator.comparing(Rule::productId)).toList();
+    Set<UUID> unique=new HashSet<>();
+    Set<UUID> productIds=new LinkedHashSet<>();
+    for(Rule rule:rules) {
+      if(!unique.add(rule.productId())) throw new VoucherService.Rejected("Choose each product only once.");
+      var rows=jdbc.queryForList("SELECT price,active FROM public.products WHERE id=? FOR UPDATE",rule.productId());
+      if(rows.isEmpty()||!Boolean.TRUE.equals(rows.get(0).get("active"))) throw new VoucherService.Rejected("Choose an active product.");
+      BigDecimal price=(BigDecimal)rows.get(0).get("price");
+      BigDecimal amount="PERCENT".equals(rule.kind())?price.multiply(rule.value()).divide(new BigDecimal("100"),2,RoundingMode.DOWN):rule.value();
+      if("PERCENT".equals(rule.kind())&&rule.value().compareTo(new BigDecimal("99"))>0) throw new VoucherService.Rejected("Product discounts must be less than 100%.");
+      if(amount.signum()<=0||amount.compareTo(price)>=0) throw new VoucherService.Rejected("Each discount must leave a positive product price.");
+      productIds.add(rule.productId());
+    }
+    if(enabled&&!productIds.isEmpty()) {
+      String placeholders=String.join(",",Collections.nCopies(productIds.size(),"?"));
+      List<Object> args=new ArrayList<>(productIds);args.add(id);
+      Boolean conflict=jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM public.product_discount_items WHERE enabled=TRUE AND product_id IN ("+placeholders+") AND campaign_id<>?)",Boolean.class,args.toArray());
+      if(Boolean.TRUE.equals(conflict)) throw new VoucherService.Rejected("A selected product already has another active campaign. Disable that campaign first.");
+    }
+    String name=normalizeName(request.name());
+    if(jdbc.update("UPDATE public.product_discount_campaigns SET name=?,version=version+1 WHERE id=? AND version=?",name,id,request.version())!=1)
+      throw new VoucherService.Rejected("This campaign changed. Refresh before editing it.");
+    jdbc.update("DELETE FROM public.product_discount_items WHERE campaign_id=?",id);
+    try {
+      for(Rule rule:rules) jdbc.update("INSERT INTO public.product_discount_items(id,campaign_id,product_id,kind,value,enabled) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),id,rule.productId(),rule.kind(),rule.value(),enabled);
+    } catch(org.springframework.dao.DuplicateKeyException ex) {
+      throw new VoucherService.Rejected("One of the products now has another active discount. Refresh and try again.");
+    }
+    return list(user).stream().filter(c->c.id().equals(id)).findFirst().orElseThrow();
+  }
+
+  @Transactional
+  public void deleteDisabled(UUID user,UUID id) {
+    requireAdmin(user);
+    var rows=jdbc.queryForList("SELECT enabled FROM public.product_discount_campaigns WHERE id=? FOR UPDATE",id);
+    if(rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Campaign not found.");
+    if(Boolean.TRUE.equals(rows.get(0).get("enabled"))) throw new VoucherService.Rejected("Disable this campaign before deleting it.");
+    jdbc.update("DELETE FROM public.product_discount_campaigns WHERE id=? AND enabled=FALSE",id);
+  }
+
+  private static String normalizeName(String name) {
+    if(name==null||name.isBlank()) return null;
+    String value=name.strip();
+    if(value.length()>100) throw new VoucherService.Rejected("Campaign names can be up to 100 characters.");
+    return value;
   }
 
   @Transactional
