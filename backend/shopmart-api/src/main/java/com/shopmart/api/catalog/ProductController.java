@@ -86,7 +86,8 @@ public class ProductController {
         reviews == null || reviews.getAverageRating() == null ? 0.0 : reviews.getAverageRating(),
         reviews == null || reviews.getReviewCount() == null ? 0L : reviews.getReviewCount(),
         offer == null ? null : offer.discountedPrice(), offer == null ? null : offer.kind(),
-        offer == null ? null : offer.value(), offer == null ? null : offer.discountAmount());
+        offer == null ? null : offer.value(), offer == null ? null : offer.discountAmount(),
+        offer == null ? null : offer.campaignId(), offer == null ? null : offer.campaignName());
   }
 
   public record CategoryResponse(UUID id, String name) {
@@ -107,7 +108,9 @@ public class ProductController {
       String discountedPrice,
       String discountKind,
       String discountValue,
-      String discountAmount) {
+      String discountAmount,
+      String discountCampaignId,
+      String discountCampaignName) {
   }
 
   public record ProductListResponse(

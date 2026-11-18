@@ -34,7 +34,7 @@ function Photo({ uri, name, surfaceColor, textColor }) {
     </View>
   );
 }
-export default function ProductDetailsModal({ product, session, onClose, onRatingSummaryChange }) {
+export default function ProductDetailsModal({ product, session, onClose, onRatingSummaryChange, onCampaignClick }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
   const [photos, setPhotos] = useState([]);
@@ -124,6 +124,18 @@ export default function ProductDetailsModal({ product, session, onClose, onRatin
 
           <Text style={[styles.category, { color: palette.accent }]}>{product.category}</Text>
           <Text style={[styles.name, { color: palette.text }]}>{product.name}</Text>
+          {product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Shop campaign ${product.discountCampaignName}`}
+              onPress={() => onCampaignClick?.({ id: product.discountCampaignId, name: product.discountCampaignName })}
+              style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10, borderWidth: 1, borderColor: "#f3c66d", borderRadius: 99, backgroundColor: theme.isDark ? "#3b2a16" : "#fff4dc", paddingHorizontal: 14, paddingVertical: 9 }}
+            >
+              <Text style={{ color: "#c05614", fontWeight: "900" }}>✦</Text>
+              <Text style={{ color: theme.isDark ? "#ffdf98" : "#713f12", fontWeight: "900", flexShrink: 1 }}>{product.discountCampaignName}</Text>
+              <Text style={{ color: "#c05614", fontWeight: "900" }}>Shop campaign ›</Text>
+            </Pressable>
+          ) : null}
           {product.discountedPrice != null && <Text style={{ color: palette.danger, fontWeight: "800", marginTop: 10 }}>{product.discountKind === "PERCENT" ? `${Number(product.discountValue)}% off` : `${formatPrice(product.discountAmount)} off`}</Text>}
           {product.discountedPrice != null && <Text style={{ color: palette.muted, textDecorationLine: "line-through", marginTop: 4 }}>{formatPrice(product.price)}</Text>}
           <Text style={[styles.price, { color: palette.accent }]}>{formatPrice(product.discountedPrice ?? product.price)}</Text>

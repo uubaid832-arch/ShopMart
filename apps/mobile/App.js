@@ -143,6 +143,7 @@ function ShopMart() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const productsListRef = useRef(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [category, setCategory] = useState("All");
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
@@ -246,7 +247,8 @@ function ShopMart() {
         matches:
           searchWords.every((word) => searchable.includes(word)) &&
           (!wishlistOnly || wishlist.hasItem(product.id)) &&
-          (category === "All" || product.category === category),
+          (category === "All" || product.category === category) &&
+          (!selectedCampaign || product.discountCampaignId === selectedCampaign.id),
       };
     })
     .filter((entry) => entry.matches)
@@ -282,6 +284,22 @@ function ShopMart() {
 
   function closeCatalog() {
     setCatalogOpen(false);
+    setSelectedCampaign(null);
+    resetProductPage();
+  }
+
+  function openCampaign(campaign) {
+    setSelectedProduct(null);
+    setSelectedCampaign(campaign);
+    setCatalogOpen(true);
+    setWishlistOnly(false);
+    setCategory("All");
+    setSearch("");
+    resetProductPage();
+  }
+
+  function clearCampaign() {
+    setSelectedCampaign(null);
     resetProductPage();
   }
 
@@ -569,18 +587,30 @@ function ShopMart() {
       <View style={styles.catalogTitleBlock}>
         <Text style={[styles.heroEyebrow, { color: palette.accent }]}>THE FULL COLLECTION</Text>
         <Text style={[styles.catalogTitle, { color: palette.text }]}>
-          {wishlistOnly ? "Wishlist" : "Discover more"}
+          {wishlistOnly ? "Wishlist" : selectedCampaign?.name || "Discover more"}
         </Text>
         <Text style={[styles.sectionCaption, { color: palette.muted }]}>
           {loading ? "Loading products..." : `${products.length} ${products.length === 1 ? "product" : "products"} available`}
         </Text>
       </View>
+      {selectedCampaign ? (
+        <View style={{ marginTop: 14, padding: 16, borderRadius: 20, backgroundColor: theme.isDark ? "#3b2a16" : "#fff4dc", borderWidth: 1, borderColor: "#f3c66d" }}>
+          <Text style={{ color: "#b45309", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 }}>SHOP THE PROMOTION</Text>
+          <Text style={{ color: theme.isDark ? "#fff0c2" : "#713f12", fontSize: 20, lineHeight: 26, fontWeight: "900", marginTop: 5 }}>{selectedCampaign.name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+            <Text style={{ color: theme.isDark ? "#e9d8b3" : "#785b35", flex: 1 }}>{products.length} promotional {products.length === 1 ? "product" : "products"}</Text>
+            <Pressable accessibilityRole="button" onPress={clearCampaign} style={{ backgroundColor: theme.isDark ? "#583d1a" : "#fff", borderRadius: 12, paddingHorizontal: 13, paddingVertical: 9 }}>
+              <Text style={{ color: "#9a4c08", fontWeight: "800" }}>View all products</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       {searchBar}
       <Text style={[styles.categoryLabel, { color: palette.text }]}>Browse categories</Text>
       {categorySlider}
       <View style={styles.catalogListHeading}>
         <Text style={[styles.sectionTitle, { color: palette.text }]}>
-          {search.trim() ? "Search results" : category === "All" ? "All products" : category}
+            {search.trim() ? "Search results" : selectedCampaign?.name || (category === "All" ? "All products" : category)}
         </Text>
         <Text style={[styles.sectionCaption, { color: palette.muted }]}>Page {currentProductPage + 1} of {productPageCount}</Text>
       </View>
@@ -835,6 +865,18 @@ function ShopMart() {
                   <Text style={[styles.category, { color: palette.muted }]} numberOfLines={1}>
                   {item.category}
                 </Text>
+                {item.discountedPrice != null && item.discountCampaignId && item.discountCampaignName ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Shop campaign ${item.discountCampaignName}`}
+                    onPress={() => openCampaign({ id: item.discountCampaignId, name: item.discountCampaignName })}
+                    style={{ alignSelf: "flex-start", maxWidth: "100%", flexDirection: "row", alignItems: "center", gap: 6, marginTop: 7, marginBottom: 4, borderRadius: 99, borderWidth: 1, borderColor: "#f3c66d", backgroundColor: theme.isDark ? "#3b2a16" : "#fff4dc", paddingHorizontal: 11, paddingVertical: 6 }}
+                  >
+                    <Text style={{ color: "#c05614", fontWeight: "900" }}>✦</Text>
+                    <Text style={{ color: theme.isDark ? "#ffdf98" : "#713f12", fontSize: 12, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{item.discountCampaignName}</Text>
+                    <Text style={{ color: "#c05614", fontWeight: "900" }}>›</Text>
+                  </Pressable>
+                ) : null}
                 {item.discountedPrice != null && <Text style={{ color: palette.danger, fontWeight: "800" }} numberOfLines={1}>{item.discountKind === "PERCENT" ? `${Number(item.discountValue)}% off` : `${formatPrice(item.discountAmount)} off`}</Text>}
                 {item.discountedPrice != null && <Text style={{ color: palette.muted, textDecorationLine: "line-through", fontSize: 13 }}>{formatPrice(item.price)}</Text>}
                 <Text style={[styles.price, { color: palette.accent }]} adjustsFontSizeToFit numberOfLines={1}>
@@ -906,6 +948,7 @@ function ShopMart() {
             active: !wishlistOnly,
             action: () => {
               setCatalogOpen(false);
+              setSelectedCampaign(null);
               setWishlistOnly(false);
               setCategory("All");
               setSearch("");
@@ -918,6 +961,7 @@ function ShopMart() {
             active: wishlistOnly,
             action: () => {
               setCatalogOpen(false);
+              setSelectedCampaign(null);
               setWishlistOnly(true);
               setCategory("All");
               setSearch("");
@@ -1060,6 +1104,7 @@ function ShopMart() {
           product={selectedProduct}
           session={auth.session}
           onRatingSummaryChange={updateRatingSummary}
+          onCampaignClick={openCampaign}
           onClose={() => setSelectedProduct(null)}
         />
       )}

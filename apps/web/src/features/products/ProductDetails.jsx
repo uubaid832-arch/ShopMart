@@ -105,6 +105,7 @@ export default function ProductDetails({
   formatPrice,
   onAdd,
   onRatingSummaryChange,
+  onCampaignClick,
   onClose,
   children,
 }) {
@@ -159,6 +160,16 @@ export default function ProductDetails({
           >
             <bdi>{product.name}</bdi>
           </h2>
+
+          {product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName && (
+            <button
+              type="button"
+              onClick={() => onCampaignClick?.({ id: product.discountCampaignId, name: product.discountCampaignName })}
+              className="mb-4 inline-flex items-center gap-2 rounded-full border border-solid border-amber-200 bg-linear-to-r from-amber-50 to-orange-100 px-4 py-2 text-sm font-extrabold text-amber-900 shadow-sm hover:shadow-md"
+            >
+              <span aria-hidden="true">✦</span>{product.discountCampaignName}<span aria-hidden="true">Shop campaign ↗</span>
+            </button>
+          )}
 
           <div className="mb-5 mt-0 text-3xl font-extrabold text-violet-700">
             {product.discountedPrice != null && (

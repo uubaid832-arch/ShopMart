@@ -202,6 +202,7 @@ function ProductCard({
   onView,
   isWishlisted,
   onToggleWishlist,
+  onCampaignClick,
 }) {
   const { language, direction } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
@@ -334,6 +335,16 @@ function ProductCard({
         <p className="m-0 text-xs text-slate-500">
           <bdi>{product.category}</bdi>
         </p>
+        {product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName && (
+          <button
+            type="button"
+            onClick={() => onCampaignClick({ id: product.discountCampaignId, name: product.discountCampaignName })}
+            className="mt-2 inline-flex max-w-full items-center gap-2 self-start rounded-full border border-solid border-amber-200 bg-linear-to-r from-amber-50 to-orange-100 px-3 py-1.5 text-start text-xs font-extrabold text-amber-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            aria-label={`Shop campaign ${product.discountCampaignName}`}
+          >
+            <span aria-hidden="true">✦</span><span className="truncate">{product.discountCampaignName}</span><span aria-hidden="true">↗</span>
+          </button>
+        )}
 
         <div className="mb-4 mt-2 flex items-start justify-between gap-2">
           <h3 className="m-0 min-w-0 flex-1 break-words text-base font-bold">
@@ -412,6 +423,7 @@ function Storefront({ products, onRatingSummaryChange }) {
   const [filters, setFilters] = useState(defaultFilters);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [notice, setNotice] = useState(null);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
@@ -501,6 +513,7 @@ function Storefront({ products, onRatingSummaryChange }) {
         Number(product.effectivePrice ?? product.price) >= minimum && Number(product.effectivePrice ?? product.price) <= maximum;
 
       const matchesStock = !filters.inStock || product.stock > 0;
+      const matchesCampaign = !selectedCampaign || product.discountCampaignId === selectedCampaign.id;
 
       const score = query
         ? (name === query ? 100 : name.includes(query) ? 50 : 0) +
@@ -521,7 +534,8 @@ function Storefront({ products, onRatingSummaryChange }) {
           matchesSearch &&
           matchesCategory &&
           matchesPrice &&
-          matchesStock,
+          matchesStock &&
+          matchesCampaign,
       };
     })
     .filter((entry) => entry.matches)
@@ -596,6 +610,19 @@ function Storefront({ products, onRatingSummaryChange }) {
     );
   }
 
+  function handleCampaignClick(campaign) {
+    setSelectedCampaign(campaign);
+    setFilters({ ...defaultFilters });
+    setPage(0);
+    setSelectedProduct(null);
+    document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function clearCampaign() {
+    setSelectedCampaign(null);
+    setPage(0);
+  }
+
   function handleAdd(product) {
     const quantity =
       cart.items.find((item) => item.id === product.id)?.quantity ?? 0;
@@ -618,6 +645,7 @@ function Storefront({ products, onRatingSummaryChange }) {
         onView={handleViewProduct}
         isWishlisted={wishlist.hasItem(product.id)}
         onToggleWishlist={wishlist.toggleItem}
+        onCampaignClick={handleCampaignClick}
       />
     );
   }
@@ -784,7 +812,7 @@ function Storefront({ products, onRatingSummaryChange }) {
               </p>
 
               <h2 id="products-title" className="mb-0 mt-2 text-3xl font-bold">
-                {text("Find your favourites", "اپنی پسند کی مصنوعات تلاش کریں")}
+                {selectedCampaign?.name || text("Find your favourites", "اپنی پسند کی مصنوعات تلاش کریں")}
               </h2>
             </div>
 
@@ -797,6 +825,17 @@ function Storefront({ products, onRatingSummaryChange }) {
                   )}
             </p>
           </header>
+
+          {selectedCampaign && (
+            <section className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-amber-200 bg-linear-to-r from-amber-50 via-orange-50 to-rose-50 p-5 shadow-sm">
+              <div>
+                <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Shop the promotion</p>
+                <h3 className="mb-1 mt-1 text-xl font-extrabold text-slate-900">{selectedCampaign.name}</h3>
+                <p className="m-0 text-sm text-slate-600">{totalItems} campaign {totalItems === 1 ? "product" : "products"} with special prices</p>
+              </div>
+              <button type="button" onClick={clearCampaign} className="rounded-xl border border-solid border-amber-300 bg-white px-4 py-2 font-bold text-orange-800 hover:bg-amber-100">View all products</button>
+            </section>
+          )}
 
           <div className="grid gap-5 rounded-2xl border border-solid border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1214,6 +1253,7 @@ function Storefront({ products, onRatingSummaryChange }) {
         formatPrice={formatPrice}
         onAdd={handleAdd}
         onRatingSummaryChange={onRatingSummaryChange}
+        onCampaignClick={handleCampaignClick}
         onClose={() => setSelectedProduct(null)}
       >
         {selectedProduct && (

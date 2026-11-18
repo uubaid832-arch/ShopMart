@@ -22,7 +22,8 @@ public class ProductDiscountService {
   public record CreateRequest(@NotNull UUID requestId, @NotBlank @Size(max=100) String name,
       @NotEmpty @Size(max=100) List<@NotNull @Valid Rule> products) {}
   public record ToggleRequest(@NotNull Boolean enabled, @NotNull @Min(0) Long version) {}
-  public record Offer(String kind, String value, String discountAmount, String discountedPrice) {}
+  public record Offer(String kind, String value, String discountAmount, String discountedPrice,
+      String campaignId, String campaignName) {}
   public record ProductRule(UUID productId, String productName, String price, String kind,
       String value, boolean enabled) {}
   public record Campaign(UUID id, String name, boolean enabled, long version,
@@ -40,7 +41,7 @@ public class ProductDiscountService {
     String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
     Map<UUID, Offer> result = new HashMap<>();
     jdbc.query("""
-        SELECT i.product_id,i.kind,i.value,p.price
+        SELECT i.product_id,i.kind,i.value,p.price,c.id AS campaign_id,c.name AS campaign_name
         FROM public.product_discount_items i
         JOIN public.product_discount_campaigns c ON c.id=i.campaign_id AND c.enabled=TRUE
         JOIN public.products p ON p.id=i.product_id AND p.active=TRUE
@@ -53,7 +54,8 @@ public class ProductDiscountService {
               ? price.multiply(value).divide(new BigDecimal("100"), 2, RoundingMode.DOWN)
               : value.setScale(2, RoundingMode.UNNECESSARY);
           if (amount.signum() > 0 && amount.compareTo(price) < 0)
-            result.put(id, new Offer(rs.getString("kind"), value.toPlainString(), amount.toPlainString(), price.subtract(amount).toPlainString()));
+            result.put(id, new Offer(rs.getString("kind"), value.toPlainString(), amount.toPlainString(), price.subtract(amount).toPlainString(),
+                rs.getObject("campaign_id", UUID.class).toString(), rs.getString("campaign_name")));
         }, ids.toArray());
     return Map.copyOf(result);
   }
