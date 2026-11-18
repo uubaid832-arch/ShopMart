@@ -1,15 +1,13 @@
-ShopMart operating cities, warehouse, and bank transfer settings
+ShopMart notification timing and mobile campaign scroll update
 
-INSTALL
-1. Copy/extract these project-relative files into the ShopMart repository, replacing matching files.
-2. Before deploying the backend, run backend/shopmart-api/database/028_storefront_settings.sql in the Neon SQL Editor connected to the Render database.
-3. Commit and push the included changes so Render deploys the backend and web updates. Rebuild/reload the Expo app for mobile changes.
+Replace these complete files in the matching paths in your ShopMart project:
+- apps/mobile/src/admin/AdminVouchers.js
+- apps/mobile/src/admin/adminUi.js
+- apps/web/src/features/auth/useSession.js
 
-ADMIN
-In Admin > My account, enter one operating city per line (or separated by commas on mobile). Checkout and saved-address forms offer only those cities; the backend rejects unsupported city values. The page also saves the warehouse street address, city, optional contact number, customer WhatsApp number, bank name, account title, account number, and IBAN.
+Changes:
+- Mobile admin action success and error feedback appears as a popup toast and auto-dismisses after 3.5 seconds.
+- The mobile Product discounts / campaign form now has its own scrollable area inside the admin screen.
+- Existing web sign-in/sign-up session toast messages now auto-dismiss after 3.5 seconds.
 
-BANK TRANSFER
-Web and mobile checkout fetch public store settings. The bank details and WhatsApp link reflect the latest admin settings. New bank-transfer orders remain pending until an administrator confirms the receipt.
-
-VALIDATION
-Web npm run lint and npm run build passed. Mobile JSX syntax parsing passed. Backend Maven compile could not run because Maven Central DNS was unavailable in this environment; no tests were run. The web build reports its existing large-chunk advisory.
+After replacing the files, restart the mobile development server and reload the app. For web, run the usual lint/build commands before deployment.

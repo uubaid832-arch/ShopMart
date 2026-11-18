@@ -234,12 +234,27 @@ export function Notice({ op }) {
           <Text style={[ui.muted, { color: palette.muted }]}>Working...</Text>
         </View>
       )}
-      {op.error ? (
-        <Text accessibilityRole="alert" style={[ui.error, { color: palette.danger }]}>
-          {op.error}
-        </Text>
-      ) : null}
-      {op.notice ? <Text style={[ui.success, { color: palette.success }]}>{op.notice}</Text> : null}
+      {(op.error || op.notice) && (
+        <Modal transparent visible animationType="fade" statusBarTranslucent>
+          <View pointerEvents="box-none" style={ui.toastLayer}>
+            <View
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+              style={[
+                ui.toast,
+                {
+                  backgroundColor: palette.surface,
+                  borderColor: op.error ? palette.danger : palette.success,
+                },
+              ]}
+            >
+              <Text style={{ color: op.error ? palette.danger : palette.success, fontWeight: "800" }}>
+                {op.error || op.notice}
+              </Text>
+            </View>
+          </View>
+        </Modal>
+      )}
       {op.uncertain && (
         <Text style={[ui.error, { color: palette.danger }]}>
           The result is uncertain. Close this editor, refresh the list and check
@@ -469,14 +484,25 @@ export function useMutation(onChanged) {
   const [uncertain, setUncertain] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(true);
+  const messageTimer = useRef(null);
   const changed = useRef(onChanged);
   changed.current = onChanged;
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      clearTimeout(messageTimer.current);
     };
   }, []);
+  function dismissMessageAfterDelay() {
+    clearTimeout(messageTimer.current);
+    messageTimer.current = setTimeout(() => {
+      if (mounted.current) {
+        setError("");
+        setNotice("");
+      }
+    }, 3500);
+  }
   async function run(action, message = "Saved.", after) {
     if (pending.current || uncertain) return false;
     pending.current = true;
@@ -488,6 +514,7 @@ export function useMutation(onChanged) {
       if (mounted.current) {
         if (!value?.cancelled) {
           setNotice(message);
+          dismissMessageAfterDelay();
           changed.current?.();
           after?.(value);
         }
@@ -496,6 +523,7 @@ export function useMutation(onChanged) {
     } catch (failure) {
       if (mounted.current) {
         setError(failure.message || "Could not confirm the result.");
+        dismissMessageAfterDelay();
         if (!failure.status || failure.status >= 500) setUncertain(true);
         changed.current?.();
       }
@@ -522,6 +550,26 @@ export function useMutation(onChanged) {
   };
 }
 const baseUi = StyleSheet.create({
+  toastLayer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingBottom: 36,
+  },
+  toast: {
+    width: "100%",
+    maxWidth: 520,
+    borderWidth: 1,
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    shadowColor: "#000",
+    shadowOpacity: 0.16,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 9,
+  },
   topActions: {
     flexDirection: "row",
     justifyContent: "flex-end",

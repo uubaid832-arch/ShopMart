@@ -12,7 +12,7 @@ export function useSessionState() {
   useEffect(() => {
     if (!notice) return;
 
-    const timer = window.setTimeout(() => setNotice(null), 5000);
+    const timer = window.setTimeout(() => setNotice(null), 3500);
 
     return () => window.clearTimeout(timer);
   }, [notice]);

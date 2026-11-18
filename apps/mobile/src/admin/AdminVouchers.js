@@ -171,7 +171,11 @@ export default function VouchersModule({ session, onClose, onChanged }) {
         <Button title="Voucher codes" secondary={tab !== "VOUCHERS"} onPress={() => setTab("VOUCHERS")} />
         <Button title="Product campaigns" secondary={tab !== "PRODUCTS"} onPress={() => setTab("PRODUCTS")} />
       </View>}
-      {tab === "PRODUCTS" && !creating ? <ProductDiscountsModule session={session} onChanged={onChanged} /> : creating ? (
+      {tab === "PRODUCTS" && !creating ? (
+        <Form>
+          <ProductDiscountsModule session={session} onChanged={onChanged} />
+        </Form>
+      ) : creating ? (
         <VoucherEditor
           key={editingVoucher?.id || "new-voucher"}
           op={op}
