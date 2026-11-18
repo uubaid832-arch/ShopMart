@@ -11,6 +11,7 @@ import java.util.*;
 
 import jakarta.validation.Valid;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
@@ -44,6 +45,7 @@ public class OrderService {
         this(jdbc, notifications, vouchers, new ProductDiscountService(jdbc));
     }
 
+    @Autowired
     public OrderService(JdbcTemplate jdbc, NotificationService notifications, VoucherService vouchers,
             ProductDiscountService productDiscounts) {
         this.jdbc = jdbc;
