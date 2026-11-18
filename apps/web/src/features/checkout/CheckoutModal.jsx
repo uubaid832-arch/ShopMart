@@ -747,7 +747,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                               <option value="">{storeSettings ? text("Choose a delivery city", "ڈیلیوری کا شہر منتخب کریں") : text("Loading available cities…", "دستیاب شہر لوڈ ہو رہے ہیں…")}</option>
                               {(storeSettings?.operatingCities || []).map((city) => <option key={city} value={city}>{city}</option>)}
                             </select>
-                            {storeSettingsError ? <span role="alert" className="text-xs text-rose-700">{storeSettingsError}</span> : storeSettings?.operatingCities?.length ? <span className="text-xs text-slate-500">{storeSettings.operatingCities.length === 1 ? `ShopMart is currently operating in ${storeSettings.operatingCities[0]} only.` : `ShopMart currently delivers in: ${storeSettings.operatingCities.join(", ")}.`}</span> : null}
+                            {storeSettingsError ? <span role="alert" className="text-xs text-rose-700">{storeSettingsError}</span> : storeSettings?.operatingCities?.length ? <span className="text-xs text-slate-500">ShopMart currently operates in these cities: {storeSettings.operatingCities.join(", ")}.</span> : null}
                           </>
                         ) : <input
                           name={name}

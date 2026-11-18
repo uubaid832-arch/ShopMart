@@ -858,13 +858,13 @@ function Storefront({ products, onRatingSummaryChange }) {
           </header>
 
           {selectedCampaign && (
-            <section className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-amber-200 bg-linear-to-r from-amber-50 via-orange-50 to-rose-50 p-5 shadow-sm">
+              <section className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-sky-200 bg-linear-to-r from-sky-50 via-white to-blue-50 p-5 shadow-sm dark:border-sky-700 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950">
               <div>
-                <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">Shop the promotion</p>
-                <h3 className="mb-1 mt-1 text-xl font-extrabold text-slate-900">{selectedCampaign.name || text("Sale promotion", "سیل پروموشن")}</h3>
-                <p className="m-0 text-sm text-slate-600">{totalItems} campaign {totalItems === 1 ? "product" : "products"} with special prices</p>
+                <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">Shop the promotion</p>
+                <h3 className="mb-1 mt-1 text-xl font-extrabold text-slate-900 dark:text-white">{selectedCampaign.name || text("Sale promotion", "سیل پروموشن")}</h3>
+                <p className="m-0 text-sm text-slate-600 dark:text-slate-300">{totalItems} campaign {totalItems === 1 ? "product" : "products"} with special prices</p>
               </div>
-              <button type="button" onClick={clearCampaign} className="rounded-xl border border-solid border-amber-300 bg-white px-4 py-2 font-bold text-orange-800 hover:bg-amber-100">View all products</button>
+              <button type="button" onClick={clearCampaign} className="rounded-xl border border-solid border-sky-200 bg-white px-4 py-2 font-bold text-sky-800 hover:bg-sky-50 dark:border-slate-600 dark:bg-slate-900 dark:text-sky-300 dark:hover:bg-slate-700">View all products</button>
             </section>
           )}
 

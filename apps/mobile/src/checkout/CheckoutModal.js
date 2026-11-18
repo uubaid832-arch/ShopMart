@@ -426,7 +426,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                         {cityPickerOpen && (storeSettings?.operatingCities || []).map((city) => (
                           <Pressable key={city} accessibilityRole="button" onPress={() => { update("city", city); setCityPickerOpen(false); }} style={[styles.input, { marginTop: 6, backgroundColor: details.city === city ? palette.accentSoft : palette.surface, borderColor: palette.border }]}><Text style={{ color: palette.text }}>{details.city === city ? "✓ " : ""}{city}</Text></Pressable>
                         ))}
-                        {storeSettingsError ? <Text style={{ color: palette.danger, marginTop: 5 }}>{storeSettingsError}</Text> : storeSettings?.operatingCities?.length ? <Text style={{ color: palette.muted, marginTop: 5 }}>{storeSettings.operatingCities.length === 1 ? `ShopMart is currently operating in ${storeSettings.operatingCities[0]} only.` : `ShopMart currently delivers in ${storeSettings.operatingCities.join(", ")}.`}</Text> : null}
+                        {storeSettingsError ? <Text style={{ color: palette.danger, marginTop: 5 }}>{storeSettingsError}</Text> : storeSettings?.operatingCities?.length ? <Text style={{ color: palette.muted, marginTop: 5 }}>ShopMart currently operates in these cities: {storeSettings.operatingCities.join(", ")}.</Text> : null}
                       </View>
                     ) : <TextInput
                       accessibilityLabel={label}

@@ -1,13 +1,22 @@
-ShopMart admin store settings HTTP 400 fix
+ShopMart store settings, campaign, theme and notifications update
 
-Replace these complete files in the matching paths:
-- backend/shopmart-api/src/main/java/com/shopmart/api/admin/AdminStoreSettingsService.java
-- backend/shopmart-api/database/028_storefront_settings.sql
-- apps/web/src/api/adminStoreSettings.js
+This archive contains the complete changed source files for the ShopMart city/store settings feature plus the latest refinements. Extract it into your ShopMart project root and replace files when prompted.
 
-Cause addressed:
-The warehouse city column defaults to an empty value, while saving store settings requires a warehouse city. The profile now returns the first operating city (Lahore by default) when the warehouse city has not been set. Migration 028 also fills any existing blank warehouse city from the first configured operating city. The web form will display Spring validation details instead of only a generic HTTP status.
+Included updates:
+- Admin web/mobile operating cities appear as saved chips; Enter adds a city and × removes it.
+- Checkout tells customers which cities ShopMart currently operates in.
+- Mobile admin has a separate Store details option for operating cities, warehouse, WhatsApp and bank details.
+- Mobile campaign products are selected from a collapsible product list, with search and per-product discount controls.
+- Promotion banner and action notification colors work with the selected dark theme.
+- Web API actions show success/error notifications that dismiss after 3.5 seconds. Mobile admin action feedback uses short popup notifications.
+- Store profile falls back to the first operating city if the warehouse city is blank; web displays backend validation messages.
 
-Apply the updated 028_storefront_settings.sql to the same Neon database configured in Render. It is safe to rerun: columns use IF NOT EXISTS and the data updates only fill blank values. Then commit/push the source and let Render deploy the backend and web app.
+Database:
+Apply backend/shopmart-api/database/028_storefront_settings.sql to the Neon database configured in Render. This migration is safe to rerun; it fills a blank warehouse city from the first operating city.
 
-Web validation: npm run lint and npm run build passed. Maven compile could not be checked here because its Spring Boot parent POM is not present in the local Maven cache and Maven Central is unavailable in offline mode.
+Then commit and push the source so Render can deploy it. Restart Expo or reload the mobile app to pick up the mobile changes.
+
+Checks performed:
+- Web npm run lint and npm run build passed. Vite still reports its existing large JavaScript chunk warning.
+- Edited mobile JSX files parsed successfully with Babel.
+- Maven compilation could not be checked here because the Spring Boot parent dependency was not available in the local Maven cache.

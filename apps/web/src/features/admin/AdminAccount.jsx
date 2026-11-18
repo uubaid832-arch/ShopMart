@@ -13,14 +13,12 @@ export default function AdminAccount() {
   const { session, saveProfile } = useSession();
   const { language, setLanguage } = useLanguage();
   const [profileBusy, setProfileBusy] = useState(false);
-  const [profileError, setProfileError] = useState("");
-  const [profileSaved, setProfileSaved] = useState(false);
   const [storeProfile, setStoreProfile] = useState(emptyStoreProfile);
-  const [citiesText, setCitiesText] = useState("Lahore");
+  const [operatingCities, setOperatingCities] = useState(["Lahore"]);
+  const [cityDraft, setCityDraft] = useState("");
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [settingsError, setSettingsError] = useState("");
-  const [settingsSaved, setSettingsSaved] = useState(false);
 
   useEffect(() => {
     if (!session?.accessToken) return undefined;
@@ -30,7 +28,8 @@ export default function AdminAccount() {
         if (!controller.signal.aborted) {
           const profile = { ...emptyStoreProfile, ...value };
           setStoreProfile(profile);
-          setCitiesText((profile.operatingCities || []).join("\n"));
+          setOperatingCities(profile.operatingCities || []);
+          setSettingsError("");
         }
       })
       .catch((failure) => {
@@ -51,17 +50,14 @@ export default function AdminAccount() {
       phone: String(data.get("phone") || "").trim(),
     };
     if (!values.name) {
-      setProfileError("Enter your name.");
+      window.dispatchEvent(new CustomEvent("shopmart:action-feedback", { detail: { type: "error", message: "Enter your name." } }));
       return;
     }
     setProfileBusy(true);
-    setProfileError("");
-    setProfileSaved(false);
     try {
       await saveProfile(values);
-      setProfileSaved(true);
-    } catch (failure) {
-      setProfileError(failure.message || "Could not save account details.");
+    } catch {
+      // The shared API action toast reports request failures.
     } finally {
       setProfileBusy(false);
     }
@@ -69,16 +65,24 @@ export default function AdminAccount() {
 
   async function saveStoreSettings(event) {
     event.preventDefault();
-    const operatingCities = citiesText.split(/[\n,]/).map((city) => city.trim()).filter(Boolean);
-    setSettingsBusy(true); setSettingsError(""); setSettingsSaved(false);
+    setSettingsBusy(true);
     try {
       const saved = await saveAdminStoreProfile(session.accessToken, { ...storeProfile, operatingCities });
-      setStoreProfile(saved); setCitiesText((saved.operatingCities || []).join("\n")); setSettingsSaved(true);
-    } catch (failure) {
-      setSettingsError(failure.message || "Could not save store settings.");
+      setStoreProfile(saved); setOperatingCities(saved.operatingCities || []);
+    } catch {
+      // The shared API action toast reports request failures.
     } finally {
       setSettingsBusy(false);
     }
+  }
+
+  function addCity() {
+    const city = cityDraft.trim().replace(/\s+/g, " ");
+    if (!city) return;
+    if (!operatingCities.some((value) => value.toLowerCase() === city.toLowerCase())) {
+      setOperatingCities([...operatingCities, city]);
+    }
+    setCityDraft("");
   }
 
   if (!session) return null;
@@ -105,11 +109,9 @@ export default function AdminAccount() {
           <span className="grid size-11 place-items-center rounded-xl bg-violet-50 text-violet-700"><UserRound size={21} aria-hidden="true" /></span>
           <div><h2 className="m-0 text-lg font-bold">Account details</h2><p className="mb-0 mt-1 text-sm text-slate-500">{session.user.email}</p></div>
         </div>
-        <form onSubmit={saveAccount} onChange={() => { setProfileError(""); setProfileSaved(false); }} className="grid gap-3 sm:grid-cols-2">
+        <form onSubmit={saveAccount} className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-semibold">Name<input className={inputClass} name="name" autoComplete="name" defaultValue={session.user.name || ""} required /></label>
           <label className="grid gap-2 text-sm font-semibold">Phone<input className={inputClass} name="phone" type="tel" autoComplete="tel" defaultValue={session.user.phone || ""} /></label>
-          {profileError && <p role="alert" className="m-0 text-sm text-rose-700 sm:col-span-2">{profileError}</p>}
-          {profileSaved && <p role="status" className="m-0 text-sm text-emerald-700 sm:col-span-2">Account details saved.</p>}
           <button type="submit" disabled={profileBusy} className="rounded-xl border-0 bg-violet-600 px-5 py-3 text-sm font-semibold text-white enabled:hover:bg-violet-700 disabled:opacity-50 sm:col-span-2">{profileBusy ? "Saving…" : "Save account details"}</button>
         </form>
       </section>
@@ -128,8 +130,19 @@ export default function AdminAccount() {
           <div><h2 className="m-0 text-lg font-bold">Store delivery & payment settings</h2><p className="mb-0 mt-1 text-sm text-slate-500">These settings control checkout city choices, return instructions, and bank transfer details.</p></div>
         </div>
         <form onSubmit={saveStoreSettings} className="grid gap-4">
-          <label className="grid gap-2 text-sm font-semibold">Operating cities <textarea className={`${inputClass} resize-y`} value={citiesText} onChange={(event) => { setCitiesText(event.target.value); setSettingsError(""); setSettingsSaved(false); }} rows={3} placeholder="One city per line, for example Lahore\nKarachi" disabled={settingsLoading || settingsBusy} /></label>
-          <p className="-mt-3 m-0 text-xs text-slate-500">Add one city per line. Customers will choose only from these cities at checkout.</p>
+          <div className="grid gap-2 text-sm font-semibold">
+            <span>Operating cities</span>
+            <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-xl border border-solid border-slate-200 bg-slate-50 p-2 dark:border-slate-600 dark:bg-slate-950">
+              {operatingCities.map((city) => (
+                <span key={city} className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1.5 text-sm font-bold text-sky-900 dark:bg-slate-700 dark:text-sky-200">
+                  {city}
+                  <button type="button" aria-label={`Remove ${city}`} disabled={settingsLoading || settingsBusy} onClick={() => setOperatingCities(operatingCities.filter((value) => value !== city))} className="grid size-5 place-items-center rounded-full border-0 bg-transparent text-current hover:bg-black/10">×</button>
+                </span>
+              ))}
+              <input className="min-w-40 flex-1 border-0 bg-transparent p-2 text-sm font-normal text-slate-800 outline-none dark:text-slate-100" value={cityDraft} onChange={(event) => setCityDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === ",") { event.preventDefault(); addCity(); } }} onBlur={addCity} placeholder="Type a city and press Enter" disabled={settingsLoading || settingsBusy} />
+            </div>
+          </div>
+          <p className="-mt-3 m-0 text-xs text-slate-500">Press Enter to add a city. Customers can select from these saved cities at checkout.</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-2 text-sm font-semibold">Warehouse street address<input className={inputClass} value={storeProfile.warehouseAddressLine} onChange={(event) => setStoreProfile({ ...storeProfile, warehouseAddressLine: event.target.value })} maxLength={1000} placeholder="Building, street, area" disabled={settingsLoading || settingsBusy} /></label>
             <label className="grid gap-2 text-sm font-semibold">Warehouse city<input className={inputClass} value={storeProfile.warehouseCity} onChange={(event) => setStoreProfile({ ...storeProfile, warehouseCity: event.target.value })} maxLength={100} placeholder="City" disabled={settingsLoading || settingsBusy} /></label>
@@ -144,7 +157,6 @@ export default function AdminAccount() {
             <label className="grid gap-2 text-sm font-semibold sm:col-span-2">IBAN<input className={inputClass} value={storeProfile.bankIban} onChange={(event) => setStoreProfile({ ...storeProfile, bankIban: event.target.value })} maxLength={80} disabled={settingsLoading || settingsBusy} /></label>
           </div>
           {settingsError && <p role="alert" className="m-0 text-sm text-rose-700">{settingsError}</p>}
-          {settingsSaved && <p role="status" className="m-0 text-sm text-emerald-700">Store settings saved. Checkout and return instructions will use the updated values.</p>}
           <div><button type="submit" disabled={settingsLoading || settingsBusy} className="rounded-xl border-0 bg-violet-600 px-5 py-3 text-sm font-semibold text-white enabled:hover:bg-violet-700 disabled:opacity-50">{settingsLoading ? "Loading settings…" : settingsBusy ? "Saving settings…" : "Save store settings"}</button></div>
         </form>
       </section>

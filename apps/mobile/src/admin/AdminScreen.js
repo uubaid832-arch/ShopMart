@@ -851,7 +851,8 @@ function WarehouseAddressSettings({ session }) {
   };
   const defaults = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000" };
   const [profile, setProfile] = useState(defaults);
-  const [citiesText, setCitiesText] = useState("Lahore");
+  const [operatingCities, setOperatingCities] = useState(["Lahore"]);
+  const [cityDraft, setCityDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -864,22 +865,34 @@ function WarehouseAddressSettings({ session }) {
         if (controller.signal.aborted) return;
         const current = { ...defaults, ...value };
         setProfile(current);
-        setCitiesText((current.operatingCities || []).join("\n"));
+        setOperatingCities(current.operatingCities || []);
       })
       .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [session.accessToken]);
 
+  useEffect(() => {
+    if (!error && !notice) return undefined;
+    const timer = setTimeout(() => { setError(""); setNotice(""); }, 3500);
+    return () => clearTimeout(timer);
+  }, [error, notice]);
+
+  function addCity() {
+    const city = cityDraft.trim().replace(/\s+/g, " ");
+    if (!city) return;
+    setOperatingCities((current) => current.some((value) => value.toLowerCase() === city.toLowerCase()) ? current : [...current, city]);
+    setCityDraft("");
+  }
+
   async function saveSettings() {
-    const operatingCities = citiesText.split(/[\n,]/).map((city) => city.trim()).filter(Boolean);
     setSaving(true); setError(""); setNotice("");
     try {
       const saved = await adminRequest(session.accessToken, "/settings/store-profile", {
         method: "PUT", values: { ...profile, operatingCities },
       });
       setProfile(saved);
-      setCitiesText((saved.operatingCities || []).join("\n"));
+      setOperatingCities(saved.operatingCities || []);
       setNotice("Store settings saved. Checkout and return instructions use the updated details.");
     } catch (failure) { setError(failure.message); }
     finally { setSaving(false); }
@@ -900,17 +913,30 @@ function WarehouseAddressSettings({ session }) {
     <View style={s.card}>
       <View style={s.inline}><Icon name="home" /><Text style={s.cardTitle}>Store delivery & payment settings</Text></View>
       <Text style={[s.muted, { marginTop: 8 }]}>Set service cities, return warehouse details, and the bank and WhatsApp details shown during checkout.</Text>
-      <Text style={[s.body, { marginTop: 14, marginBottom: 6 }]}>Operating cities — one per line</Text>
-      <TextInput
-        accessibilityLabel="Operating cities"
-        value={citiesText}
-        onChangeText={(value) => { setCitiesText(value); setError(""); setNotice(""); }}
-        editable={!loading && !saving}
-        multiline maxLength={2000} textAlignVertical="top"
-        placeholder="Lahore\nKarachi" placeholderTextColor={palette.muted}
-        style={[s.input, { minHeight: 82, color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
-      />
-      <Text style={[s.muted, { marginTop: 4 }]}>Customers can order only in these cities. Multiple cities appear as a dropdown at checkout.</Text>
+      <Text style={[s.body, { marginTop: 14, marginBottom: 6 }]}>Operating cities</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8, minHeight: 54, padding: 8, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.elevated, borderRadius: 12 }}>
+        {operatingCities.map((city) => (
+          <View key={city} style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 999, paddingVertical: 7, paddingLeft: 12, paddingRight: 6, backgroundColor: palette.accentSoft }}>
+            <Text style={{ color: palette.text, fontWeight: "800" }}>{city}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${city}`} disabled={loading || saving} onPress={() => setOperatingCities((current) => current.filter((value) => value !== city))} style={{ width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: palette.danger, fontSize: 19, fontWeight: "900" }}>×</Text>
+            </Pressable>
+          </View>
+        ))}
+        <TextInput
+          accessibilityLabel="Add an operating city"
+          value={cityDraft}
+          onChangeText={setCityDraft}
+          onSubmitEditing={addCity}
+          returnKeyType="done"
+          editable={!loading && !saving}
+          maxLength={100}
+          placeholder="Type city, press Enter"
+          placeholderTextColor={palette.muted}
+          style={{ minWidth: 160, flexGrow: 1, paddingVertical: 8, paddingHorizontal: 5, color: palette.text, backgroundColor: "transparent" }}
+        />
+      </View>
+      <Text style={[s.muted, { marginTop: 4 }]}>Press Enter to add each city. Customers can order only in these cities.</Text>
       {fields.map(([label, key, placeholder, maxLength]) => (
         <View key={key} style={{ marginTop: 12 }}>
           <Text style={[s.body, { marginBottom: 6 }]}>{label}</Text>
@@ -925,9 +951,16 @@ function WarehouseAddressSettings({ session }) {
           />
         </View>
       ))}
-      {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
-      {notice ? <Text style={s.success}>{notice}</Text> : null}
       <Button title={loading ? "Loading settings…" : saving ? "Saving settings…" : "Save store settings"} icon="check" disabled={loading || saving} onPress={saveSettings} />
+      {(error || notice) && (
+        <Modal transparent visible animationType="fade" statusBarTranslucent>
+          <View pointerEvents="box-none" style={{ flex: 1, justifyContent: "flex-end", padding: 18, paddingBottom: 34 }}>
+            <View style={{ borderRadius: 16, borderWidth: 1, borderColor: error ? palette.danger : palette.success, backgroundColor: palette.surface, padding: 15, elevation: 10 }}>
+              <Text accessibilityRole="alert" style={{ color: error ? palette.danger : palette.success, fontWeight: "800" }}>{error || notice}</Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -1429,6 +1462,18 @@ export default function AdminScreen({
                   <Text style={s.drawerItemText}>My profile & security</Text>
                   <Icon name="arrow" size={15} color={themePalette.muted} />
                 </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setSidebarOpen(false);
+                    setPanel("store-details");
+                  }}
+                  style={s.drawerItem}
+                >
+                  <Icon name="home" color={themePalette.muted} />
+                  <Text style={s.drawerItemText}>Store details</Text>
+                  <Icon name="arrow" size={15} color={themePalette.muted} />
+                </Pressable>
               </ScrollView>
               <View style={s.drawerFooter}>
                 <Text style={s.welcomeCaption}>
@@ -1505,6 +1550,22 @@ export default function AdminScreen({
         visible={appearanceOpen}
         onClose={() => setAppearanceOpen(false)}
       />
+      {panel === "store-details" && (
+        <Modal visible animationType="slide" onRequestClose={() => setPanel("")}>
+          <SafeAreaView style={s.screen}>
+            <View style={s.header}>
+              <View style={s.grow}>
+                <Text style={s.eyebrow}>SHOPMART ADMIN</Text>
+                <Text style={s.title}>Store details</Text>
+              </View>
+              <IconButton icon="close" label="Close store details" onPress={() => setPanel("")} />
+            </View>
+            <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+              <WarehouseAddressSettings session={session} />
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+      )}
       {panel === "account" && (
         <Modal
           visible
@@ -1536,7 +1597,6 @@ export default function AdminScreen({
                   <Text style={s.link}>Administrator</Text>
                 </View>
               </View>
-              <WarehouseAddressSettings session={session} />
               <Pressable
                 accessibilityRole="button"
                 onPress={() => languageSettings.setLanguage(languageSettings.language === "en" ? "ur" : "en")}

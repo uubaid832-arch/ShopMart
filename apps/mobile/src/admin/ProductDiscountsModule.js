@@ -4,12 +4,16 @@ import { View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { adminRequest, money, useAdminResource } from "./adminApi";
 import { Badge, Button, Card, Choice, confirm, Field, Notice, ui, useMutation, check } from "./adminUi";
+import { useMobileAppearance } from "../appearance/MobileAppearance";
 
 export default function ProductDiscountsModule({ session, onChanged }) {
+  const { theme } = useMobileAppearance();
+  const palette = theme.colors;
   const [revision, setRevision] = useState(0);
   const [products, setProducts] = useState([]);
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
+  const [productDropdownOpen, setProductDropdownOpen] = useState(false);
   const [allDiscountKind, setAllDiscountKind] = useState("PERCENT");
   const [allDiscountValue, setAllDiscountValue] = useState("10");
   const [selected, setSelected] = useState({});
@@ -67,6 +71,7 @@ export default function ProductDiscountsModule({ session, onChanged }) {
   function editCampaign(campaign) {
     setEditing(campaign); setName(campaign.name || "");
     setSelected(Object.fromEntries(campaign.products.map((product) => [product.productId, { checked: true, kind: product.kind, value: String(product.value) }])));
+    setProductDropdownOpen(false);
   }
   return <View style={{ gap: 14 }}>
     <Notice op={op} />
@@ -78,12 +83,31 @@ export default function ProductDiscountsModule({ session, onChanged }) {
         <Field label={allDiscountKind === "PERCENT" ? "Discount percentage (maximum 99%)" : "Flat discount per product (PKR)"} value={allDiscountValue} onChangeText={setAllDiscountValue} keyboardType="decimal-pad" />
         <Button title={`Apply to all available products (${eligibleProducts.length})`} secondary disabled={op.blocked} onPress={selectAllForDiscount} />
       </Card>
-      <Field label="Search products" value={search} onChangeText={setSearch} />
-      {visible.map((product) => {
-        const rule = selected[product.id] || { checked: false, kind: "PERCENT", value: "10" };
-        const locked = activeIds.has(product.id) || !product.active;
-        return <Card key={product.id} title={product.name} subtitle={`${money(product.price)}${locked ? " · Already discounted" : ""}`}>
-          <Button title={rule.checked ? "Selected" : "Select product"} secondary={!rule.checked} disabled={locked} onPress={() => setSelected({ ...selected, [product.id]: { ...rule, checked: !rule.checked } })} />
+      <Card title={`Campaign products (${Object.values(selected).filter((rule) => rule.checked).length} selected)`} subtitle="Open the product list to add or remove products from this campaign.">
+        <Button title={productDropdownOpen ? "Hide product list" : "Choose products"} secondary icon={productDropdownOpen ? "down" : "box"} onPress={() => setProductDropdownOpen((value) => !value)} />
+        {productDropdownOpen && <>
+          <Field label="Search products" value={search} onChangeText={setSearch} />
+          <View style={{ gap: 8, marginTop: 6 }}>
+            {visible.map((product) => {
+              const rule = selected[product.id] || { checked: false, kind: "PERCENT", value: "10" };
+              const locked = activeIds.has(product.id) || !product.active;
+              return <View key={product.id} style={[ui.row, { justifyContent: "space-between", alignItems: "center", padding: 10, borderWidth: 1, borderColor: palette.border, backgroundColor: rule.checked ? palette.accentSoft : palette.surface, borderRadius: 12, opacity: locked ? 0.6 : 1 }]}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[ui.body, { fontWeight: "800" }]}>{product.name}</Text>
+                  <Text style={ui.muted}>{money(product.price)}{locked ? " · Already discounted" : ""}</Text>
+                </View>
+                <Button title={rule.checked ? "Remove" : "Add"} secondary={!rule.checked} disabled={locked} onPress={() => setSelected({ ...selected, [product.id]: { ...rule, checked: !rule.checked } })} />
+              </View>;
+            })}
+            {!visible.length && <Text style={ui.muted}>No matching products.</Text>}
+          </View>
+        </>}
+      </Card>
+      {Object.entries(selected).filter(([, rule]) => rule.checked).map(([productId, rule]) => {
+        const product = products.find((item) => item.id === productId);
+        if (!product) return null;
+        return <Card key={product.id} title={product.name} subtitle={`${money(product.price)} · Original price`}>
+          <Button title="Remove from campaign" danger onPress={() => setSelected({ ...selected, [product.id]: { ...rule, checked: false } })} />
           {rule.checked && <>
             <Choice label="Discount type" value={rule.kind} onChange={(kind) => setSelected({ ...selected, [product.id]: { ...rule, kind } })} options={[{ value: "PERCENT", label: "Percentage" }, { value: "FIXED", label: "PKR amount" }]} />
             <Field label={rule.kind === "PERCENT" ? "Discount percent (maximum 99)" : "Discount amount (PKR)"} value={rule.value} onChangeText={(value) => setSelected({ ...selected, [product.id]: { ...rule, value } })} keyboardType="decimal-pad" />
