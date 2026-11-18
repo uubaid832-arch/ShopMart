@@ -65,8 +65,14 @@ async function placeOrder({
     } catch {
       /* Use the status fallback. */
     }
+    // Spring's ProblemDetail responses expose the server reason as `detail`;
+    // reading only `message` hides useful conflict causes such as an unfinished
+    // Safepay checkout or a product whose stock changed.
+    const serverMessage = [detail?.message, detail?.detail, detail?.title].find(
+      (value) => typeof value === "string" && value.trim(),
+    );
     const error = new Error(
-      detail?.message ??
+      serverMessage ??
         messages[response.status] ??
         "Could not confirm the order. Retry without changing your details.",
     );
