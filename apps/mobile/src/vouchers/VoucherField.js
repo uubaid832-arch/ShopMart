@@ -11,7 +11,6 @@ export default function VoucherField({ voucher, disabled }) {
         <TextInput
           accessibilityLabel="Voucher code"
           placeholder="Enter discount code"
-          placeholderTextColor="#a18bad"
           value={voucher.code}
           onChangeText={voucher.change}
           autoCapitalize="characters"
@@ -44,8 +43,7 @@ export default function VoucherField({ voucher, disabled }) {
         </Text>
       ) : null}
       <Text style={[s.note, { color: palette.muted }]}>
-        One voucher per order. Final eligibility is checked when placing the
-        order.
+        One voucher per order. Vouchers apply only to full-price products; discounted items are excluded. Eligibility is checked again when placing your order.
       </Text>
     </View>
   );

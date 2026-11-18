@@ -332,7 +332,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       </Text>
                       <Text style={[styles.itemPrice, { color: palette.text }]}>
                         {formatPrice(
-                          Number(item.price) * item.quantity,
+                          Number(item.price) * item.quantity - Number(item.discountAmount || 0),
                           confirmation.currency,
                         )}
                       </Text>
@@ -341,7 +341,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
 
                   {Number(confirmation.discountAmount) > 0 && (
                     <Text style={[styles.description, { color: palette.muted }]}>
-                      Voucher {confirmation.voucherCode}: -
+                  {confirmation.voucherCode ? `Discounts · ${confirmation.voucherCode}` : "Product savings"}: -
                       {formatPrice(
                         confirmation.discountAmount,
                         confirmation.currency,
@@ -444,7 +444,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                         {item.name} × {item.quantity}
                       </Text>
                       <Text style={[styles.itemPrice, { color: palette.text }]}>
-                        {formatPrice(item.price * item.quantity)}
+                        {formatPrice((item.effectivePrice ?? item.price) * item.quantity)}
                       </Text>
                     </View>
                   ))}
@@ -454,7 +454,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   </Text>
                   {Number(summaryDiscount) > 0 && (
                     <Text style={[styles.description, { color: palette.muted }]}>
-                      Voucher discount: -{formatPrice(summaryDiscount)}
+                      {voucher.quote?.code ? "Voucher and product discounts" : "Automatic product savings"}: -{formatPrice(summaryDiscount)}
                     </Text>
                   )}
                   <Text style={[styles.description, { color: palette.muted }]}>Shipping: PKR 0</Text>

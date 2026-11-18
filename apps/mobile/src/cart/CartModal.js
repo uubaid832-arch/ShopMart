@@ -87,7 +87,7 @@ export default function CartModal({ cart, onClose, onCheckout }) {
                   <CartProductImage item={item} accentColor={palette.accent} surfaceColor={palette.soft} />
                   <View style={styles.productCopy}>
                     <Text style={[styles.name, { color: palette.text }]}>{item.name}</Text>
-                    <Text style={[styles.muted, { color: palette.muted }]}>{formatPrice(item.price)} each</Text>
+                    {item.discountedPrice != null ? <><Text style={{ color: palette.danger, fontWeight: "800", marginTop: 4 }}>{item.discountKind === "PERCENT" ? `${Number(item.discountValue)}% off` : `${formatPrice(item.discountAmount)} off`}</Text><Text style={[styles.muted, { color: palette.muted, textDecorationLine: "line-through" }]}>{formatPrice(item.price)} each</Text><Text style={[styles.muted, { color: palette.accent }]}>{formatPrice(item.discountedPrice)} each</Text></> : <Text style={[styles.muted, { color: palette.muted }]}>{formatPrice(item.price)} each</Text>}
                   </View>
                 </View>
 
@@ -121,7 +121,7 @@ export default function CartModal({ cart, onClose, onCheckout }) {
                   </View>
 
                   <Text style={[styles.lineTotal, { color: palette.accent }]}>
-                    {formatPrice(item.price * item.quantity)}
+                    {formatPrice((item.effectivePrice ?? item.price) * item.quantity)}
                   </Text>
                 </View>
 

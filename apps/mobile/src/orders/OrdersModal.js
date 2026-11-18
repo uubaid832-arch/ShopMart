@@ -295,7 +295,7 @@ export default function OrdersModal({ session, onClose, onOpenReturns }) {
             <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
               {selected.items.map(item => <View key={item.productId} style={styles.productRow}>
                 <View style={styles.grow}><Text style={[styles.productName, { color: palette.text }]}>{item.name}</Text><Text style={[styles.muted, { color: palette.muted }]}>{formatPrice(item.price, selected.currency)} × {item.quantity}</Text></View>
-                <Text style={[styles.itemPrice, { color: palette.text }]}>{formatPrice(Number(item.price) * item.quantity, selected.currency)}</Text>
+                <Text style={[styles.itemPrice, { color: palette.text }]}>{formatPrice(Number(item.price) * item.quantity - Number(item.discountAmount || 0), selected.currency)}</Text>
               </View>)}
               {Number(selected.discountAmount) > 0 && <Text style={[styles.payment, { color: palette.muted }]}>Voucher {selected.voucherCode}: -{formatPrice(selected.discountAmount, selected.currency)}</Text>}
               <Text style={[styles.total, { color: palette.text }]}>Total: {formatPrice(selected.total, selected.currency)}</Text>

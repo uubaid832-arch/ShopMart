@@ -114,7 +114,7 @@ export default function WishlistModal({
                       </h3>
 
                       <p className="m-0 font-semibold text-violet-700">
-                        <bdi>{formatPrice(product.price)}</bdi>
+                        {product.discountedPrice != null ? <><del className="me-2 text-slate-500"><bdi>{formatPrice(product.price)}</bdi></del><bdi>{formatPrice(product.discountedPrice)}</bdi></> : <bdi>{formatPrice(product.price)}</bdi>}
                       </p>
 
                       <p

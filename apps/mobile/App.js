@@ -835,12 +835,10 @@ function ShopMart() {
                   <Text style={[styles.category, { color: palette.muted }]} numberOfLines={1}>
                   {item.category}
                 </Text>
-                <Text
-                  style={[styles.price, { color: palette.accent }]}
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                >
-                  {formatPrice(item.price)}
+                {item.discountedPrice != null && <Text style={{ color: palette.danger, fontWeight: "800" }} numberOfLines={1}>{item.discountKind === "PERCENT" ? `${Number(item.discountValue)}% off` : `${formatPrice(item.discountAmount)} off`}</Text>}
+                {item.discountedPrice != null && <Text style={{ color: palette.muted, textDecorationLine: "line-through", fontSize: 13 }}>{formatPrice(item.price)}</Text>}
+                <Text style={[styles.price, { color: palette.accent }]} adjustsFontSizeToFit numberOfLines={1}>
+                  {formatPrice(item.discountedPrice ?? item.price)}
                 </Text>
                 {quantity > 0 && !unavailable ? (
                   <View style={[styles.stepper, { backgroundColor: palette.accentSoft }]}>

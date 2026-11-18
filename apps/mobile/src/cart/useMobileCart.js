@@ -131,7 +131,7 @@ export function useMobileCart(products, userId, enabled = true) {
     items,
     loading,
     count: items.reduce((sum, item) => sum + item.quantity, 0),
-    total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    total: items.reduce((sum, item) => sum + (item.effectivePrice ?? item.price) * item.quantity, 0),
     quantityFor: (id) => items.find((item) => item.id === id)?.quantity ?? 0,
     addItem,
     changeQuantity,

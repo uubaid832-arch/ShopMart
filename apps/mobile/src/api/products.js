@@ -58,6 +58,9 @@ export async function getProducts(signal) {
         ...product,
         category: product.category.name,
         price: Number(product.price),
+        discountedPrice: product.discountedPrice == null ? null : Number(product.discountedPrice),
+        effectivePrice: product.discountedPrice == null ? Number(product.price) : Number(product.discountedPrice),
+        discountAmount: product.discountAmount == null ? 0 : Number(product.discountAmount),
       })),
     );
 

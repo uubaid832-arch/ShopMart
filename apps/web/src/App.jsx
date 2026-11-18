@@ -357,7 +357,15 @@ function ProductCard({
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2">
           <p className="m-0 text-lg font-extrabold">
-            <bdi>{formatPrice(product.price)}</bdi>
+            {product.discountedPrice != null ? (
+              <span className="grid justify-items-start leading-tight">
+                <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700">
+                  {product.discountKind === "PERCENT" ? `${Number(product.discountValue)}% off` : `${formatPrice(product.discountAmount)} off`}
+                </span>
+                <del className="mt-1 text-sm font-medium text-slate-500"><bdi>{formatPrice(product.price)}</bdi></del>
+                <bdi className="text-emerald-700">{formatPrice(product.discountedPrice)}</bdi>
+              </span>
+            ) : <bdi>{formatPrice(product.price)}</bdi>}
           </p>
           <span className="text-xs text-slate-500">
             {text("In stock", "اسٹاک میں موجود")}
@@ -490,7 +498,7 @@ function Storefront({ products, onRatingSummaryChange }) {
         selectedCategory === "All" || product.category === selectedCategory;
 
       const matchesPrice =
-        Number(product.price) >= minimum && Number(product.price) <= maximum;
+        Number(product.effectivePrice ?? product.price) >= minimum && Number(product.effectivePrice ?? product.price) <= maximum;
 
       const matchesStock = !filters.inStock || product.stock > 0;
 
@@ -525,11 +533,11 @@ function Storefront({ products, onRatingSummaryChange }) {
       );
 
       if (filters.sort === "price-low") {
-        return a.product.price - b.product.price || byName;
+        return (a.product.effectivePrice ?? a.product.price) - (b.product.effectivePrice ?? b.product.price) || byName;
       }
 
       if (filters.sort === "price-high") {
-        return b.product.price - a.product.price || byName;
+        return (b.product.effectivePrice ?? b.product.price) - (a.product.effectivePrice ?? a.product.price) || byName;
       }
 
       if (filters.sort === "name") return byName;

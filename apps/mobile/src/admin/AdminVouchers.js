@@ -1,6 +1,6 @@
 import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useRef, useState } from "react";
-import { Text as NativeText, View } from "react-native";
+import { View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { adminRequest, dateLabel, money, useAdminResource } from "./adminApi";
 import {
@@ -18,6 +18,7 @@ import {
   ui,
   useMutation,
 } from "./adminUi";
+import ProductDiscountsModule from "./ProductDiscountsModule";
 function VoucherEditor({ op, onSave }) {
   const requestId = useRef(Crypto.randomUUID());
   const [form, setForm] = useState({
@@ -118,6 +119,7 @@ export default function VouchersModule({ session, onClose, onChanged }) {
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState("ALL");
+  const [tab, setTab] = useState("VOUCHERS");
   const refresh = () => setRevision((v) => v + 1);
   const op = useMutation(() => {
     refresh();
@@ -131,7 +133,7 @@ export default function VouchersModule({ session, onClose, onChanged }) {
   return (
     <Page
       footerAction={
-        !creating ? (
+        !creating && tab === "VOUCHERS" ? (
           <Button
             title="Generate voucher"
             icon="plus"
@@ -143,7 +145,7 @@ export default function VouchersModule({ session, onClose, onChanged }) {
           />
         ) : null
       }
-      title={creating ? "Create voucher" : "Vouchers & discounts"}
+      title={creating ? "Create voucher" : tab === "PRODUCTS" ? "Product discounts" : "Vouchers & discounts"}
       onClose={onClose}
       busy={op.busy}
       onBack={
@@ -163,7 +165,11 @@ export default function VouchersModule({ session, onClose, onChanged }) {
           : undefined
       }
     >
-      {creating ? (
+      {!creating && <View style={ui.toolbar}>
+        <Button title="Voucher codes" secondary={tab !== "VOUCHERS"} onPress={() => setTab("VOUCHERS")} />
+        <Button title="Product campaigns" secondary={tab !== "PRODUCTS"} onPress={() => setTab("PRODUCTS")} />
+      </View>}
+      {tab === "PRODUCTS" && !creating ? <ProductDiscountsModule session={session} onChanged={onChanged} /> : creating ? (
         <VoucherEditor
           op={op}
           onSave={(values) =>

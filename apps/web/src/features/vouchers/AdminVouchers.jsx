@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { TicketPercent, Plus, RefreshCw } from "lucide-react";
 import { useSession } from "../auth/useSession";
 import { voucherRequest } from "../../api/vouchers";
+import AdminProductDiscounts from "./AdminProductDiscounts";
 const input =
   "w-full rounded-xl border border-solid border-violet-200 bg-white p-3 text-sm";
 const button =
@@ -28,6 +29,7 @@ export default function AdminVouchers() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [uncertain, setUncertain] = useState(false);
+  const [tab, setTab] = useState("VOUCHERS");
   const pending = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
@@ -136,6 +138,11 @@ export default function AdminVouchers() {
           </button>
         </div>
       </header>
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Discount management">
+        <button type="button" role="tab" aria-selected={tab === "VOUCHERS"} onClick={() => setTab("VOUCHERS")} className={`${button} ${tab === "VOUCHERS" ? "" : "bg-slate-200 text-slate-700"}`}>Voucher codes</button>
+        <button type="button" role="tab" aria-selected={tab === "PRODUCTS"} onClick={() => setTab("PRODUCTS")} className={`${button} ${tab === "PRODUCTS" ? "" : "bg-slate-200 text-slate-700"}`}>Product campaigns</button>
+      </div>
+      {tab === "PRODUCTS" ? <AdminProductDiscounts /> : <>
       {error && (
         <p
           role="alert"
@@ -351,6 +358,7 @@ export default function AdminVouchers() {
           )}
         </div>
       )}
+      </>}
       <footer className="flex items-center justify-between gap-3">
         <button
           type="button"

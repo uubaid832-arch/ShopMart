@@ -8,6 +8,7 @@ import { useMobileAppearance } from "../appearance/MobileAppearance";
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "")
   .trim()
   .replace(/\/+$/, "");
+const formatPrice = (value) => new Intl.NumberFormat("en-PK", { style: "currency", currency: "PKR" }).format(Number(value || 0));
 
 function absoluteUrl(url) {
   if (!url) return null;
@@ -123,9 +124,9 @@ export default function ProductDetailsModal({ product, session, onClose, onRatin
 
           <Text style={[styles.category, { color: palette.accent }]}>{product.category}</Text>
           <Text style={[styles.name, { color: palette.text }]}>{product.name}</Text>
-          <Text style={[styles.price, { color: palette.accent }]}>
-            PKR {Number(product.price).toLocaleString("en-PK")}
-          </Text>
+          {product.discountedPrice != null && <Text style={{ color: palette.danger, fontWeight: "800", marginTop: 10 }}>{product.discountKind === "PERCENT" ? `${Number(product.discountValue)}% off` : `${formatPrice(product.discountAmount)} off`}</Text>}
+          {product.discountedPrice != null && <Text style={{ color: palette.muted, textDecorationLine: "line-through", marginTop: 4 }}>{formatPrice(product.price)}</Text>}
+          <Text style={[styles.price, { color: palette.accent }]}>{formatPrice(product.discountedPrice ?? product.price)}</Text>
 
           <View style={[styles.stock, { backgroundColor: palette.soft }]}>
             <Text style={{ color: palette.text }}>

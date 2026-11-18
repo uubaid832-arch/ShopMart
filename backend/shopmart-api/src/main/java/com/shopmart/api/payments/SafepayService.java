@@ -7,6 +7,8 @@ import java.util.*;
 import com.shopmart.api.orders.OrderModels.*;
 import com.shopmart.api.orders.OrderService;
 import com.shopmart.api.vouchers.VoucherService;
+import com.shopmart.api.vouchers.ProductDiscountService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -20,10 +22,14 @@ import tools.jackson.databind.json.JsonMapper;
 @Service
 public class SafepayService {
   private final JdbcTemplate jdbc;private final SafepayClient client;private final OrderService orders;
-  private final VoucherService vouchers;private final TransactionTemplate orderTransaction;
+  private final VoucherService vouchers;private final ProductDiscountService productDiscounts;private final TransactionTemplate orderTransaction;
   private final JsonMapper json=JsonMapper.builder().build();
   public SafepayService(JdbcTemplate jdbc,SafepayClient client,OrderService orders,VoucherService vouchers,PlatformTransactionManager manager){
-    this.jdbc=jdbc;this.client=client;this.orders=orders;this.vouchers=vouchers;
+    this(jdbc,client,orders,vouchers,new ProductDiscountService(jdbc),manager);
+  }
+  @Autowired
+  public SafepayService(JdbcTemplate jdbc,SafepayClient client,OrderService orders,VoucherService vouchers,ProductDiscountService productDiscounts,PlatformTransactionManager manager){
+    this.jdbc=jdbc;this.client=client;this.orders=orders;this.vouchers=vouchers;this.productDiscounts=productDiscounts;
     orderTransaction=new TransactionTemplate(manager);orderTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
   }
   public record Session(UUID id,String state,String checkoutUrl,String total,String currency,String tracker,OrderReceipt order,String message) {}
@@ -43,15 +49,17 @@ public class SafepayService {
     }
     long pending=jdbc.queryForObject("SELECT COUNT(*) FROM public.safepay_sessions WHERE user_id=? AND state IN ('PENDING','REVIEW')",Long.class,user);
     if(pending>=1)throw failure(429,"You have unfinished Safepay checkouts. Resume them before starting another.");
-    var quantities=new TreeMap<UUID,Integer>();BigDecimal subtotal=BigDecimal.ZERO;
+    var quantities=new TreeMap<UUID,Integer>();BigDecimal subtotal=BigDecimal.ZERO;BigDecimal automaticDiscount=BigDecimal.ZERO;
     for(var item:normalized.items()){
       if(quantities.putIfAbsent(item.productId(),item.quantity())!=null)throw failure(400,"Each product must appear only once.");
       var rows=jdbc.queryForList("SELECT price,stock,active,currency FROM public.products WHERE id=?",item.productId());
       if(rows.isEmpty())throw failure(409,"A product is no longer available.");var product=rows.get(0);
       if(!Boolean.TRUE.equals(product.get("active")) || !"PKR".equals(product.get("currency")) || ((Number)product.get("stock")).intValue()<item.quantity())throw failure(409,"A product is unavailable or has insufficient stock.");
       subtotal=subtotal.add(((BigDecimal)product.get("price")).multiply(BigDecimal.valueOf(item.quantity())));
+      var offer=productDiscounts.activeOffers(List.of(item.productId())).get(item.productId());
+      if(offer!=null)automaticDiscount=automaticDiscount.add(new BigDecimal(offer.discountAmount()).multiply(BigDecimal.valueOf(item.quantity())));
     }
-    BigDecimal total=normalized.voucherCode()==null?subtotal:new BigDecimal(vouchers.quote(user,new VoucherService.QuoteRequest(normalized.voucherCode(),normalized.items())).total());
+    BigDecimal total=normalized.voucherCode()==null?subtotal.subtract(automaticDiscount):new BigDecimal(vouchers.quote(user,new VoucherService.QuoteRequest(normalized.voucherCode(),normalized.items())).total());
     if(input.expectedTotal()!=null && input.expectedTotal().compareTo(total)!=0)throw failure(409,"The total changed. Review your cart and voucher first.");
     long minor;try{minor=total.movePointRight(2).longValueExact();}catch(ArithmeticException error){throw failure(400,"The checkout total is too large.");}
     if(minor<=0)throw failure(400,"The checkout total must be positive.");

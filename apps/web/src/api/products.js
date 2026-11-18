@@ -60,6 +60,9 @@ export async function getProducts(signal) {
           categoryId: product.category.id,
           category: product.category.name,
           price,
+          discountedPrice: product.discountedPrice == null ? null : Number(product.discountedPrice),
+          effectivePrice: product.discountedPrice == null ? price : Number(product.discountedPrice),
+          discountAmount: product.discountAmount == null ? 0 : Number(product.discountAmount),
           images,
           imageUrl: images[0]?.url ?? null,
         };

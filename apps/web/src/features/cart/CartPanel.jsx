@@ -113,7 +113,7 @@ export default function CartPanel({
                     </h3>
 
                     <p className="m-0 text-sm text-slate-500">
-                      <bdi>{formatPrice(item.price)}</bdi>{" "}
+                      {item.discountedPrice != null ? <><del className="me-2 text-slate-500"><bdi>{formatPrice(item.price)}</bdi></del><bdi>{formatPrice(item.discountedPrice)}</bdi></> : <bdi>{formatPrice(item.price)}</bdi>}{" "}
                       {text("each", "فی عدد")}
                     </p>
                   </div>
@@ -175,7 +175,7 @@ export default function CartPanel({
                   </div>
 
                   <strong>
-                    <bdi>{formatPrice(item.price * item.quantity)}</bdi>
+                    <bdi>{formatPrice((item.effectivePrice ?? item.price) * item.quantity)}</bdi>
                   </strong>
                 </div>
 

@@ -8,6 +8,7 @@ import com.shopmart.api.orders.OrderModels.OrderLine;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class VoucherService {
   private final JdbcTemplate jdbc;
-  public VoucherService(JdbcTemplate jdbc){this.jdbc=jdbc;}
+  private final ProductDiscountService productDiscounts;
+  public VoucherService(JdbcTemplate jdbc){this(jdbc,new ProductDiscountService(jdbc));}
+  @Autowired public VoucherService(JdbcTemplate jdbc,ProductDiscountService productDiscounts){this.jdbc=jdbc;this.productDiscounts=productDiscounts;}
   public static class Rejected extends RuntimeException {public Rejected(String message){super(message);}}
   public static String normalize(String code) {
     if(code==null||code.isBlank())return null;
@@ -33,14 +36,20 @@ public class VoucherService {
     SortedMap<UUID,Integer> quantities=new TreeMap<>();
     for(var item:request.items())if(quantities.putIfAbsent(item.productId(),item.quantity())!=null)throw new Rejected("Each product must appear only once.");
     List<OrderLine> lines=new ArrayList<>();
+    Map<UUID, ProductDiscountService.Offer> offers=productDiscounts.activeOffers(quantities.keySet());
+    BigDecimal automaticDiscount=BigDecimal.ZERO.setScale(2);
     for(var item:quantities.entrySet()) {
       var products=jdbc.queryForList("SELECT name,price,stock,active,currency FROM public.products WHERE id=?",item.getKey());
       if(products.isEmpty())throw new Rejected("A product is no longer available.");var p=products.get(0);
       if(!Boolean.TRUE.equals(p.get("active"))||!"PKR".equals(p.get("currency"))||((Number)p.get("stock")).intValue()<item.getValue())throw new Rejected("A product is unavailable or has insufficient stock.");
-      lines.add(new OrderLine(item.getKey(),(String)p.get("name"),((BigDecimal)p.get("price")).toPlainString(),item.getValue()));
+      var offer=offers.get(item.getKey());
+      BigDecimal lineAutomatic=offer==null?BigDecimal.ZERO: new BigDecimal(offer.discountAmount()).multiply(BigDecimal.valueOf(item.getValue()));
+      automaticDiscount=automaticDiscount.add(lineAutomatic);
+      lines.add(new OrderLine(item.getKey(),(String)p.get("name"),((BigDecimal)p.get("price")).toPlainString(),item.getValue(),lineAutomatic.toPlainString()));
     }
     Pricing result=price(user,normalize(request.code()),lines,false);
-    return new Quote(result.code(),result.subtotal().toPlainString(),result.discount().toPlainString(),result.subtotal().subtract(result.discount()).toPlainString(),"PKR");
+    BigDecimal totalDiscount=automaticDiscount.add(result.discount()).setScale(2);
+    return new Quote(result.code(),result.subtotal().toPlainString(),totalDiscount.toPlainString(),result.subtotal().subtract(totalDiscount).toPlainString(),"PKR");
   }
   @Transactional(propagation=Propagation.MANDATORY)
   public Pricing forOrder(UUID user,String code,List<OrderLine> lines){return price(user,normalize(code),lines,true);}
@@ -52,14 +61,25 @@ public class VoucherService {
     if(rows.isEmpty())throw new Rejected("Voucher code not found.");var voucher=rows.get(0);
     if(!Boolean.TRUE.equals(voucher.get("enabled")))throw new Rejected("This voucher is disabled.");
     if(!((java.sql.Timestamp)voucher.get("expires_at")).toInstant().isAfter(Instant.now()))throw new Rejected("This voucher has expired.");
-    if(subtotal.compareTo((BigDecimal)voucher.get("min_subtotal"))<0)throw new Rejected("Minimum product subtotal for this voucher is PKR "+voucher.get("min_subtotal")+".");
+    List<Integer> eligibleIndexes=new ArrayList<>();
+    List<BigDecimal> eligibleGross=new ArrayList<>();
+    for(int i=0;i<lines.size();i++) {
+      if(new BigDecimal(lines.get(i).discountAmount()==null?"0":lines.get(i).discountAmount()).signum()==0) {
+        eligibleIndexes.add(i); eligibleGross.add(gross.get(i));
+      }
+    }
+    BigDecimal eligibleSubtotal=eligibleGross.stream().reduce(BigDecimal.ZERO,BigDecimal::add).setScale(2);
+    if(eligibleGross.isEmpty())throw new Rejected("Voucher codes apply only to full-price products. This cart has no eligible items.");
+    if(eligibleSubtotal.compareTo((BigDecimal)voucher.get("min_subtotal"))<0)throw new Rejected("Minimum full-price product subtotal for this voucher is PKR "+voucher.get("min_subtotal")+".");
     UUID id=(UUID)voucher.get("id");
     long total=jdbc.queryForObject("SELECT COUNT(*) FROM public.voucher_redemptions WHERE voucher_id=?",Long.class,id);
     long personal=jdbc.queryForObject("SELECT COUNT(*) FROM public.voucher_redemptions WHERE voucher_id=? AND user_id=?",Long.class,id,user);
     if(total>=((Number)voucher.get("usage_limit")).longValue())throw new Rejected("This voucher has reached its usage limit.");
     if(personal>=((Number)voucher.get("per_user_limit")).longValue())throw new Rejected("You have already used this voucher the allowed number of times.");
-    var amount=VoucherMath.calculate((String)voucher.get("kind"),(BigDecimal)voucher.get("value"),(BigDecimal)voucher.get("max_discount"),gross);
-    return new Pricing(id,code,amount.subtotal(),amount.discount(),amount.lineDiscounts());
+    var amount=VoucherMath.calculate((String)voucher.get("kind"),(BigDecimal)voucher.get("value"),(BigDecimal)voucher.get("max_discount"),eligibleGross);
+    List<BigDecimal> allLineDiscounts=new ArrayList<>(Collections.nCopies(lines.size(),BigDecimal.ZERO.setScale(2)));
+    for(int i=0;i<eligibleIndexes.size();i++)allLineDiscounts.set(eligibleIndexes.get(i),amount.lineDiscounts().get(i));
+    return new Pricing(id,code,subtotal,amount.discount(),List.copyOf(allLineDiscounts));
   }
   @Transactional(propagation=Propagation.MANDATORY)
   public void redeem(UUID user,UUID order,Pricing pricing) {

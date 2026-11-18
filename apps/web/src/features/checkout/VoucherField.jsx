@@ -49,8 +49,8 @@ export default function VoucherField({ voucher, disabled }) {
       )}
       <p className="mb-0 text-xs leading-5 text-slate-500">
         {text(
-          "One voucher per order. Eligibility is checked again when placing your order.",
-          "ہر آرڈر پر ایک واؤچر۔ آرڈر دیتے وقت دوبارہ تصدیق کی جائے گی۔",
+          "One voucher per order. Vouchers apply only to full-price products; discounted items are excluded. Eligibility is checked again when placing your order.",
+          "ہر آرڈر پر ایک واؤچر۔ واؤچر صرف مکمل قیمت والی مصنوعات پر لاگو ہوتا ہے؛ رعایتی اشیاء شامل نہیں۔ آرڈر دیتے وقت دوبارہ تصدیق ہوگی۔",
         )}
       </p>
     </section>

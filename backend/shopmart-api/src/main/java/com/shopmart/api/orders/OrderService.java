@@ -2,6 +2,7 @@ package com.shopmart.api.orders;
 
 import java.math.BigDecimal;
 import com.shopmart.api.vouchers.VoucherService;
+import com.shopmart.api.vouchers.ProductDiscountService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,14 +35,21 @@ public class OrderService {
     private final JdbcTemplate jdbc;
     private final NotificationService notifications;
     private final VoucherService vouchers;
+    private final ProductDiscountService productDiscounts;
 
     public OrderService(
             JdbcTemplate jdbc,
             NotificationService notifications,
             VoucherService vouchers) {
+        this(jdbc, notifications, vouchers, new ProductDiscountService(jdbc));
+    }
+
+    public OrderService(JdbcTemplate jdbc, NotificationService notifications, VoucherService vouchers,
+            ProductDiscountService productDiscounts) {
         this.jdbc = jdbc;
         this.notifications = notifications;
         this.vouchers = vouchers;
+        this.productDiscounts = productDiscounts;
     }
 
     @Transactional
@@ -178,19 +186,26 @@ public class OrderService {
             }
 
             BigDecimal price = (BigDecimal) product.get("price");
+            var activeOffer = productDiscounts.activeOffers(List.of(entry.getKey())).get(entry.getKey());
+            BigDecimal campaignDiscount = activeOffer == null ? BigDecimal.ZERO.setScale(2)
+                    : new BigDecimal(activeOffer.discountAmount()).multiply(BigDecimal.valueOf(quantity)).setScale(2);
 
             lines.add(new OrderLine(
                     entry.getKey(),
                     (String) product.get("name"),
                     price.toPlainString(),
-                    quantity));
+                    quantity,
+                    campaignDiscount.toPlainString()));
 
             subtotal = subtotal.add(
                     price.multiply(BigDecimal.valueOf(quantity)));
         }
 
         var pricing = vouchers.forOrder(userId, voucherCode, lines);
-        if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(pricing.discount()))!=0)
+        BigDecimal automaticDiscount=lines.stream().map(line->new BigDecimal(line.discountAmount()))
+                .reduce(BigDecimal.ZERO,BigDecimal::add).setScale(2);
+        BigDecimal totalDiscount=automaticDiscount.add(pricing.discount()).setScale(2);
+        if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(totalDiscount))!=0)
             throw new VoucherService.Rejected("Prices changed. Remove and apply the voucher again to confirm the new total.");
         UUID orderId = UUID.randomUUID();
         Long orderSequence = jdbc.queryForObject(
@@ -224,8 +239,8 @@ public class OrderService {
                 city,
                 subtotal,
                 BigDecimal.ZERO,
-                subtotal.subtract(pricing.discount()),
-                pricing.voucherId(), pricing.code(), pricing.discount(),
+                subtotal.subtract(totalDiscount),
+                pricing.voucherId(), pricing.code(), totalDiscount,
                 paymentMethod,
                 paymentStatus);
 
@@ -241,7 +256,7 @@ public class OrderService {
                     line.productId(),
                     line.name(),
                     new BigDecimal(line.price()),
-                    line.quantity(), pricing.lineDiscounts().get(lineIndex));
+                    line.quantity(), new BigDecimal(line.discountAmount()).add(pricing.lineDiscounts().get(lineIndex)));
 
             int updated = jdbc.update("""
                     UPDATE public.products

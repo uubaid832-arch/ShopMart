@@ -160,9 +160,15 @@ export default function ProductDetails({
             <bdi>{product.name}</bdi>
           </h2>
 
-          <p className="mb-5 mt-0 text-3xl font-extrabold text-violet-700">
-            <bdi>{formatPrice(product.price)}</bdi>
-          </p>
+          <div className="mb-5 mt-0 text-3xl font-extrabold text-violet-700">
+            {product.discountedPrice != null && (
+              <span className="mb-2 inline-flex rounded-full bg-rose-100 px-3 py-1 text-sm font-bold text-rose-700">
+                {product.discountKind === "PERCENT" ? `${Number(product.discountValue)}% off` : `${formatPrice(product.discountAmount)} off`}
+              </span>
+            )}
+            <p className="m-0"><bdi>{formatPrice(product.discountedPrice ?? product.price)}</bdi></p>
+            {product.discountedPrice != null && <del className="mt-1 block text-base font-medium text-slate-500"><bdi>{formatPrice(product.price)}</bdi></del>}
+          </div>
 
           <section className="mb-5">
             <h3 className="mb-2 mt-0 text-sm font-bold">

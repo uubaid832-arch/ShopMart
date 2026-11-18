@@ -11,47 +11,46 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import com.shopmart.api.vouchers.ProductDiscountService;
 
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
 
   private final ProductRepository repository;
+  private final ProductDiscountService discounts;
 
-  public ProductController(ProductRepository repository) {
+  public ProductController(ProductRepository repository, ProductDiscountService discounts) {
     this.repository = repository;
+    this.discounts = discounts;
   }
 
   @GetMapping
   public ProductListResponse getProducts(
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "12") int size,
-      @RequestParam(required = false) String q) {
+      @RequestParam(defaultValue = "12") int size) {
     if (page < 0 || size < 1 || size > 100) {
       throw new ResponseStatusException(
           HttpStatus.BAD_REQUEST,
           "Page must be non-negative and size must be between 1 and 100.");
     }
 
-    String search = q == null ? "" : q.strip();
-    if (search.length() > 100) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Search text is too long.");
-    }
-    Page<Product> result = search.isEmpty()
-      ? repository.findByActiveTrue(PageRequest.of(
-          page, size, Sort.by("name").ascending().and(Sort.by("id"))))
-      : repository.searchActive(search, PageRequest.of(
-          page, size, Sort.by("name").ascending().and(Sort.by("id"))));
+    Page<Product> result = repository.findByActiveTrue(
+        PageRequest.of(
+            page,
+            size,
+            Sort.by("name").ascending().and(Sort.by("id"))));
 
     List<Product> products = result.getContent();
     Map<UUID, ProductRepository.ProductReviewSummary> reviews = products.isEmpty()
         ? Map.of()
         : repository.findVisibleReviewSummaries(products.stream().map(Product::getId).toList())
             .stream().collect(Collectors.toMap(ProductRepository.ProductReviewSummary::getProductId, Function.identity()));
+    Map<UUID, ProductDiscountService.Offer> offers = discounts.activeOffers(products.stream().map(Product::getId).toList());
 
     return new ProductListResponse(
         products.stream()
-            .map(product -> toResponse(product, reviews.get(product.getId())))
+            .map(product -> toResponse(product, reviews.get(product.getId()), offers.get(product.getId())))
             .toList(),
         result.getNumber(),
         result.getSize(),
@@ -64,14 +63,14 @@ public class ProductController {
     return repository.findByIdAndActiveTrue(id)
         .map(product -> {
           List<ProductRepository.ProductReviewSummary> summaries = repository.findVisibleReviewSummaries(List.of(id));
-          return toResponse(product, summaries.isEmpty() ? null : summaries.get(0));
+          return toResponse(product, summaries.isEmpty() ? null : summaries.get(0), discounts.activeOffers(List.of(id)).get(id));
         })
         .orElseThrow(() -> new ResponseStatusException(
             HttpStatus.NOT_FOUND,
             "Product not found."));
   }
 
-  private static ProductResponse toResponse(Product product, ProductRepository.ProductReviewSummary reviews) {
+  private static ProductResponse toResponse(Product product, ProductRepository.ProductReviewSummary reviews, ProductDiscountService.Offer offer) {
     Category category = product.getCategory();
 
     return new ProductResponse(
@@ -85,7 +84,9 @@ public class ProductController {
         product.getIllustration(),
         product.getColor(),
         reviews == null || reviews.getAverageRating() == null ? 0.0 : reviews.getAverageRating(),
-        reviews == null || reviews.getReviewCount() == null ? 0L : reviews.getReviewCount());
+        reviews == null || reviews.getReviewCount() == null ? 0L : reviews.getReviewCount(),
+        offer == null ? null : offer.discountedPrice(), offer == null ? null : offer.kind(),
+        offer == null ? null : offer.value(), offer == null ? null : offer.discountAmount());
   }
 
   public record CategoryResponse(UUID id, String name) {
@@ -102,7 +103,11 @@ public class ProductController {
       String illustration,
       String color,
       double averageRating,
-      long reviewCount) {
+      long reviewCount,
+      String discountedPrice,
+      String discountKind,
+      String discountValue,
+      String discountAmount) {
   }
 
   public record ProductListResponse(

@@ -82,7 +82,7 @@ function OrderSummary({
               <bdi>{item.name}</bdi> × {item.quantity}
             </span>
             <strong className="shrink-0">
-              <bdi>{formatPrice(item.price * item.quantity)}</bdi>
+              <bdi>{formatPrice((item.effectivePrice ?? item.price) * item.quantity)}</bdi>
             </strong>
           </li>
         ))}
@@ -95,9 +95,7 @@ function OrderSummary({
             <span>{formatPrice(Number(subtotal) + Number(discount))}</span>
           </div>
           <div className="mb-4 flex justify-between text-sm font-semibold text-emerald-700">
-            <span>
-              {text("Voucher", "واؤچر")} {voucherCode}
-            </span>
+            <span>{voucherCode ? `${text("Discounts", "رعایتیں")} · ${voucherCode}` : text("Automatic product savings", "مصنوعات کی خودکار بچت")}</span>
             <span>-{formatPrice(discount)}</span>
           </div>
         </>
