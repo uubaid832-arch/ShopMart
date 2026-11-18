@@ -26,7 +26,7 @@ const links = [
     Icon: LayoutDashboard,
     end: true,
   },
-  { to: "/admin/vouchers", label: "Vouchers", Icon: TicketPercent },
+  { to: "/admin/vouchers", label: "Vouchers & Discounts", Icon: TicketPercent },
   { to: "/admin/products", label: "Products", Icon: Package },
   { to: "/admin/categories", label: "Categories", Icon: FolderTree },
   { to: "/admin/orders", label: "Orders", Icon: ShoppingBag },
@@ -200,14 +200,6 @@ export default function AdminLayout() {
                   Administrator
                 </p>
               </div>
-              <NavLink
-                to="/admin/account"
-                aria-label="Open my admin account settings"
-                title="My account"
-                className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-violet-50 hover:text-violet-700"
-              >
-                <UserRound size={18} aria-hidden="true" />
-              </NavLink>
 
               <button
                 type="button"
