@@ -10,7 +10,8 @@ export default function ProductDiscountsModule({ session, onChanged }) {
   const [products, setProducts] = useState([]);
   const [name, setName] = useState("");
   const [search, setSearch] = useState("");
-  const [flatAllValue, setFlatAllValue] = useState("500");
+  const [allDiscountKind, setAllDiscountKind] = useState("PERCENT");
+  const [allDiscountValue, setAllDiscountValue] = useState("10");
   const [selected, setSelected] = useState({});
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState({});
@@ -38,15 +39,17 @@ export default function ProductDiscountsModule({ session, onChanged }) {
   const activeIds = new Set((campaigns.data || []).filter((item) => item.enabled && item.id !== editing?.id).flatMap((item) => item.products.map((p) => p.productId)));
   const visible = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
   const eligibleProducts = products.filter((product) => product.active && !activeIds.has(product.id));
-  function selectAllForFlatDiscount() {
-    const amount = Number(flatAllValue);
+  function selectAllForDiscount() {
+    const value = Number(allDiscountValue);
     const minimumPrice = Math.min(...eligibleProducts.map((product) => Number(product.price)));
     if (!eligibleProducts.length) { setLoadError("There are no active products available for a new campaign."); return; }
-    if (!Number.isFinite(amount) || amount <= 0 || amount >= minimumPrice) {
-      setLoadError(`Enter a flat amount below the cheapest eligible product price (${money(minimumPrice)}).`);
+    if (!Number.isFinite(value) || value <= 0 || (allDiscountKind === "PERCENT" ? value > 99 : value >= minimumPrice)) {
+      setLoadError(allDiscountKind === "PERCENT"
+        ? "Enter a percentage greater than 0 and no more than 99."
+        : `Enter a flat amount below the cheapest eligible product price (${money(minimumPrice)}).`);
       return;
     }
-    setSelected(Object.fromEntries(eligibleProducts.map((product) => [product.id, { checked: true, kind: "FIXED", value: String(amount) }])));
+    setSelected(Object.fromEntries(eligibleProducts.map((product) => [product.id, { checked: true, kind: allDiscountKind, value: String(value) }])));
     setLoadError("");
   }
   async function createCampaign() {
@@ -70,9 +73,11 @@ export default function ProductDiscountsModule({ session, onChanged }) {
     {loadError ? <Text style={ui.error}>{loadError}</Text> : null}
     <Card title={editing ? "Edit promotion" : "Automatic product discounts"} subtitle="Set a separate discount on each selected product. Voucher codes cannot discount these products again.">
       <Field label="Campaign name (optional)" value={name} onChangeText={setName} maxLength={100} />
-      <Field label="Flat discount per product (PKR)" value={flatAllValue} onChangeText={setFlatAllValue} keyboardType="decimal-pad" />
-      <Text style={ui.muted}>Apply one PKR amount to every active product that is not already in another active campaign.</Text>
-      <Button title={`Apply to all available products (${eligibleProducts.length})`} secondary disabled={op.blocked} onPress={selectAllForFlatDiscount} />
+      <Card title="Apply a discount to all available products" subtitle="Choose a percentage or flat PKR amount. Products already in another active campaign are excluded.">
+        <Choice label="Discount type" value={allDiscountKind} onChange={setAllDiscountKind} options={[{ value: "PERCENT", label: "Percentage" }, { value: "FIXED", label: "Flat PKR amount" }]} />
+        <Field label={allDiscountKind === "PERCENT" ? "Discount percentage (maximum 99%)" : "Flat discount per product (PKR)"} value={allDiscountValue} onChangeText={setAllDiscountValue} keyboardType="decimal-pad" />
+        <Button title={`Apply to all available products (${eligibleProducts.length})`} secondary disabled={op.blocked} onPress={selectAllForDiscount} />
+      </Card>
       <Field label="Search products" value={search} onChangeText={setSearch} />
       {visible.map((product) => {
         const rule = selected[product.id] || { checked: false, kind: "PERCENT", value: "10" };

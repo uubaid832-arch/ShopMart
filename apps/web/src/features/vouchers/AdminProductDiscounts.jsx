@@ -13,7 +13,8 @@ export default function AdminProductDiscounts() {
   const [revision, setRevision] = useState(0);
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
-  const [flatAllValue, setFlatAllValue] = useState("500");
+  const [allDiscountKind, setAllDiscountKind] = useState("PERCENT");
+  const [allDiscountValue, setAllDiscountValue] = useState("10");
   const [selected, setSelected] = useState({});
   const [editing, setEditing] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -33,16 +34,18 @@ export default function AdminProductDiscounts() {
   const activeProductIds = useMemo(() => new Set(campaigns.filter((c) => c.enabled).flatMap((c) => c.products.map((p) => p.productId))), [campaigns]);
   const visibleProducts = products.filter((product) => `${product.name} ${product.categoryName ?? ""}`.toLowerCase().includes(query.toLowerCase()));
   const eligibleProducts = products.filter((product) => product.active && (!activeProductIds.has(product.id) || editing?.products.some((item) => item.productId === product.id)));
-  function selectAllForFlatDiscount() {
-    const amount = Number(flatAllValue);
+  function selectAllForDiscount() {
+    const value = Number(allDiscountValue);
     const minimumPrice = Math.min(...eligibleProducts.map((product) => Number(product.price)));
     if (!eligibleProducts.length) { setError("There are no active products available for a new campaign."); return; }
-    if (!Number.isFinite(amount) || amount <= 0 || amount >= minimumPrice) {
-      setError(`Enter a flat amount below the cheapest eligible product price (PKR ${minimumPrice.toLocaleString("en-PK")}).`);
+    if (!Number.isFinite(value) || value <= 0 || (allDiscountKind === "PERCENT" ? value > 99 : value >= minimumPrice)) {
+      setError(allDiscountKind === "PERCENT"
+        ? "Enter a percentage greater than 0 and no more than 99."
+        : `Enter a flat amount below the cheapest eligible product price (PKR ${minimumPrice.toLocaleString("en-PK")}).`);
       return;
     }
-    setSelected(Object.fromEntries(eligibleProducts.map((product) => [product.id, { checked: true, kind: "FIXED", value: String(amount) }])));
-    setError(""); setNotice(`${eligibleProducts.length} eligible products selected with PKR ${amount.toLocaleString("en-PK")} off each.`);
+    setSelected(Object.fromEntries(eligibleProducts.map((product) => [product.id, { checked: true, kind: allDiscountKind, value: String(value) }])));
+    setError(""); setNotice(`${eligibleProducts.length} eligible products selected with ${allDiscountKind === "PERCENT" ? `${value}% off each` : `PKR ${value.toLocaleString("en-PK")} off each`}.`);
   }
   async function save() {
     const chosen = Object.entries(selected).filter(([, value]) => value.checked);
@@ -88,10 +91,11 @@ export default function AdminProductDiscounts() {
       <p className="text-sm text-slate-600">Choose products and set a separate percentage or PKR discount for each. Discounted products are excluded from voucher codes.</p>
       <label className="grid gap-2 text-sm font-semibold">Campaign name (optional)<input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="Leave blank for a general sale label" /></label>
       <label className="mt-4 grid gap-2 text-sm font-semibold">Find products<input className={input} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products" /></label>
-      <div className="mt-4 grid gap-3 rounded-xl border border-solid border-sky-200 bg-sky-50 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
-        <label className="grid gap-2 text-sm font-semibold">Flat discount per product (PKR)<input className={input} type="number" min="0.01" step="0.01" value={flatAllValue} onChange={(e) => setFlatAllValue(e.target.value)} placeholder="For example, 500" /></label>
-        <button type="button" disabled={busy} onClick={selectAllForFlatDiscount} className="rounded-xl border-0 bg-sky-700 px-5 py-3 font-bold text-white disabled:opacity-50">Apply to all available products ({eligibleProducts.length})</button>
-        <p className="m-0 text-xs text-slate-600 sm:col-span-2">Selects every active product that is not already in another active campaign. The amount must be lower than the cheapest selected product price.</p>
+      <div className="mt-4 grid gap-3 rounded-xl border border-solid border-sky-200 bg-sky-50 p-4 text-slate-900 dark:border-sky-300/30 dark:bg-slate-800 dark:text-slate-100 sm:grid-cols-[minmax(10rem,0.8fr)_minmax(12rem,1fr)_auto] sm:items-end">
+        <label className="grid gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">Discount type<select className={`${input} text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white`} value={allDiscountKind} onChange={(e) => setAllDiscountKind(e.target.value)}><option value="PERCENT">Percentage</option><option value="FIXED">Flat PKR amount</option></select></label>
+        <label className="grid gap-2 text-sm font-semibold text-slate-800 dark:text-slate-100">{allDiscountKind === "PERCENT" ? "Discount percentage (max 99%)" : "Flat discount per product (PKR)"}<input className={`${input} text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-white`} type="number" min="0.01" max={allDiscountKind === "PERCENT" ? 99 : undefined} step="0.01" value={allDiscountValue} onChange={(e) => setAllDiscountValue(e.target.value)} placeholder={allDiscountKind === "PERCENT" ? "For example, 10" : "For example, 500"} /></label>
+        <button type="button" disabled={busy} onClick={selectAllForDiscount} className="rounded-xl border-0 bg-sky-700 px-5 py-3 font-bold text-white hover:bg-sky-800 disabled:opacity-50 dark:bg-sky-500 dark:text-slate-950 dark:hover:bg-sky-400">Apply to all available products ({eligibleProducts.length})</button>
+        <p className="m-0 text-xs text-slate-600 dark:text-slate-300 sm:col-span-3">Selects active products that are not already in another active campaign. Percentage discounts must be below 100%; flat discounts must be below the cheapest selected product price.</p>
       </div>
       <div className="mt-4 grid max-h-96 gap-2 overflow-auto">
         {visibleProducts.map((product) => {
