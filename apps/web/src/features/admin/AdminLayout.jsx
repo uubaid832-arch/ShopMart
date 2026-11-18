@@ -207,7 +207,6 @@ export default function AdminLayout() {
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-violet-50 hover:text-violet-700"
               >
                 <UserRound size={18} aria-hidden="true" />
-                <span className="hidden md:inline">My account</span>
               </NavLink>
 
               <button
