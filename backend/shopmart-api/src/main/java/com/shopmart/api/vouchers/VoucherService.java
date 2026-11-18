@@ -27,7 +27,8 @@ public class VoucherService {
     return value;
   }
   public record Pricing(UUID voucherId,String code,BigDecimal subtotal,BigDecimal discount,List<BigDecimal> lineDiscounts) {}
-  public record Quote(String code,String subtotal,String discountAmount,String total,String currency) {}
+  public record Quote(String code,String subtotal,String discountAmount,String total,String currency,
+      String automaticDiscountAmount,String voucherDiscountAmount) {}
   public record QuoteRequest(@NotBlank @Size(max=40) String code,@NotEmpty @Size(max=50) List<@NotNull @Valid ItemRequest> items) {}
 
   @Transactional(readOnly=true)
@@ -49,7 +50,8 @@ public class VoucherService {
     }
     Pricing result=price(user,normalize(request.code()),lines,false);
     BigDecimal totalDiscount=automaticDiscount.add(result.discount()).setScale(2);
-    return new Quote(result.code(),result.subtotal().toPlainString(),totalDiscount.toPlainString(),result.subtotal().subtract(totalDiscount).toPlainString(),"PKR");
+    return new Quote(result.code(),result.subtotal().toPlainString(),totalDiscount.toPlainString(),result.subtotal().subtract(totalDiscount).toPlainString(),"PKR",
+        automaticDiscount.toPlainString(),result.discount().toPlainString());
   }
   @Transactional(propagation=Propagation.MANDATORY)
   public Pricing forOrder(UUID user,String code,List<OrderLine> lines){return price(user,normalize(code),lines,true);}

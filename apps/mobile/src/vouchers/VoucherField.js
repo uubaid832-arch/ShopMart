@@ -22,7 +22,7 @@ export default function VoucherField({ voucher, disabled }) {
         />
         <Pressable
           accessibilityRole="button"
-          disabled={disabled || voucher.busy || !voucher.code.trim()}
+          disabled={disabled || voucher.busy || (!voucher.quote && !voucher.code.trim())}
           onPress={voucher.quote ? voucher.remove : voucher.apply}
           style={[s.button, { backgroundColor: palette.accent }, (disabled || voucher.busy) && s.dim]}
         >
@@ -30,11 +30,21 @@ export default function VoucherField({ voucher, disabled }) {
             {voucher.busy ? "Checking..." : voucher.quote ? "Remove" : "Apply"}
           </Text>
         </Pressable>
+        {!voucher.quote && voucher.code.trim() ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Clear voucher code"
+            disabled={disabled || voucher.busy}
+            onPress={voucher.remove}
+            style={[s.clearButton, { borderColor: palette.border, backgroundColor: palette.elevated }, (disabled || voucher.busy) && s.dim]}
+          >
+            <Text style={[s.clearText, { color: palette.text }]}>Clear</Text>
+          </Pressable>
+        ) : null}
       </View>
       {voucher.quote && (
         <Text style={[s.success, { color: palette.success }]}>
-          {voucher.quote.code} applied · Save PKR{" "}
-          {Number(voucher.quote.discountAmount).toLocaleString("en-PK")}
+          {voucher.quote.code} · Campaign savings PKR {Number(voucher.quote.automaticDiscountAmount || 0).toLocaleString("en-PK")} · Voucher savings PKR {Number(voucher.quote.voucherDiscountAmount || 0).toLocaleString("en-PK")}
         </Text>
       )}
       {voucher.error ? (
@@ -63,7 +73,7 @@ const s = StyleSheet.create({
     color: "#58366b",
     marginBottom: 11,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 9 },
+  row: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 9 },
   input: {
     flex: 1,
     minWidth: 0,
@@ -83,6 +93,8 @@ const s = StyleSheet.create({
     backgroundColor: "#7c3aed",
     justifyContent: "center",
   },
+  clearButton: { paddingHorizontal: 11, minHeight: 46, borderRadius: 11, borderWidth: 1, justifyContent: "center" },
+  clearText: { fontSize: 11, fontWeight: "700" },
   white: { color: "#fff", fontSize: 11, fontWeight: "700" },
   success: { color: "#258153", fontSize: 12, marginTop: 12 },
   error: { color: "#be3153", fontSize: 12, marginTop: 12 },

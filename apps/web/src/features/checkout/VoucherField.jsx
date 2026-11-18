@@ -12,7 +12,7 @@ export default function VoucherField({ voucher, disabled }) {
         <TicketPercent size={18} />
         {text("Have a voucher?", "کیا آپ کے پاس واؤچر ہے؟")}
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <input
           id="checkout-voucher"
           value={voucher.code}
@@ -25,7 +25,7 @@ export default function VoucherField({ voucher, disabled }) {
         />
         <button
           type="button"
-          disabled={disabled || voucher.busy || !voucher.code.trim()}
+          disabled={disabled || voucher.busy || (!voucher.quote && !voucher.code.trim())}
           onClick={voucher.quote ? voucher.remove : voucher.apply}
           className="rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
         >
@@ -35,11 +35,20 @@ export default function VoucherField({ voucher, disabled }) {
               ? text("Remove", "ہٹائیں")
               : text("Apply", "لاگو کریں")}
         </button>
+        {!voucher.quote && voucher.code.trim() && (
+          <button
+            type="button"
+            disabled={disabled || voucher.busy}
+            onClick={voucher.remove}
+            className="rounded-xl border border-solid border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-700 disabled:opacity-50"
+          >
+            {text("Clear code", "کوڈ صاف کریں")}
+          </button>
+        )}
       </div>
       {voucher.quote && (
         <p role="status" className="mb-0 text-sm text-emerald-700">
-          {voucher.quote.code} · {text("You save", "آپ کی بچت")} PKR{" "}
-          {Number(voucher.quote.discountAmount).toLocaleString("en-PK")}
+          {voucher.quote.code} · {text("Campaign savings", "مہم کی بچت")} PKR {Number(voucher.quote.automaticDiscountAmount || 0).toLocaleString("en-PK")} · {text("Voucher savings", "واؤچر کی بچت")} PKR {Number(voucher.quote.voucherDiscountAmount || 0).toLocaleString("en-PK")}
         </p>
       )}
       {voucher.error && (

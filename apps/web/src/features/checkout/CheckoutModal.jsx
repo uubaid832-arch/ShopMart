@@ -64,10 +64,17 @@ function OrderSummary({
   subtotal,
   formatPrice,
   discount = 0,
+  automaticDiscount,
+  voucherDiscount,
   voucherCode,
 }) {
   const { language } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
+  const originalSubtotal = items.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0);
+  const derivedCampaignSavings = items.reduce((sum, item) => sum + Math.max(0, Number(item.price || 0) - Number(item.effectivePrice ?? item.price ?? 0)) * item.quantity, 0);
+  const hasSplitBreakdown = automaticDiscount != null || voucherDiscount != null || !voucherCode;
+  const campaignSavings = Number(automaticDiscount ?? (hasSplitBreakdown ? Math.max(derivedCampaignSavings, Number(discount || 0)) : 0));
+  const couponSavings = Number(voucherDiscount ?? (hasSplitBreakdown && voucherCode ? Math.max(0, Number(discount || 0) - campaignSavings) : 0));
 
   return (
     <section className="mt-5 rounded-2xl bg-violet-50 p-4">
@@ -88,16 +95,16 @@ function OrderSummary({
         ))}
       </ul>
 
-      {Number(discount) > 0 && (
+      {(originalSubtotal > Number(subtotal) || Number(discount) > 0) && (
         <>
           <div className="mb-2 flex justify-between text-sm">
             <span>{text("Product subtotal", "مصنوعات کی کل رقم")}</span>
-            <span>{formatPrice(Number(subtotal) + Number(discount))}</span>
+            <span>{formatPrice(originalSubtotal)}</span>
           </div>
-          <div className="mb-4 flex justify-between text-sm font-semibold text-emerald-700">
-            <span>{voucherCode ? `${text("Discounts", "رعایتیں")} · ${voucherCode}` : text("Automatic product savings", "مصنوعات کی خودکار بچت")}</span>
-            <span>-{formatPrice(discount)}</span>
-          </div>
+          {campaignSavings > 0 && <div className="mb-2 flex justify-between text-sm font-semibold text-emerald-700"><span>{text("Automatic campaign savings", "خودکار مہم کی بچت")}</span><span>-{formatPrice(campaignSavings)}</span></div>}
+          {couponSavings > 0 && <div className="mb-4 flex justify-between text-sm font-semibold text-emerald-700"><span>{text("Voucher savings on full-price products", "مکمل قیمت والی مصنوعات پر واؤچر کی بچت")} · {voucherCode}</span><span>-{formatPrice(couponSavings)}</span></div>}
+          {!hasSplitBreakdown && Number(discount) > 0 && <div className="mb-4 flex justify-between text-sm font-semibold text-emerald-700"><span>{text("Total savings (campaign + voucher)", "مہم اور واؤچر کی کل بچت")}</span><span>-{formatPrice(discount)}</span></div>}
+          {Number(discount) > 0 && !voucherCode && campaignSavings === 0 && <div className="mb-4 flex justify-between text-sm font-semibold text-emerald-700"><span>{text("Order savings", "آرڈر کی بچت")}</span><span>-{formatPrice(discount)}</span></div>}
         </>
       )}
       <div className="flex flex-wrap justify-between gap-2 border-0 border-t border-solid border-violet-200 pt-4 font-bold">
@@ -551,6 +558,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
               }))}
               subtotal={Number(confirmation.total)}
               discount={confirmation.discountAmount}
+              automaticDiscount={confirmation.voucherCode ? undefined : confirmation.discountAmount}
+              voucherDiscount={confirmation.voucherCode ? undefined : 0}
               voucherCode={confirmation.voucherCode}
               formatPrice={formatPrice}
             />
@@ -766,6 +775,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                     items={cart.items}
                     subtotal={Number(voucher.quote?.total ?? cart.total)}
                     discount={voucher.quote?.discountAmount}
+                    automaticDiscount={voucher.quote?.automaticDiscountAmount}
+                    voucherDiscount={voucher.quote?.voucherDiscountAmount}
                     voucherCode={voucher.quote?.code}
                     formatPrice={formatPrice}
                   />

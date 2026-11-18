@@ -142,6 +142,8 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
         total: voucher.quote?.total ?? cart.total,
         discount: voucher.quote?.discountAmount || "0.00",
         subtotal: voucher.quote?.subtotal ?? cart.total,
+        automaticDiscount: Number(voucher.quote?.automaticDiscountAmount ?? cart.items.reduce((sum, item) => sum + Math.max(0, item.price - (item.effectivePrice ?? item.price)) * item.quantity, 0)),
+        voucherDiscount: Number(voucher.quote?.voucherDiscountAmount ?? 0),
       };
     }
 
@@ -221,10 +223,11 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   const summaryItems = snapshot.current?.items ?? cart.items;
   const summaryTotal =
     snapshot.current?.total ?? voucher.quote?.total ?? cart.total;
-  const summarySubtotal =
-    snapshot.current?.subtotal ?? voucher.quote?.subtotal ?? cart.total;
   const summaryDiscount =
     snapshot.current?.discount ?? voucher.quote?.discountAmount ?? "0.00";
+  const originalSubtotal = summaryItems.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0);
+  const campaignSavings = Number(snapshot.current?.automaticDiscount ?? voucher.quote?.automaticDiscountAmount ?? summaryItems.reduce((sum, item) => sum + Math.max(0, Number(item.price || 0) - Number(item.effectivePrice ?? item.price ?? 0)) * item.quantity, 0));
+  const voucherSavings = Number(snapshot.current?.voucherDiscount ?? voucher.quote?.voucherDiscountAmount ?? Math.max(0, Number(summaryDiscount || 0) - campaignSavings));
 
   if (bankTransferOpen)
     return (
@@ -449,14 +452,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                     </View>
                   ))}
 
-                  <Text style={[styles.description, { color: palette.muted }]}>
-                    Product subtotal: {formatPrice(summarySubtotal)}
-                  </Text>
-                  {Number(summaryDiscount) > 0 && (
-                    <Text style={[styles.description, { color: palette.muted }]}>
-                      {voucher.quote?.code ? "Voucher and product discounts" : "Automatic product savings"}: -{formatPrice(summaryDiscount)}
-                    </Text>
-                  )}
+                  {(campaignSavings > 0 || voucherSavings > 0) && <Text style={[styles.description, { color: palette.muted }]}>Product subtotal: {formatPrice(originalSubtotal)}</Text>}
+                  {campaignSavings > 0 && <Text style={[styles.description, { color: palette.success }]}>Automatic campaign savings: -{formatPrice(campaignSavings)}</Text>}
+                  {voucherSavings > 0 && <Text style={[styles.description, { color: palette.success }]}>Voucher savings on full-price products: -{formatPrice(voucherSavings)}</Text>}
                   <Text style={[styles.description, { color: palette.muted }]}>Shipping: PKR 0</Text>
                   <Text style={[styles.total, { color: palette.accent }]}>{formatPrice(summaryTotal)}</Text>
                 </View>

@@ -10,9 +10,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 class VoucherServiceTests {
- JdbcTemplate jdbc;VoucherService service;UUID user=UUID.randomUUID(),voucher=UUID.randomUUID(),product=UUID.randomUUID();Map<String,Object> row;
+ JdbcTemplate jdbc;VoucherService service;ProductDiscountService productDiscounts;UUID user=UUID.randomUUID(),voucher=UUID.randomUUID(),product=UUID.randomUUID();Map<String,Object> row;
  List<OrderLine> lines;
- @BeforeEach void setup(){jdbc=mock(JdbcTemplate.class);service=new VoucherService(jdbc);row=new HashMap<>(Map.of("id",voucher,"code","SAVE10","kind","PERCENT","value",new BigDecimal("10.00"),"min_subtotal",new BigDecimal("500.00"),"expires_at",Timestamp.from(Instant.now().plusSeconds(3600)),"enabled",true,"usage_limit",10,"per_user_limit",1));
+ @BeforeEach void setup(){jdbc=mock(JdbcTemplate.class);productDiscounts=mock(ProductDiscountService.class);service=new VoucherService(jdbc,productDiscounts);when(productDiscounts.activeOffers(anyCollection())).thenReturn(Map.of());row=new HashMap<>(Map.of("id",voucher,"code","SAVE10","kind","PERCENT","value",new BigDecimal("10.00"),"min_subtotal",new BigDecimal("500.00"),"expires_at",Timestamp.from(Instant.now().plusSeconds(3600)),"enabled",true,"usage_limit",10,"per_user_limit",1));
   when(jdbc.queryForList("SELECT * FROM public.vouchers WHERE code=? FOR UPDATE","SAVE10")).thenReturn(List.of(row));
   when(jdbc.queryForList("SELECT * FROM public.vouchers WHERE code=?","SAVE10")).thenReturn(List.of(row));
   when(jdbc.queryForObject("SELECT COUNT(*) FROM public.voucher_redemptions WHERE voucher_id=?",Long.class,voucher)).thenReturn(0L);
@@ -29,6 +29,25 @@ class VoucherServiceTests {
   when(jdbc.queryForObject(contains("SELECT EXISTS"),eq(Boolean.class),eq(user))).thenReturn(true);
   when(jdbc.queryForList("SELECT name,price,stock,active,currency FROM public.products WHERE id=?",product)).thenReturn(List.of(Map.of("name","Product","price",new BigDecimal("1000.00"),"stock",5,"active",true,"currency","PKR")));
   var quote=service.quote(user,new VoucherService.QuoteRequest("SAVE10",List.of(new ItemRequest(product,2))));assertEquals("1800.00",quote.total());verify(jdbc,never()).update(anyString(),any(Object[].class));verify(jdbc,never()).queryForList(contains("FOR UPDATE"),any(Object[].class));
+ }
+ @Test void voucherDiscountAppliesOnlyToFullPriceLinesAlongsideCampaignDiscount(){
+  UUID saleProduct=UUID.randomUUID();
+  when(productDiscounts.activeOffers(Set.of(product,saleProduct))).thenReturn(Map.of(saleProduct,
+      new ProductDiscountService.Offer("PERCENT","20.00","200.00","800.00",UUID.randomUUID().toString(),"Sale")));
+  when(jdbc.queryForObject(contains("SELECT EXISTS"),eq(Boolean.class),eq(user))).thenReturn(true);
+  when(jdbc.queryForList("SELECT name,price,stock,active,currency FROM public.products WHERE id=?",saleProduct))
+      .thenReturn(List.of(Map.of("name","Sale product","price",new BigDecimal("1000.00"),"stock",5,"active",true,"currency","PKR")));
+  when(jdbc.queryForList("SELECT name,price,stock,active,currency FROM public.products WHERE id=?",product))
+      .thenReturn(List.of(Map.of("name","Full price product","price",new BigDecimal("2000.00"),"stock",5,"active",true,"currency","PKR")));
+
+  var quote=service.quote(user,new VoucherService.QuoteRequest("SAVE10",List.of(
+      new ItemRequest(saleProduct,1),new ItemRequest(product,1))));
+
+  assertEquals("3000.00",quote.subtotal());
+  assertEquals("400.00",quote.discountAmount());
+  assertEquals("2600.00",quote.total());
+  assertEquals("200.00",quote.automaticDiscountAmount());
+  assertEquals("200.00",quote.voucherDiscountAmount());
  }
  @Test void invalidCodeCharactersRejected(){assertThrows(VoucherService.Rejected.class,()->VoucherService.normalize("A' OR 1=1"));}
 }
