@@ -37,6 +37,7 @@ public class AddressService {
   @Transactional
   public AddressResponse create(UUID userId, AddressRequest request) {
     requireUser(userId, true);
+    requireOperatingCity(request.city());
 
     Long count = jdbc.queryForObject("""
         SELECT COUNT(*)
@@ -75,6 +76,7 @@ public class AddressService {
   public AddressResponse update(
       UUID userId, UUID id, AddressRequest request) {
     requireUser(userId, true);
+    requireOperatingCity(request.city());
 
     // Check ownership before changing any defaults.
     find(userId, id);
@@ -143,6 +145,18 @@ public class AddressService {
       throw new ResponseStatusException(
           HttpStatus.UNAUTHORIZED, "Please sign in again.");
     }
+  }
+
+  private void requireOperatingCity(String city) {
+    Boolean supported = jdbc.queryForObject("""
+        SELECT EXISTS (
+          SELECT 1 FROM public.store_settings s,
+            LATERAL unnest(s.operating_cities) AS configured(city)
+          WHERE s.id=1 AND lower(trim(configured.city))=lower(trim(?)))
+        """, Boolean.class, city);
+    if (!Boolean.TRUE.equals(supported))
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Choose one of ShopMart's currently supported delivery cities.");
   }
 
   private void clearDefault(UUID userId) {

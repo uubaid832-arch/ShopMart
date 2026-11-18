@@ -2,6 +2,7 @@ import { Text, TextInput } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
+import { getMobileStoreSettings } from "../api/storeSettings";
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL || "").trim().replace(/\/+$/, "");
 
@@ -34,6 +35,8 @@ export default function SavedAddressesManager({ token }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [revision, setRevision] = useState(0);
+  const [operatingCities, setOperatingCities] = useState([]);
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,6 +44,14 @@ export default function SavedAddressesManager({ token }) {
       .catch((failure) => { if (active) setError(failure.message); });
     return () => { active = false; };
   }, [token, revision]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getMobileStoreSettings(controller.signal)
+      .then((settings) => { if (!controller.signal.aborted) setOperatingCities(settings.operatingCities || []); })
+      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
+    return () => controller.abort();
+  }, []);
 
   const field = (key, label, placeholder, multiline = false) => (
     <View key={key} style={styles.field}>
@@ -59,10 +70,21 @@ export default function SavedAddressesManager({ token }) {
     </View>
   );
 
+  const cityField = () => (
+    <View style={styles.field}>
+      <Text style={[styles.fieldLabel, { color: palette.text }]}>City</Text>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: cityPickerOpen }} disabled={busy || !operatingCities.length} onPress={() => setCityPickerOpen((value) => !value)} style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <Text style={{ color: form?.city ? palette.text : palette.muted }}>{form?.city || (operatingCities.length ? "Choose a delivery city" : "Loading available cities…")} {operatingCities.length > 1 ? (cityPickerOpen ? "▴" : "▾") : ""}</Text>
+      </Pressable>
+      {cityPickerOpen && operatingCities.map((city) => <Pressable key={city} accessibilityRole="button" onPress={() => { setForm((current) => ({ ...current, city })); setCityPickerOpen(false); }} style={[styles.input, { marginTop: 5, backgroundColor: form?.city === city ? palette.accentSoft : palette.surface, borderColor: palette.border }]}><Text style={{ color: palette.text }}>{form?.city === city ? "✓ " : ""}{city}</Text></Pressable>)}
+      {operatingCities.length ? <Text style={[styles.copy, { color: palette.muted }]}>{operatingCities.length === 1 ? `ShopMart currently operates in ${operatingCities[0]} only.` : `Available delivery cities: ${operatingCities.join(", ")}.`}</Text> : null}
+    </View>
+  );
+
   async function save() {
     if (busy || !form) return;
     const label = form.label === "Other" ? form.customLabel.trim() : form.label;
-    if (!label || !form.recipientName.trim() || !form.phone.trim() || !form.addressLine.trim() || !form.city.trim()) {
+    if (!label || !form.recipientName.trim() || !form.phone.trim() || !form.addressLine.trim() || !operatingCities.some((city) => city.toLowerCase() === form.city.trim().toLowerCase())) {
       setError("Complete the address label, recipient, phone, street and city.");
       return;
     }
@@ -92,7 +114,7 @@ export default function SavedAddressesManager({ token }) {
           <Text style={[styles.copy, { color: palette.muted }]}>{item.recipientName} · {item.phone}</Text>
           <Text style={[styles.copy, { color: palette.muted }]}>{item.addressLine}, {item.city}{item.postalCode ? ` ${item.postalCode}` : ""}</Text>
           <View style={styles.row}>
-            <Pressable accessibilityRole="button" disabled={busy} onPress={() => setForm({ ...item, customLabel: ["Home", "Office", "Other"].includes(item.label) ? "" : item.label, label: ["Home", "Office", "Other"].includes(item.label) ? item.label : "Other" })}><Text style={[styles.link, { color: palette.accent }]}>Edit</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={busy} onPress={() => setForm({ ...item, city: operatingCities.find((city) => city.toLowerCase() === item.city.toLowerCase()) || "", customLabel: ["Home", "Office", "Other"].includes(item.label) ? "" : item.label, label: ["Home", "Office", "Other"].includes(item.label) ? item.label : "Other" })}><Text style={[styles.link, { color: palette.accent }]}>Edit</Text></Pressable>
             <Pressable accessibilityRole="button" disabled={busy} onPress={() => remove(item)}><Text style={[styles.danger, { color: palette.danger }]}>Delete</Text></Pressable>
           </View>
         </View>
@@ -120,12 +142,12 @@ export default function SavedAddressesManager({ token }) {
           {field("recipientName", "Recipient name", "Name of the person receiving the order")}
           {field("phone", "Phone number", "e.g. 0300 1234567")}
           {field("addressLine", "Street address", "House/flat, street and area", true)}
-          {field("city", "City", "e.g. Lahore")}
+          {cityField()}
           {field("postalCode", "Postal code (optional)", "Enter postal code if available")}
           <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: form.isDefault }} onPress={() => setForm({ ...form, isDefault: !form.isDefault })} style={styles.row}><Text style={[styles.copy, { color: palette.text }]}>{form.isDefault ? "☑" : "☐"} Use as default</Text></Pressable>
           <View style={styles.row}><Pressable disabled={busy} onPress={save} style={[styles.primary, { backgroundColor: palette.accent }]}><Text style={styles.primaryText}>{busy ? "Saving…" : "Save address"}</Text></Pressable><Pressable disabled={busy} onPress={() => setForm(null)} style={[styles.choice, { backgroundColor: palette.surface, borderColor: palette.border }]}><Text style={[styles.choiceText, { color: palette.accent }]}>Cancel</Text></Pressable></View>
         </View>
-      ) : <Pressable disabled={busy} onPress={() => setForm({ ...empty })} style={[styles.primary, { backgroundColor: palette.accent }]}><Text style={styles.primaryText}>+ Add address</Text></Pressable>}
+      ) : <Pressable disabled={busy} onPress={() => { setForm({ ...empty, city: operatingCities.length === 1 ? operatingCities[0] : "" }); setCityPickerOpen(false); }} style={[styles.primary, { backgroundColor: palette.accent }]}><Text style={styles.primaryText}>+ Add address</Text></Pressable>}
       {error ? <Text accessibilityRole="alert" style={[styles.danger, { color: palette.danger }]}>{error}</Text> : null}
       {notice ? <Text style={[styles.link, { color: palette.accent }]}>{notice}</Text> : null}
     </View>

@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyRound, MapPinned, UserRound } from "lucide-react";
-import { getWarehouseReturnAddress, saveWarehouseReturnAddress } from "../../api/adminStoreSettings";
+import { getAdminStoreProfile, saveAdminStoreProfile } from "../../api/adminStoreSettings";
 import ChangePasswordButton from "../auth/ChangePasswordButton";
 import { useSession } from "../auth/useSession";
 import { useLanguage } from "../language/useLanguage";
 import AppearanceMenu from "../../components/AppearanceMenu";
 
 const inputClass = "box-border w-full rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 text-sm text-slate-800";
+const emptyStoreProfile = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000" };
 
 export default function AdminAccount() {
   const { session, saveProfile } = useSession();
@@ -14,29 +15,29 @@ export default function AdminAccount() {
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
-  const [address, setAddress] = useState("");
-  const [savedAddress, setSavedAddress] = useState("");
-  const [addressLoading, setAddressLoading] = useState(true);
-  const [addressBusy, setAddressBusy] = useState(false);
-  const [addressError, setAddressError] = useState("");
-  const [addressSaved, setAddressSaved] = useState(false);
-  const addressInFlight = useRef(false);
+  const [storeProfile, setStoreProfile] = useState(emptyStoreProfile);
+  const [citiesText, setCitiesText] = useState("Lahore");
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsSaved, setSettingsSaved] = useState(false);
 
   useEffect(() => {
     if (!session?.accessToken) return undefined;
     const controller = new AbortController();
-    getWarehouseReturnAddress(session.accessToken, controller.signal)
+    getAdminStoreProfile(session.accessToken, controller.signal)
       .then((value) => {
         if (!controller.signal.aborted) {
-          setAddress(value);
-          setSavedAddress(value);
+          const profile = { ...emptyStoreProfile, ...value };
+          setStoreProfile(profile);
+          setCitiesText((profile.operatingCities || []).join("\n"));
         }
       })
       .catch((failure) => {
-        if (!controller.signal.aborted) setAddressError(failure.message);
+        if (!controller.signal.aborted) setSettingsError(failure.message);
       })
       .finally(() => {
-        if (!controller.signal.aborted) setAddressLoading(false);
+        if (!controller.signal.aborted) setSettingsLoading(false);
       });
     return () => controller.abort();
   }, [session?.accessToken]);
@@ -66,27 +67,17 @@ export default function AdminAccount() {
     }
   }
 
-  async function saveAddressForm(event) {
+  async function saveStoreSettings(event) {
     event.preventDefault();
-    if (addressInFlight.current) return;
-    if (address.trim().length < 10) {
-      setAddressError("Enter the full warehouse address, city, and contact details.");
-      return;
-    }
-    addressInFlight.current = true;
-    setAddressBusy(true);
-    setAddressError("");
-    setAddressSaved(false);
+    const operatingCities = citiesText.split(/[\n,]/).map((city) => city.trim()).filter(Boolean);
+    setSettingsBusy(true); setSettingsError(""); setSettingsSaved(false);
     try {
-      const value = await saveWarehouseReturnAddress(session.accessToken, address);
-      setAddress(value);
-      setSavedAddress(value);
-      setAddressSaved(true);
+      const saved = await saveAdminStoreProfile(session.accessToken, { ...storeProfile, operatingCities });
+      setStoreProfile(saved); setCitiesText((saved.operatingCities || []).join("\n")); setSettingsSaved(true);
     } catch (failure) {
-      setAddressError(failure.message || "Could not save the warehouse address.");
+      setSettingsError(failure.message || "Could not save store settings.");
     } finally {
-      addressInFlight.current = false;
-      setAddressBusy(false);
+      setSettingsBusy(false);
     }
   }
 
@@ -97,7 +88,7 @@ export default function AdminAccount() {
       <header>
         <p className="mb-2 mt-0 text-xs font-bold uppercase tracking-widest text-violet-600">Administrator settings</p>
         <h1 className="m-0 text-3xl font-bold">My account</h1>
-        <p className="mb-0 mt-2 text-sm text-slate-500">Edit your account, password, and the address customers use for returns.</p>
+        <p className="mb-0 mt-2 text-sm text-slate-500">Manage delivery cities, warehouse return details, and bank transfer contact information.</p>
       </header>
 
       <section className="grid gap-3 rounded-2xl border border-solid border-slate-200 bg-white p-5 shadow-sm">
@@ -134,14 +125,27 @@ export default function AdminAccount() {
       <section className="rounded-2xl border border-solid border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><MapPinned size={21} aria-hidden="true" /></span>
-          <div><h2 className="m-0 text-lg font-bold">Warehouse return address</h2><p className="mb-0 mt-1 text-sm text-slate-500">This address is included in web and mobile return instructions.</p></div>
+          <div><h2 className="m-0 text-lg font-bold">Store delivery & payment settings</h2><p className="mb-0 mt-1 text-sm text-slate-500">These settings control checkout city choices, return instructions, and bank transfer details.</p></div>
         </div>
-        <form onSubmit={saveAddressForm} className="grid gap-3">
-          <label htmlFor="admin-warehouse-address" className="grid gap-2 text-sm font-semibold">Full address, city, and contact number<textarea id="admin-warehouse-address" className={`${inputClass} resize-y`} value={address} onChange={(event) => { setAddress(event.target.value); setAddressError(""); setAddressSaved(false); }} maxLength={1500} rows={4} disabled={addressLoading || addressBusy} placeholder="Street and building, area, city, and warehouse phone number" /></label>
-          <p className="m-0 text-xs leading-5 text-slate-500">Include enough detail for a customer or courier to find the warehouse.</p>
-          {addressError && <p role="alert" className="m-0 text-sm text-rose-700">{addressError}</p>}
-          {addressSaved && <p role="status" className="m-0 text-sm text-emerald-700">Warehouse return address saved.</p>}
-          <div><button type="submit" disabled={addressLoading || addressBusy || address.trim() === savedAddress.trim()} className="rounded-xl border-0 bg-violet-600 px-5 py-3 text-sm font-semibold text-white enabled:hover:bg-violet-700 disabled:opacity-50">{addressLoading ? "Loading saved address…" : addressBusy ? "Saving address…" : "Save warehouse address"}</button></div>
+        <form onSubmit={saveStoreSettings} className="grid gap-4">
+          <label className="grid gap-2 text-sm font-semibold">Operating cities <textarea className={`${inputClass} resize-y`} value={citiesText} onChange={(event) => { setCitiesText(event.target.value); setSettingsError(""); setSettingsSaved(false); }} rows={3} placeholder="One city per line, for example Lahore\nKarachi" disabled={settingsLoading || settingsBusy} /></label>
+          <p className="-mt-3 m-0 text-xs text-slate-500">Add one city per line. Customers will choose only from these cities at checkout.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold">Warehouse street address<input className={inputClass} value={storeProfile.warehouseAddressLine} onChange={(event) => setStoreProfile({ ...storeProfile, warehouseAddressLine: event.target.value })} maxLength={1000} placeholder="Building, street, area" disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold">Warehouse city<input className={inputClass} value={storeProfile.warehouseCity} onChange={(event) => setStoreProfile({ ...storeProfile, warehouseCity: event.target.value })} maxLength={100} placeholder="City" disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold sm:col-span-2">Warehouse contact number<input className={inputClass} type="tel" value={storeProfile.warehousePhone} onChange={(event) => setStoreProfile({ ...storeProfile, warehousePhone: event.target.value })} maxLength={32} placeholder="Optional contact number" disabled={settingsLoading || settingsBusy} /></label>
+          </div>
+          <div className="grid gap-3 rounded-xl border border-solid border-slate-200 p-4 sm:grid-cols-2">
+            <h3 className="m-0 text-base font-bold sm:col-span-2">Bank transfer checkout details</h3>
+            <label className="grid gap-2 text-sm font-semibold">WhatsApp number (country code)<input className={inputClass} type="tel" value={storeProfile.whatsappNumber} onChange={(event) => setStoreProfile({ ...storeProfile, whatsappNumber: event.target.value })} maxLength={32} placeholder="923001234567" disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold">Bank name<input className={inputClass} value={storeProfile.bankName} onChange={(event) => setStoreProfile({ ...storeProfile, bankName: event.target.value })} maxLength={120} disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold">Account title<input className={inputClass} value={storeProfile.bankAccountTitle} onChange={(event) => setStoreProfile({ ...storeProfile, bankAccountTitle: event.target.value })} maxLength={120} disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold">Account number<input className={inputClass} value={storeProfile.bankAccountNumber} onChange={(event) => setStoreProfile({ ...storeProfile, bankAccountNumber: event.target.value })} maxLength={80} disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold sm:col-span-2">IBAN<input className={inputClass} value={storeProfile.bankIban} onChange={(event) => setStoreProfile({ ...storeProfile, bankIban: event.target.value })} maxLength={80} disabled={settingsLoading || settingsBusy} /></label>
+          </div>
+          {settingsError && <p role="alert" className="m-0 text-sm text-rose-700">{settingsError}</p>}
+          {settingsSaved && <p role="status" className="m-0 text-sm text-emerald-700">Store settings saved. Checkout and return instructions will use the updated values.</p>}
+          <div><button type="submit" disabled={settingsLoading || settingsBusy} className="rounded-xl border-0 bg-violet-600 px-5 py-3 text-sm font-semibold text-white enabled:hover:bg-violet-700 disabled:opacity-50">{settingsLoading ? "Loading settings…" : settingsBusy ? "Saving settings…" : "Save store settings"}</button></div>
         </form>
       </section>
     </div>

@@ -845,16 +845,13 @@ function WarehouseAddressSettings({ session }) {
   const { theme } = useMobileAppearance();
   const palette = {
     ...theme.colors,
-    accent: theme.accent === "violet"
-      ? theme.isDark ? "#8db7ff" : "#2864d8"
-      : theme.colors.accent,
-    accentSoft: theme.accent === "violet"
-      ? theme.isDark ? "#1d2d49" : "#edf4ff"
-      : theme.colors.accentSoft,
+    accent: theme.accent === "violet" ? theme.isDark ? "#8db7ff" : "#2864d8" : theme.colors.accent,
+    accentSoft: theme.accent === "violet" ? theme.isDark ? "#1d2d49" : "#edf4ff" : theme.colors.accentSoft,
     warningSoft: theme.isDark ? "#3c3423" : "#fff6e2",
   };
-  const [address, setAddress] = useState("");
-  const [savedAddress, setSavedAddress] = useState("");
+  const defaults = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000" };
+  const [profile, setProfile] = useState(defaults);
+  const [citiesText, setCitiesText] = useState("Lahore");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -862,83 +859,75 @@ function WarehouseAddressSettings({ session }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    adminRequest(session.accessToken, "/settings/warehouse-address", {
-      signal: controller.signal,
-    })
+    adminRequest(session.accessToken, "/settings/store-profile", { signal: controller.signal })
       .then((value) => {
         if (controller.signal.aborted) return;
-        const current = value.address || "";
-        setAddress(current);
-        setSavedAddress(current);
+        const current = { ...defaults, ...value };
+        setProfile(current);
+        setCitiesText((current.operatingCities || []).join("\n"));
       })
-      .catch((failure) => {
-        if (!controller.signal.aborted) setError(failure.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
+      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [session.accessToken]);
 
-  async function saveAddress() {
-    const value = address.trim();
-    if (value.length < 10) {
-      setError("Enter the full warehouse address, city, and contact details.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    setNotice("");
+  async function saveSettings() {
+    const operatingCities = citiesText.split(/[\n,]/).map((city) => city.trim()).filter(Boolean);
+    setSaving(true); setError(""); setNotice("");
     try {
-      const saved = await adminRequest(
-        session.accessToken,
-        "/settings/warehouse-address",
-        { method: "PUT", values: { address: value } },
-      );
-      setAddress(saved.address || value);
-      setSavedAddress(saved.address || value);
-      setNotice("Warehouse return address saved for the store.");
-    } catch (failure) {
-      setError(failure.message);
-    } finally {
-      setSaving(false);
-    }
+      const saved = await adminRequest(session.accessToken, "/settings/store-profile", {
+        method: "PUT", values: { ...profile, operatingCities },
+      });
+      setProfile(saved);
+      setCitiesText((saved.operatingCities || []).join("\n"));
+      setNotice("Store settings saved. Checkout and return instructions use the updated details.");
+    } catch (failure) { setError(failure.message); }
+    finally { setSaving(false); }
   }
+
+  const fields = [
+    ["Warehouse street address", "warehouseAddressLine", "Street, building, and area", 1000],
+    ["Warehouse city", "warehouseCity", "City", 100],
+    ["Warehouse contact number", "warehousePhone", "Optional contact number", 32],
+    ["Customer WhatsApp number with country code", "whatsappNumber", "923263101049", 32],
+    ["Bank name", "bankName", "Bank name", 120],
+    ["Account title", "bankAccountTitle", "Account title", 120],
+    ["Account number", "bankAccountNumber", "Account number", 80],
+    ["IBAN", "bankIban", "IBAN", 80],
+  ];
 
   return (
     <View style={s.card}>
-      <View style={s.inline}>
-        <Icon name="home" />
-        <Text style={s.cardTitle}>Warehouse return address</Text>
-      </View>
-      <Text style={[s.muted, { marginTop: 8 }]}>
-        This address is included in return instructions sent to customers.
-      </Text>
-      <Text style={[s.body, { marginTop: 12, marginBottom: 6 }]}>Full address, city, and contact number</Text>
+      <View style={s.inline}><Icon name="home" /><Text style={s.cardTitle}>Store delivery & payment settings</Text></View>
+      <Text style={[s.muted, { marginTop: 8 }]}>Set service cities, return warehouse details, and the bank and WhatsApp details shown during checkout.</Text>
+      <Text style={[s.body, { marginTop: 14, marginBottom: 6 }]}>Operating cities — one per line</Text>
       <TextInput
-        accessibilityLabel="Warehouse return address"
-        value={address}
-        onChangeText={(value) => {
-          setAddress(value);
-          setError("");
-          setNotice("");
-        }}
+        accessibilityLabel="Operating cities"
+        value={citiesText}
+        onChangeText={(value) => { setCitiesText(value); setError(""); setNotice(""); }}
         editable={!loading && !saving}
-        multiline
-        maxLength={1500}
-        textAlignVertical="top"
-        placeholder="Building and street, area, city, and warehouse phone number"
-        placeholderTextColor={palette.muted}
-        style={[s.input, { minHeight: 110, color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
+        multiline maxLength={2000} textAlignVertical="top"
+        placeholder="Lahore\nKarachi" placeholderTextColor={palette.muted}
+        style={[s.input, { minHeight: 82, color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
       />
+      <Text style={[s.muted, { marginTop: 4 }]}>Customers can order only in these cities. Multiple cities appear as a dropdown at checkout.</Text>
+      {fields.map(([label, key, placeholder, maxLength]) => (
+        <View key={key} style={{ marginTop: 12 }}>
+          <Text style={[s.body, { marginBottom: 6 }]}>{label}</Text>
+          <TextInput
+            accessibilityLabel={label}
+            value={profile[key] || ""}
+            onChangeText={(value) => { setProfile({ ...profile, [key]: value }); setError(""); setNotice(""); }}
+            editable={!loading && !saving} maxLength={maxLength}
+            keyboardType={key.toLowerCase().includes("phone") || key.toLowerCase().includes("number") ? "phone-pad" : "default"}
+            placeholder={placeholder} placeholderTextColor={palette.muted}
+            style={[s.input, { color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
+          />
+        </View>
+      ))}
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
       {notice ? <Text style={s.success}>{notice}</Text> : null}
-      <Button
-        title={loading ? "Loading saved address…" : saving ? "Saving address…" : "Save warehouse address"}
-        icon="check"
-        disabled={loading || saving || address.trim() === savedAddress.trim()}
-        onPress={saveAddress}
-      />
+      <Button title={loading ? "Loading settings…" : saving ? "Saving settings…" : "Save store settings"} icon="check" disabled={loading || saving} onPress={saveSettings} />
     </View>
   );
 }

@@ -44,3 +44,35 @@ export async function saveWarehouseReturnAddress(token, address) {
   const result = await response.json();
   return result.address;
 }
+
+async function adminSettingsRequest(token, path, { method = "GET", values, signal } = {}) {
+  const headers = { Authorization: `Bearer ${token}` };
+  if (method !== "GET") {
+    const csrfResponse = await fetch("/api/auth/csrf", { credentials: "same-origin", cache: "no-store", signal });
+    if (!csrfResponse.ok) throw new Error("Could not prepare the secure request.");
+    const csrf = await csrfResponse.json();
+    headers[csrf.headerName] = csrf.token;
+    headers["Content-Type"] = "application/json";
+  }
+  const response = await fetch(`/api/admin/settings/${path}`, {
+    method, credentials: "same-origin", cache: "no-store", headers, signal,
+    body: values ? JSON.stringify(values) : undefined,
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => null);
+    throw new Error(detail?.message || `Could not ${method === "GET" ? "load" : "save"} store settings (HTTP ${response.status}).`);
+  }
+  return response.json();
+}
+
+export const getAdminStoreProfile = (token, signal) =>
+  adminSettingsRequest(token, "store-profile", { signal });
+
+export const saveAdminStoreProfile = (token, values) =>
+  adminSettingsRequest(token, "store-profile", { method: "PUT", values });
+
+export async function getPublicStoreSettings(signal) {
+  const response = await fetch("/api/store/settings", { cache: "no-store", signal });
+  if (!response.ok) throw new Error(`Could not load ShopMart delivery and payment settings (HTTP ${response.status}).`);
+  return response.json();
+}

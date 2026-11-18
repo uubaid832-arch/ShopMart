@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "../language/useLanguage";
+import { getPublicStoreSettings } from "../../api/adminStoreSettings";
 
 const fields = [
   {
@@ -36,11 +37,21 @@ export default function AddressForm({ address, onSave, onCancel }) {
 
   const [feedback, setFeedback] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [operatingCities, setOperatingCities] = useState([]);
+  const [cityError, setCityError] = useState("");
   const [label, setLabel] = useState(address?.label || "Home");
   const [otherLabel, setOtherLabel] = useState(
     ["Home", "Office", "Other"].includes(address?.label) ? "" : address?.label || "",
   );
   const inFlight = useRef(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPublicStoreSettings(controller.signal)
+      .then((settings) => { if (!controller.signal.aborted) setOperatingCities(settings.operatingCities || []); })
+      .catch((failure) => { if (!controller.signal.aborted) setCityError(failure.message); });
+    return () => controller.abort();
+  }, []);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -135,7 +146,13 @@ export default function AddressForm({ address, onSave, onCancel }) {
           {fields.map(({ name, label, type = "text", autoComplete }) => (
             <label key={name} className="grid gap-2 text-sm font-semibold">
               {text(...label)}
-              <input
+              {name === "city" ? <>
+                <select name="city" required defaultValue={operatingCities.some((city) => city.toLowerCase() === address?.city?.toLowerCase()) ? address.city : operatingCities.length === 1 ? operatingCities[0] : ""} disabled={!operatingCities.length} className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3">
+                  <option value="">{text("Choose a city", "شہر منتخب کریں")}</option>
+                  {operatingCities.map((city) => <option key={city} value={city}>{city}</option>)}
+                </select>
+                {cityError ? <span role="alert" className="text-xs font-normal text-rose-700">{cityError}</span> : operatingCities.length ? <span className="text-xs font-normal text-slate-500">{operatingCities.length === 1 ? `ShopMart currently operates in ${operatingCities[0]} only.` : `Available delivery cities: ${operatingCities.join(", ")}.`}</span> : null}
+              </> : <input
                 name={name}
                 type={type}
                 dir={["phone", "postalCode"].includes(name) ? "ltr" : "auto"}
@@ -152,7 +169,7 @@ export default function AddressForm({ address, onSave, onCancel }) {
                         : 100
                 }
                 className="box-border w-full min-w-0 rounded-xl border border-solid border-slate-200 bg-white p-3"
-              />
+              />}
             </label>
           ))}
 

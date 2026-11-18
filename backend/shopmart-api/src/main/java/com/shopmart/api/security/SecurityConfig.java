@@ -72,6 +72,7 @@ public class SecurityConfig {
                                                                 "/api/categories",
                                                                 "/api/products",
                                                                 "/api/products/*",
+                                                                "/api/store/settings",
                                                                 "/api/auth/csrf")
                                                 .permitAll()
                                                 .requestMatchers(
@@ -314,6 +315,12 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.PUT,
                                                                 "/api/admin/settings/warehouse-address")
                                                 .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/admin/settings/store-profile")
+                                                                .hasRole("ADMIN")
+                                                .requestMatchers(HttpMethod.PUT,
+                                                                "/api/admin/settings/store-profile")
+                                                                .hasRole("ADMIN")
                                                 .requestMatchers(HttpMethod.POST, "/api/vouchers/quote").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/admin/vouchers").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/admin/vouchers").hasRole("ADMIN")

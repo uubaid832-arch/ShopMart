@@ -106,6 +106,18 @@ public class OrderService {
                     "Please complete the delivery details.");
         }
 
+        Boolean operatingCity = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM public.store_settings s,
+                      LATERAL unnest(s.operating_cities) AS configured(city)
+                    WHERE s.id=1 AND lower(trim(configured.city))=lower(trim(?))
+                )
+                """, Boolean.class, city);
+        if (!Boolean.TRUE.equals(operatingCity)) {
+            throw failure(HttpStatus.BAD_REQUEST,
+                    "ShopMart is not currently delivering to this city. Choose one of the available cities.");
+        }
+
         // Lock products in a consistent order.
         SortedMap<UUID, Integer> quantities = new TreeMap<>();
 

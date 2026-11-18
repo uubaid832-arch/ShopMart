@@ -12,14 +12,21 @@ const DEMO_ACCOUNT = {
   whatsapp: "923263101049",
 };
 
-export default function BankTransferDetails({ total, name, phone, onBack, onClose, onPlaceOrder, busy = false, error = "" }) {
+export default function BankTransferDetails({ total, name, phone, settings, onBack, onClose, onPlaceOrder, busy = false, error = "" }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
   const [receiptOpened, setReceiptOpened] = useState(false);
-  const message = `Hello ShopMart, I have made a demo bank transfer. Name: ${name || ""}. Phone: ${phone || ""}. Cart total: PKR ${Number(total || 0).toLocaleString("en-PK")}. I will attach the transfer receipt here.`;
+  const whatsapp = String(settings?.whatsappNumber || DEMO_ACCOUNT.whatsapp).replace(/\D/g, "");
+  const message = `Hello ShopMart, I have made a bank transfer. Name: ${name || ""}. Phone: ${phone || ""}. Cart total: PKR ${Number(total || 0).toLocaleString("en-PK")}. I will attach the transfer receipt here.`;
+  const account = {
+    bank: settings?.bankName || DEMO_ACCOUNT.bank,
+    title: settings?.bankAccountTitle || DEMO_ACCOUNT.title,
+    account: settings?.bankAccountNumber || DEMO_ACCOUNT.account,
+    iban: settings?.bankIban || DEMO_ACCOUNT.iban,
+  };
   async function sendReceipt() {
     try {
-      await Linking.openURL(`https://wa.me/${DEMO_ACCOUNT.whatsapp}?text=${encodeURIComponent(message)}`);
+      await Linking.openURL(`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`);
       setReceiptOpened(true);
     } catch {
       Alert.alert("WhatsApp could not be opened", "Install WhatsApp or try again.");
@@ -29,20 +36,20 @@ export default function BankTransferDetails({ total, name, phone, onBack, onClos
     <Modal visible animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={[styles.screen, { backgroundColor: palette.background }]}>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={[styles.eyebrow, { color: palette.accent }]}>DEMO PAYMENT DETAILS</Text>
+          <Text style={[styles.eyebrow, { color: palette.accent }]}>BANK TRANSFER DETAILS</Text>
           <Text style={[styles.title, { color: palette.text }]}>Bank transfer</Text>
           <Text style={[styles.body, { color: palette.muted }]}>For this demo, send the receipt message to ShopMart on WhatsApp. Include your name and phone number so the pending order can be matched.</Text>
           <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
-            <Detail palette={palette} label="Bank" value={DEMO_ACCOUNT.bank} />
-            <Detail palette={palette} label="Account title" value={DEMO_ACCOUNT.title} />
-            <Detail palette={palette} label="Account number" value={DEMO_ACCOUNT.account} />
-            <Detail palette={palette} label="IBAN (demo)" value={DEMO_ACCOUNT.iban} />
+            <Detail palette={palette} label="Bank" value={account.bank} />
+            <Detail palette={palette} label="Account title" value={account.title} />
+            <Detail palette={palette} label="Account number" value={account.account} />
+            <Detail palette={palette} label="IBAN" value={account.iban || "Not provided"} />
             <Detail palette={palette} label="Amount to transfer" value={`PKR ${Number(total || 0).toLocaleString("en-PK")}`} strong />
           </View>
-          <Text style={[styles.warning, { color: theme.isDark ? "#fbbf24" : "#854d0e", backgroundColor: theme.isDark ? "#392d18" : "#fff7e6" }]}><Text style={styles.bold}>Demo only:</Text> these fictional details cannot receive money. The order created here is marked Bank transfer / Pending and must not be treated as paid.</Text>
+          <Text style={[styles.warning, { color: theme.isDark ? "#fbbf24" : "#854d0e", backgroundColor: theme.isDark ? "#392d18" : "#fff7e6" }]}>Send the exact amount shown and share the receipt with ShopMart. Your order stays pending until an administrator verifies the transfer.</Text>
           {error ? <Text accessibilityRole="alert" style={[styles.error, { color: palette.danger }]}>{error}</Text> : null}
-          <Pressable accessibilityRole="button" onPress={sendReceipt} style={styles.whatsapp}><Text style={styles.buttonText}>Send receipt on WhatsApp · 0326 3101049</Text></Pressable>
-          <Pressable accessibilityRole="button" disabled={!receiptOpened || busy} onPress={onPlaceOrder} style={[styles.place, { backgroundColor: palette.accent }, (!receiptOpened || busy) && styles.disabled]}><Text style={styles.buttonText}>{busy ? "Placing order…" : "I sent it — place demo order"}</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={sendReceipt} style={styles.whatsapp}><Text style={styles.buttonText}>Send receipt on WhatsApp · {settings?.whatsappNumber || "0326 3101049"}</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={!receiptOpened || busy} onPress={onPlaceOrder} style={[styles.place, { backgroundColor: palette.accent }, (!receiptOpened || busy) && styles.disabled]}><Text style={styles.buttonText}>{busy ? "Placing order…" : "I sent the receipt — place pending order"}</Text></Pressable>
           <Pressable accessibilityRole="button" onPress={onBack} style={[styles.back, { backgroundColor: palette.soft }]}><Text style={[styles.backText, { color: palette.text }]}>Back to checkout</Text></Pressable>
         </ScrollView>
       </SafeAreaView>

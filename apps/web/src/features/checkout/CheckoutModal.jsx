@@ -8,6 +8,7 @@ import MockPaymentGateway from "./MockPaymentGateway";
 import { useVoucher } from "./useVoucher";
 import VoucherField from "./VoucherField";
 import { getAddresses } from "../../api/addresses";
+import { getPublicStoreSettings } from "../../api/adminStoreSettings";
 import { useLanguage } from "../language/useLanguage";
 
 const fields = [
@@ -146,6 +147,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   const [safepayWindow, setSafepayWindow] = useState(null);
   const [gatewayOpen, setGatewayOpen] = useState(false);
   const [submittedTotal, setSubmittedTotal] = useState(null);
+  const [storeSettings, setStoreSettings] = useState(null);
+  const [storeSettingsError, setStoreSettingsError] = useState("");
 
   const [details, setDetails] = useState({
     name: session?.user.name ?? "",
@@ -161,6 +164,21 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   useEffect(() => {
     headingRef.current?.focus();
   }, [step]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPublicStoreSettings(controller.signal)
+      .then((settings) => {
+        if (controller.signal.aborted) return;
+        const operatingCities = (settings.operatingCities || []).filter(Boolean);
+        setStoreSettings({ ...settings, operatingCities });
+        if (operatingCities.length === 1) {
+          setDetails((current) => ({ ...current, city: operatingCities[0] }));
+        }
+      })
+      .catch((failure) => { if (!controller.signal.aborted) setStoreSettingsError(failure.message); });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -238,6 +256,12 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
 
     const saved = addresses.find((address) => address.id === id);
     if (!saved) return;
+    const supportedCities = storeSettings?.operatingCities || [];
+    if (!supportedCities.some((city) => city.toLowerCase() === saved.city.toLowerCase())) {
+      setSelectedAddress("");
+      setError(`ShopMart currently delivers only to ${supportedCities.join(", ") || "its listed cities"}. Choose a supported city and enter the address manually.`);
+      return;
+    }
 
     setDetails((current) => ({
       ...current,
@@ -356,6 +380,11 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
     if (step === 1) {
       const form = event.currentTarget;
 
+      if (!storeSettings || !storeSettings.operatingCities.some((city) => city.toLowerCase() === details.city.trim().toLowerCase())) {
+        setError(storeSettingsError || text("Choose a currently supported delivery city.", "براہ کرم دستیاب ڈیلیوری شہر منتخب کریں۔"));
+        return;
+      }
+
       fields.forEach(({ name }) => {
         form.elements
           .namedItem(name)
@@ -473,6 +502,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         total={voucher.quote?.total ?? cart.total}
         name={details.name}
         phone={details.phone}
+        settings={storeSettings}
         onBack={() => setBankTransferOpen(false)}
         onClose={close}
         onPlaceOrder={() => submitOrder()}
@@ -711,7 +741,15 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                         className="grid gap-2 text-sm font-semibold"
                       >
                         {text(...label)}
-                        <input
+                        {name === "city" ? (
+                          <>
+                            <select name="city" value={details.city} onChange={updateDetails} required disabled={!storeSettings || submitting || locked} className={inputStyle}>
+                              <option value="">{storeSettings ? text("Choose a delivery city", "ڈیلیوری کا شہر منتخب کریں") : text("Loading available cities…", "دستیاب شہر لوڈ ہو رہے ہیں…")}</option>
+                              {(storeSettings?.operatingCities || []).map((city) => <option key={city} value={city}>{city}</option>)}
+                            </select>
+                            {storeSettingsError ? <span role="alert" className="text-xs text-rose-700">{storeSettingsError}</span> : storeSettings?.operatingCities?.length ? <span className="text-xs text-slate-500">{storeSettings.operatingCities.length === 1 ? `ShopMart is currently operating in ${storeSettings.operatingCities[0]} only.` : `ShopMart currently delivers in: ${storeSettings.operatingCities.join(", ")}.`}</span> : null}
+                          </>
+                        ) : <input
                           name={name}
                           type={type ?? "text"}
                           dir={
@@ -723,7 +761,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                           required
                           maxLength={maxLength}
                           className={inputStyle}
-                        />
+                        />}
                       </label>
                     ),
                   )}

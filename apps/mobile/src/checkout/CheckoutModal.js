@@ -11,6 +11,7 @@ import { useVoucher } from "../vouchers/useVoucher";
 import VoucherField from "../vouchers/VoucherField";
 import BankTransferDetails from "./BankTransferDetails";
 import { useMobileAppearance } from "../appearance/MobileAppearance";
+import { getMobileStoreSettings } from "../api/storeSettings";
 const fields = [
   ["name", "Recipient name", 150],
   ["email", "Email address", 254],
@@ -46,6 +47,9 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   const [confirmation, setConfirmation] = useState(null);
   const successScale = useRef(new Animated.Value(0.4)).current;
   const [bankTransferOpen, setBankTransferOpen] = useState(false);
+  const [storeSettings, setStoreSettings] = useState(null);
+  const [storeSettingsError, setStoreSettingsError] = useState("");
+  const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const voucher = useVoucher(session, cart.items);
   const pending = useRef(false);
   const snapshot = useRef(null);
@@ -60,6 +64,19 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
       useNativeDriver: true,
     }).start();
   }, [confirmation, successScale]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getMobileStoreSettings(controller.signal)
+      .then((settings) => {
+        if (controller.signal.aborted) return;
+        const operatingCities = (settings.operatingCities || []).filter(Boolean);
+        setStoreSettings({ ...settings, operatingCities });
+        if (operatingCities.length === 1) setDetails((current) => ({ ...current, city: operatingCities[0] }));
+      })
+      .catch((failure) => { if (!controller.signal.aborted) setStoreSettingsError(failure.message); });
+    return () => controller.abort();
+  }, []);
 
   function close() {
     if (pending.current) return;
@@ -108,6 +125,11 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
 
       if (Object.values(values).some((value) => !value)) {
         setError("Please complete all delivery fields.");
+        return;
+      }
+
+      if (!(storeSettings?.operatingCities || []).some((city) => city.toLowerCase() === values.city.toLowerCase())) {
+        setError(storeSettingsError || "Choose one of ShopMart's currently supported delivery cities.");
         return;
       }
 
@@ -235,6 +257,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
         total={summaryTotal}
         name={details.name}
         phone={details.phone}
+        settings={storeSettings}
         onBack={() => setBankTransferOpen(false)}
         onClose={() => setBankTransferOpen(false)}
         onPlaceOrder={placeBankTransferOrder}
@@ -379,6 +402,11 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                     disabled={saving || locked}
                     onSelect={(address) => {
                       if (saving || locked) return;
+                      const allowed = storeSettings?.operatingCities || [];
+                      if (!allowed.some((city) => city.toLowerCase() === address.city.toLowerCase())) {
+                        setError(`ShopMart currently delivers only to ${allowed.join(", ") || "its listed cities"}. Choose a supported city and enter the address manually.`);
+                        return;
+                      }
                       setDetails((current) => ({
                         ...current,
                         ...address,
@@ -390,7 +418,17 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                 {fields.map(([name, label, maxLength]) => (
                   <View key={name} style={styles.field}>
                     <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
-                    <TextInput
+                    {name === "city" ? (
+                      <View>
+                        <Pressable accessibilityRole="button" accessibilityState={{ expanded: cityPickerOpen }} disabled={!storeSettings || saving || locked} onPress={() => setCityPickerOpen((value) => !value)} style={[styles.input, { minHeight: 52, justifyContent: "center", backgroundColor: palette.surface, borderColor: palette.border }]}>
+                          <Text style={{ color: details.city ? palette.text : palette.muted }}>{details.city || (storeSettings ? "Choose a delivery city" : "Loading available cities…")} {storeSettings?.operatingCities?.length > 1 ? (cityPickerOpen ? "▴" : "▾") : ""}</Text>
+                        </Pressable>
+                        {cityPickerOpen && (storeSettings?.operatingCities || []).map((city) => (
+                          <Pressable key={city} accessibilityRole="button" onPress={() => { update("city", city); setCityPickerOpen(false); }} style={[styles.input, { marginTop: 6, backgroundColor: details.city === city ? palette.accentSoft : palette.surface, borderColor: palette.border }]}><Text style={{ color: palette.text }}>{details.city === city ? "✓ " : ""}{city}</Text></Pressable>
+                        ))}
+                        {storeSettingsError ? <Text style={{ color: palette.danger, marginTop: 5 }}>{storeSettingsError}</Text> : storeSettings?.operatingCities?.length ? <Text style={{ color: palette.muted, marginTop: 5 }}>{storeSettings.operatingCities.length === 1 ? `ShopMart is currently operating in ${storeSettings.operatingCities[0]} only.` : `ShopMart currently delivers in ${storeSettings.operatingCities.join(", ")}.`}</Text> : null}
+                      </View>
+                    ) : <TextInput
                       accessibilityLabel={label}
                       value={details[name]}
                       onChangeText={(value) => update(name, value)}
@@ -410,7 +448,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                       placeholderTextColor={palette.muted}
                       selectionColor={palette.accent}
                       style={[styles.input, { backgroundColor: palette.surface, borderColor: palette.border, color: palette.text }]}
-                    />
+                    />}
                   </View>
                 ))}
 

@@ -39,6 +39,21 @@ public class AdminStoreSettingsController {
         .body(settings.update(userId(jwt), request));
   }
 
+  @GetMapping("/store-profile")
+  public ResponseEntity<AdminStoreSettingsService.StoreProfile> getProfile(
+      @AuthenticationPrincipal Jwt jwt) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(settings.getProfile(userId(jwt)));
+  }
+
+  @PutMapping("/store-profile")
+  public ResponseEntity<AdminStoreSettingsService.StoreProfile> updateProfile(
+      @AuthenticationPrincipal Jwt jwt,
+      @Valid @RequestBody AdminStoreSettingsService.StoreProfileRequest request) {
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+        .body(settings.updateProfile(userId(jwt), request));
+  }
+
   private static UUID userId(Jwt jwt) {
     if (jwt == null || jwt.getSubject() == null) {
       throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
