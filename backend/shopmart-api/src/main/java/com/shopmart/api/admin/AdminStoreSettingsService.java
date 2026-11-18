@@ -59,7 +59,9 @@ public class AdminStoreSettingsService {
   public StoreProfile getProfile(UUID adminId) {
     requireAdmin(adminId);
     return jdbc.queryForObject("""
-        SELECT operating_cities, warehouse_address_line, warehouse_city, warehouse_phone,
+        SELECT operating_cities, warehouse_address_line,
+               COALESCE(NULLIF(BTRIM(warehouse_city), ''), operating_cities[1], 'Lahore') AS warehouse_city,
+               warehouse_phone,
                whatsapp_number, bank_name, bank_account_title, bank_account_number, bank_iban
         FROM public.store_settings WHERE id = 1
         """, (rs, row) -> new StoreProfile(

@@ -60,7 +60,10 @@ async function adminSettingsRequest(token, path, { method = "GET", values, signa
   });
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
-    throw new Error(detail?.message || `Could not ${method === "GET" ? "load" : "save"} store settings (HTTP ${response.status}).`);
+    throw new Error(
+      detail?.message || detail?.detail || detail?.title ||
+      `Could not ${method === "GET" ? "load" : "save"} store settings (HTTP ${response.status}).`,
+    );
   }
   return response.json();
 }

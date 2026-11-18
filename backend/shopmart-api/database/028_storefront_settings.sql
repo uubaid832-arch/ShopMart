@@ -15,6 +15,10 @@ UPDATE public.store_settings
 SET warehouse_address_line = warehouse_return_address
 WHERE warehouse_address_line = '' AND warehouse_return_address <> '';
 
+UPDATE public.store_settings
+SET warehouse_city = COALESCE(NULLIF(BTRIM(warehouse_city), ''), operating_cities[1], 'Lahore')
+WHERE BTRIM(warehouse_city) = '';
+
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'shopmart_app') THEN

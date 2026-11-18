@@ -1,13 +1,13 @@
-ShopMart notification timing and mobile campaign scroll update
+ShopMart admin store settings HTTP 400 fix
 
-Replace these complete files in the matching paths in your ShopMart project:
-- apps/mobile/src/admin/AdminVouchers.js
-- apps/mobile/src/admin/adminUi.js
-- apps/web/src/features/auth/useSession.js
+Replace these complete files in the matching paths:
+- backend/shopmart-api/src/main/java/com/shopmart/api/admin/AdminStoreSettingsService.java
+- backend/shopmart-api/database/028_storefront_settings.sql
+- apps/web/src/api/adminStoreSettings.js
 
-Changes:
-- Mobile admin action success and error feedback appears as a popup toast and auto-dismisses after 3.5 seconds.
-- The mobile Product discounts / campaign form now has its own scrollable area inside the admin screen.
-- Existing web sign-in/sign-up session toast messages now auto-dismiss after 3.5 seconds.
+Cause addressed:
+The warehouse city column defaults to an empty value, while saving store settings requires a warehouse city. The profile now returns the first operating city (Lahore by default) when the warehouse city has not been set. Migration 028 also fills any existing blank warehouse city from the first configured operating city. The web form will display Spring validation details instead of only a generic HTTP status.
 
-After replacing the files, restart the mobile development server and reload the app. For web, run the usual lint/build commands before deployment.
+Apply the updated 028_storefront_settings.sql to the same Neon database configured in Render. It is safe to rerun: columns use IF NOT EXISTS and the data updates only fill blank values. Then commit/push the source and let Render deploy the backend and web app.
+
+Web validation: npm run lint and npm run build passed. Maven compile could not be checked here because its Spring Boot parent POM is not present in the local Maven cache and Maven Central is unavailable in offline mode.
