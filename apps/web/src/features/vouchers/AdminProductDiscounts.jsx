@@ -13,6 +13,7 @@ export default function AdminProductDiscounts() {
   const [revision, setRevision] = useState(0);
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
+  const [flatAllValue, setFlatAllValue] = useState("500");
   const [selected, setSelected] = useState({});
   const [editing, setEditing] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
@@ -31,6 +32,18 @@ export default function AdminProductDiscounts() {
   }, [token, revision]);
   const activeProductIds = useMemo(() => new Set(campaigns.filter((c) => c.enabled).flatMap((c) => c.products.map((p) => p.productId))), [campaigns]);
   const visibleProducts = products.filter((product) => `${product.name} ${product.categoryName ?? ""}`.toLowerCase().includes(query.toLowerCase()));
+  const eligibleProducts = products.filter((product) => product.active && (!activeProductIds.has(product.id) || editing?.products.some((item) => item.productId === product.id)));
+  function selectAllForFlatDiscount() {
+    const amount = Number(flatAllValue);
+    const minimumPrice = Math.min(...eligibleProducts.map((product) => Number(product.price)));
+    if (!eligibleProducts.length) { setError("There are no active products available for a new campaign."); return; }
+    if (!Number.isFinite(amount) || amount <= 0 || amount >= minimumPrice) {
+      setError(`Enter a flat amount below the cheapest eligible product price (PKR ${minimumPrice.toLocaleString("en-PK")}).`);
+      return;
+    }
+    setSelected(Object.fromEntries(eligibleProducts.map((product) => [product.id, { checked: true, kind: "FIXED", value: String(amount) }])));
+    setError(""); setNotice(`${eligibleProducts.length} eligible products selected with PKR ${amount.toLocaleString("en-PK")} off each.`);
+  }
   async function save() {
     const chosen = Object.entries(selected).filter(([, value]) => value.checked);
     if (!chosen.length) { setError("Choose at least one product for this campaign."); return; }
@@ -75,6 +88,11 @@ export default function AdminProductDiscounts() {
       <p className="text-sm text-slate-600">Choose products and set a separate percentage or PKR discount for each. Discounted products are excluded from voucher codes.</p>
       <label className="grid gap-2 text-sm font-semibold">Campaign name (optional)<input className={input} value={name} onChange={(e) => setName(e.target.value)} maxLength={100} placeholder="Leave blank for a general sale label" /></label>
       <label className="mt-4 grid gap-2 text-sm font-semibold">Find products<input className={input} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products" /></label>
+      <div className="mt-4 grid gap-3 rounded-xl border border-solid border-sky-200 bg-sky-50 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+        <label className="grid gap-2 text-sm font-semibold">Flat discount per product (PKR)<input className={input} type="number" min="0.01" step="0.01" value={flatAllValue} onChange={(e) => setFlatAllValue(e.target.value)} placeholder="For example, 500" /></label>
+        <button type="button" disabled={busy} onClick={selectAllForFlatDiscount} className="rounded-xl border-0 bg-sky-700 px-5 py-3 font-bold text-white disabled:opacity-50">Apply to all available products ({eligibleProducts.length})</button>
+        <p className="m-0 text-xs text-slate-600 sm:col-span-2">Selects every active product that is not already in another active campaign. The amount must be lower than the cheapest selected product price.</p>
+      </div>
       <div className="mt-4 grid max-h-96 gap-2 overflow-auto">
         {visibleProducts.map((product) => {
           const belongsToEditing = editing?.products.some((item) => item.productId === product.id);

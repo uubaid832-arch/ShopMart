@@ -20,9 +20,9 @@ public class ProductDiscountService {
   public record Rule(@NotNull UUID productId, @NotBlank @Pattern(regexp="FIXED|PERCENT") String kind,
       @NotNull @DecimalMin("0.01") @Digits(integer=10, fraction=2) BigDecimal value) {}
   public record CreateRequest(@NotNull UUID requestId, @Size(max=100) String name,
-      @NotEmpty @Size(max=100) List<@NotNull @Valid Rule> products) {}
+      @NotEmpty @Size(max=5000) List<@NotNull @Valid Rule> products) {}
   public record EditRequest(@Size(max=100) String name, @NotNull @Min(0) Long version,
-      @NotEmpty @Size(max=100) List<@NotNull @Valid Rule> products) {}
+      @NotEmpty @Size(max=5000) List<@NotNull @Valid Rule> products) {}
   public record ToggleRequest(@NotNull Boolean enabled, @NotNull @Min(0) Long version) {}
   public record Offer(String kind, String value, String discountAmount, String discountedPrice,
       String campaignId, String campaignName) {}

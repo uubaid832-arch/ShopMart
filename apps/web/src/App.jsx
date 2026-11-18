@@ -733,26 +733,6 @@ function Storefront({ products, onRatingSummaryChange }) {
         dir={direction}
         className="mx-auto max-w-7xl scroll-mt-48 px-4 lg:px-6"
       >
-        {!query && !selectedCampaign && namedPromotions.length > 0 && (
-          <section aria-label="Current product promotions" className="my-5 grid gap-3 sm:grid-cols-2">
-            {namedPromotions.map((promotion, index) => (
-              <button
-                key={promotion.id}
-                type="button"
-                onClick={() => handleCampaignClick(promotion)}
-                aria-label={`Shop ${promotion.name} promotion with ${promotion.productCount} products`}
-                className={`group flex min-h-32 w-full items-center justify-between gap-4 rounded-3xl border border-solid p-5 text-start shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg ${index % 2 ? "border-violet-200 bg-linear-to-r from-violet-50 to-fuchsia-100" : "border-amber-200 bg-linear-to-r from-amber-50 via-orange-50 to-rose-100"}`}
-              >
-                <span className="min-w-0">
-                  <span className="block text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700">ShopMart promotion</span>
-                  <span className="mt-2 block truncate text-xl font-black text-slate-900 sm:text-2xl">{promotion.name}</span>
-                  <span className="mt-1 block text-sm font-semibold text-slate-600">{promotion.productCount} sale {promotion.productCount === 1 ? "product" : "products"} · Tap to shop</span>
-                </span>
-                <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-white/80 text-2xl font-black text-orange-700 shadow-sm transition group-hover:translate-x-1">↗</span>
-              </button>
-            ))}
-          </section>
-        )}
         {!query && (
         <section
           aria-labelledby="hero-title"
@@ -828,6 +808,27 @@ function Storefront({ products, onRatingSummaryChange }) {
             </div>
           </div>
         </section>
+        )}
+
+        {!query && !selectedCampaign && namedPromotions.length > 0 && (
+          <section aria-label="Current product promotions" className="my-6 grid gap-3">
+            {namedPromotions.map((promotion) => (
+              <button
+                key={promotion.id}
+                type="button"
+                onClick={() => handleCampaignClick(promotion)}
+                aria-label={`Shop ${promotion.name} promotion with ${promotion.productCount} products`}
+                className="group flex min-h-36 w-full items-center justify-between gap-5 rounded-3xl border border-solid border-sky-200 bg-linear-to-r from-sky-50 via-white to-indigo-100 p-6 text-start shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-sky-300/25 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950 sm:px-8"
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-extrabold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">ShopMart promotion</span>
+                  <span className="mt-2 block truncate text-2xl font-black text-slate-900 dark:text-white sm:text-3xl">{promotion.name}</span>
+                  <span className="mt-1 block text-sm font-semibold text-slate-600 dark:text-slate-300">{promotion.productCount} sale {promotion.productCount === 1 ? "product" : "products"} · Tap to shop</span>
+                </span>
+                <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-full bg-sky-700 text-2xl font-black text-white shadow-sm transition group-hover:translate-x-1 dark:bg-sky-400 dark:text-slate-950">↗</span>
+              </button>
+            ))}
+          </section>
         )}
 
         <section
