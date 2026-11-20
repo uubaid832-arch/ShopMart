@@ -22,6 +22,7 @@ import { useLanguage } from "./features/language/useLanguage";
 import { getPublicStoreSettings } from "./api/adminStoreSettings";
 import AboutModal from "./components/AboutModal";
 import Modal from "./components/Modal";
+import Toast from "./components/Toast";
 
 const formatPrice = (price) =>
   new Intl.NumberFormat("en-PK", {
@@ -1047,36 +1048,12 @@ function Storefront({ products, onRatingSummaryChange }) {
             )}
           </div>
 
-          {notice && (
-            <div
-              role="status"
-              key={notice.key}
-              className="cart-added-toast mt-5 flex flex-wrap items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
-            >
-              <span aria-hidden="true" className="cart-icon-pop text-xl">🛒</span>
-              <span>
-                <bdi>{notice.name}</bdi>{" "}
-                {text("added to your cart.", "آپ کی ٹوکری میں شامل ہو گیا۔")}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => setIsCartOpen(true)}
-                className="ms-auto rounded-lg border-0 bg-transparent px-2 py-1 font-semibold text-emerald-800 hover:bg-emerald-100"
-              >
-                {text("View cart →", "ٹوکری دیکھیں ←")}
-              </button>
-
-              <button
-                type="button"
-                aria-label={text("Dismiss notification", "اطلاع بند کریں")}
-                onClick={() => setNotice(null)}
-                className="grid size-8 place-items-center rounded-lg border-0 bg-transparent text-emerald-800 hover:bg-emerald-100"
-              >
-                ×
-              </button>
-            </div>
-          )}
+          <Toast
+            message={notice ? `${notice.name} ${text("added to your cart.", "آپ کی ٹوکری میں شامل ہو گیا۔")}` : ""}
+            onClose={setNotice}
+            actionLabel={text("View cart →", "ٹوکری دیکھیں ←")}
+            onAction={() => setIsCartOpen(true)}
+          />
 
           {priceError ? (
             <p className="my-6 rounded-xl bg-rose-50 p-4 text-sm text-rose-700">

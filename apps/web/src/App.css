@@ -166,6 +166,8 @@
 }
 
 .cart-added-toast { animation: shopmart-cart-entry 420ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes shopmart-toast-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.shopmart-toast-in { animation: shopmart-toast-in 180ms ease-out both; }
 .cart-icon-pop { display: inline-block; animation: shopmart-cart-hop 520ms ease-out both; }
 .wishlist-pop { animation: shopmart-heart-pop 420ms ease-out; }
 .order-success-mark { animation: shopmart-success 560ms cubic-bezier(.2,.8,.2,1) both; }

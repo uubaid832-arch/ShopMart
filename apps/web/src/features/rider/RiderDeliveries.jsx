@@ -11,6 +11,7 @@ import {
   reportFailedDelivery,
 } from "../../api/riderDeliveries";
 import RiderLocationSharing from "../delivery/RiderLocationSharing";
+import Toast from "../../components/Toast";
 
 const statuses = [
   ["ASSIGNED", "Assigned"],
@@ -354,6 +355,8 @@ export default function RiderDeliveries() {
 
   return (
     <div className="grid gap-5">
+      <Toast message={feedback} onClose={() => setFeedback("")} />
+      <Toast message={actionError} type="error" onClose={() => setActionError("")} />
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="m-0 text-3xl font-bold">My deliveries</h1>
@@ -391,22 +394,6 @@ export default function RiderDeliveries() {
           </button>
         ))}
       </nav>
-      {feedback && (
-        <p
-          role="status"
-          className="m-0 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700"
-        >
-          {feedback}
-        </p>
-      )}
-      {actionError && (
-        <p
-          role="alert"
-          className="m-0 rounded-xl bg-rose-50 p-4 text-sm text-rose-700"
-        >
-          {actionError}
-        </p>
-      )}
       <section aria-label="Assigned deliveries" aria-busy={loading}>
         {loading ? (
           <p role="status" className="text-sm text-slate-500">
