@@ -4,7 +4,7 @@ import CartModal from "./CartModal";
 import AuthModal from "../auth/AuthModal";
 import CheckoutModal from "../checkout/CheckoutModal";
 
-export default function CartFlow({ cart, auth, onClose, onPlaced, previewMode = false }) {
+export default function CartFlow({ cart, auth, onClose, onPlaced, onViewProduct, previewMode = false }) {
   const [screen, setScreen] = useState("cart");
 
   if (screen === "auth") {
@@ -28,6 +28,7 @@ export default function CartFlow({ cart, auth, onClose, onPlaced, previewMode = 
     <CartModal
       cart={cart}
       onClose={onClose}
+      onViewProduct={onViewProduct}
       onCheckout={() => { if (previewMode) { Alert.alert("Store preview", "Browse products and preview the cart here. Use a customer account to place an order."); return; } setScreen(auth.session ? "checkout" : "auth"); }}
     />
   );

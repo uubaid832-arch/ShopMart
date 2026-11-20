@@ -85,9 +85,18 @@ public class AdminDashboardService {
 
                 List<RecentOrder> recentOrders = jdbc.query("""
                                 SELECT o.id, o.order_number, u.name AS customer_name,
-                                       o.status, o.total, o.currency, o.created_at
+                                       o.status, o.total, o.currency, o.created_at,
+                                       delivery_attempt.reason AS failure_reason,
+                                       delivery_attempt.warehouse_reported_at
                                 FROM public.orders o
                                 JOIN public.users u ON u.id = o.user_id
+                                LEFT JOIN LATERAL (
+                                    SELECT reason, warehouse_reported_at
+                                    FROM public.delivery_attempts
+                                    WHERE order_id = o.id AND resolved_at IS NULL
+                                    ORDER BY created_at DESC, id DESC
+                                    LIMIT 1
+                                ) delivery_attempt ON TRUE
                                 ORDER BY o.created_at DESC, o.id DESC
                                 LIMIT 4
                                 """,
@@ -98,7 +107,9 @@ public class AdminDashboardService {
                                                 rs.getString("status"),
                                                 rs.getBigDecimal("total").toPlainString(),
                                                 rs.getString("currency"),
-                                                rs.getTimestamp("created_at").toInstant()));
+                                                rs.getTimestamp("created_at").toInstant(),
+                                                rs.getString("failure_reason") != null,
+                                                rs.getTimestamp("warehouse_reported_at") != null));
 
                 List<LowStockProduct> lowStockProducts = jdbc.query("""
                                 SELECT id, name, stock
@@ -174,7 +185,13 @@ public class AdminDashboardService {
                         String status,
                         String total,
                         String currency,
-                        Instant createdAt) {
+                        Instant createdAt,
+                        boolean deliveryUnsuccessful,
+                        boolean returnedToWarehouse) {
+                public RecentOrder(UUID id, String orderNumber, String customerName,
+                        String status, String total, String currency, Instant createdAt) {
+                        this(id, orderNumber, customerName, status, total, currency, createdAt, false, false);
+                }
         }
 
         public record LowStockProduct(

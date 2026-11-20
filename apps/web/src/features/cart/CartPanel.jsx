@@ -8,6 +8,7 @@ export default function CartPanel({
   isOpen,
   onClose,
   onCheckout,
+  onViewProduct,
 }) {
   const { language, direction } = useLanguage();
   const urdu = language === "ur";
@@ -101,16 +102,23 @@ export default function CartPanel({
                 className="border-0 border-b border-solid border-slate-200 py-5 last:border-b-0"
               >
                 <div className="flex items-start gap-3">
-                  <ProductThumbnail product={item} />
+                  <button
+                    type="button"
+                    onClick={() => onViewProduct?.(item)}
+                    aria-label={text(`View details for ${item.name}`, `${item.name} کی تفصیلات دیکھیں`)}
+                    className="shrink-0 rounded-xl border-0 bg-transparent p-0 text-inherit"
+                  >
+                    <ProductThumbnail product={item} />
+                  </button>
 
                   <div className="min-w-0 flex-1">
                     <p className="m-0 text-xs text-slate-500">
                       <bdi>{item.category}</bdi>
                     </p>
 
-                    <h3 className="my-1 break-words text-base font-bold">
+                    <button type="button" onClick={() => onViewProduct?.(item)} className="my-1 block break-words border-0 bg-transparent p-0 text-start text-base font-bold text-inherit hover:text-violet-700">
                       <bdi>{item.name}</bdi>
-                    </h3>
+                    </button>
 
                     <p className="m-0 text-sm text-slate-500">
                       {item.discountedPrice != null ? <><del className="me-2 text-slate-500"><bdi>{formatPrice(item.price)}</bdi></del><bdi>{formatPrice(item.discountedPrice)}</bdi></> : <bdi>{formatPrice(item.price)}</bdi>}{" "}

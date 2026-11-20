@@ -22,12 +22,12 @@ const shortcuts = [
 ];
 
 const statusColors = {
-  PENDING: "bg-amber-50 text-amber-700",
-  CONFIRMED: "bg-blue-50 text-blue-700",
-  PICKED_UP: "bg-cyan-50 text-cyan-700",
-  DISPATCHED: "bg-violet-50 text-violet-700",
-  DELIVERED: "bg-emerald-50 text-emerald-700",
-  CANCELLED: "bg-rose-50 text-rose-700",
+  PENDING: "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200",
+  CONFIRMED: "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-200",
+  PICKED_UP: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/50 dark:text-cyan-200",
+  DISPATCHED: "bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-200",
+  DELIVERED: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200",
+  CANCELLED: "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-200",
 };
 
 const readable = (value = "") => value.replaceAll("_", " ").toLowerCase();
@@ -199,19 +199,19 @@ export default function AdminDashboard() {
         )}
       </section>
       {codOpen && <AdminCodModal token={accessToken} onClose={() => { setCodOpen(false); setReload(v => v + 1); }} />}
-      {summary && <section className="overflow-hidden rounded-3xl bg-slate-950 p-5 text-white shadow-lg sm:p-6">
+      {summary && <section className="overflow-hidden rounded-3xl border border-solid border-slate-200 bg-white p-5 text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div><p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-violet-300">Money overview</p><h2 className="mb-0 mt-2 text-xl font-extrabold">Revenue & COD handovers</h2><p className="mb-0 mt-1 text-xs text-slate-400">Refunds are subtracted from collected revenue.</p></div>
-          <Wallet className="text-violet-300" size={24} aria-hidden="true" />
+          <div><p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-violet-700 dark:text-violet-300">Money overview</p><h2 className="mb-0 mt-2 text-xl font-extrabold">Revenue & COD handovers</h2><p className="mb-0 mt-1 text-xs text-slate-500 dark:text-slate-300">Refunds are subtracted from collected revenue.</p></div>
+          <Wallet className="text-violet-600 dark:text-violet-300" size={24} aria-hidden="true" />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {[["Gross paid", summary.grossPaidRevenue, "text-white"], ["Refunded", summary.refundedAmount, "text-rose-300"], ["COD with riders", summary.codWithRiders, "text-amber-200"]].map(([label, amount, tone]) => <div key={label} className="rounded-2xl border border-solid border-white/10 bg-white/[0.06] p-4"><p className="m-0 text-xs text-slate-400">{label}</p><strong className={`mt-2 block text-xl font-extrabold tracking-tight ${tone}`}>{formatPrice(amount)}</strong></div>)}
+          {[["Gross paid", summary.grossPaidRevenue, "text-slate-900 dark:text-white"], ["Refunded", summary.refundedAmount, "text-rose-700 dark:text-rose-300"], ["COD with riders", summary.codWithRiders, "text-amber-800 dark:text-amber-200"]].map(([label, amount, tone]) => <div key={label} className="rounded-2xl border border-solid border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"><p className="m-0 text-xs text-slate-500 dark:text-slate-400">{label}</p><strong className={`mt-2 block text-xl font-extrabold tracking-tight ${tone}`}>{formatPrice(amount)}</strong></div>)}
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-violet-500/15 p-4">
-          <p className="m-0 text-sm text-violet-100">{summary.pendingCodHandovers ?? 0} cash handovers are waiting for review <span className="font-bold">· {formatPrice(summary.pendingCodAmount)}</span></p>
-          <button className="rounded-xl border-0 bg-violet-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-violet-400" onClick={() => setCodOpen(true)}>Review handovers</button>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-violet-50 p-4 dark:bg-slate-700">
+          <p className="m-0 text-sm text-violet-900 dark:text-slate-100">{summary.pendingCodHandovers ?? 0} cash handovers are waiting for review <span className="font-bold">· {formatPrice(summary.pendingCodAmount)}</span></p>
+          <button className="rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400" onClick={() => setCodOpen(true)}>Review handovers</button>
         </div>
-        <p className="mb-0 mt-3 text-xs text-slate-400">Confirm a COD handover only after receiving cash. This does not add revenue again.</p>
+        <p className="mb-0 mt-3 text-xs text-slate-500 dark:text-slate-300">Confirm a COD handover only after receiving cash. This does not add revenue again.</p>
       </section>}
       <section
         aria-label="Active accounts"
@@ -313,6 +313,11 @@ export default function AdminDashboard() {
                           >
                             {readable(order.status)}
                           </span>
+                          {(order.returnedToWarehouse || order.deliveryUnsuccessful) && (
+                            <span className={`mt-2 inline-block rounded-full px-2 py-1 text-xs font-bold ${order.returnedToWarehouse ? "bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200" : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200"}`}>
+                              {order.returnedToWarehouse ? "Returned to warehouse" : "Delivery unsuccessful"}
+                            </span>
+                          )}
                         </td>
 
                         <td className="whitespace-nowrap p-4 font-semibold">

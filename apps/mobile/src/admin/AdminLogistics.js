@@ -452,6 +452,7 @@ export default function LogisticsModule({
                 subtitle={delivery.customerName}
               >
                 <Badge value={delivery.status} />
+                {delivery.warehouseReturned ? <Badge value="Returned to warehouse" /> : delivery.failureReason ? <Badge value="Delivery unsuccessful" /> : null}
                 <Text style={ui.body}>{delivery.address}</Text>
                 <Text style={ui.body}>{delivery.phone}</Text>
                 <Text style={ui.body}>
@@ -463,9 +464,9 @@ export default function LogisticsModule({
                 {delivery.failureReason && (
                   <View style={ui.info}>
                     <Text style={ui.body}>
-                      Last failure: {readable(delivery.failureReason)}
+                      {delivery.warehouseReturned ? "Parcel reported returned to the warehouse" : `Delivery unsuccessful: ${readable(delivery.failureReason)}`}
                     </Text>
-                    <Text style={ui.muted}>{delivery.failureNote}</Text>
+                    {delivery.failureNote ? <Text style={ui.muted}>{delivery.failureNote}</Text> : null}
                   </View>
                 )}
                 {delivery.failureReason && (

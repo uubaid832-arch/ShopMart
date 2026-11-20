@@ -13,7 +13,7 @@ import WarehouseControls from "../delivery/WarehouseControls";
 import { Wallet } from "lucide-react";
 
 const buttonStyle =
-  "rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40";
+  "rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40 dark:bg-slate-700 dark:text-sky-200 dark:enabled:hover:bg-slate-600";
 
 export default function AdminDeliveries() {
   const { session } = useSession();
@@ -86,17 +86,13 @@ export default function AdminDeliveries() {
         </button>
       </header>
       <section
-        className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid p-5"
-        style={{
-          backgroundColor: "#f5f3ff",
-          borderColor: "#ddd6fe",
-        }}
+        className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800"
       >
         <div>
-          <h2 className="m-0 text-lg font-bold" style={{ color: "#4c1d95" }}>
+          <h2 className="m-0 text-lg font-bold text-slate-900 dark:text-white">
             Cash reconciliation
           </h2>
-          <p className="mb-0 mt-2 text-sm" style={{ color: "#6d6380" }}>
+          <p className="mb-0 mt-2 text-sm text-slate-600 dark:text-slate-300">
             Review rider handovers and confirm COD cash received.
           </p>
         </div>
@@ -104,12 +100,7 @@ export default function AdminDeliveries() {
         <button
           type="button"
           onClick={() => setCodOpen(true)}
-          className="flex min-h-12 items-center justify-center gap-3 rounded-xl border-0 px-6 py-3 text-sm font-bold shadow-md transition-opacity hover:opacity-90"
-          style={{
-            backgroundColor: "#7c3aed",
-            color: "#ffffff",
-            cursor: "pointer",
-          }}
+          className="flex min-h-12 items-center justify-center gap-3 rounded-xl border-0 bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-md transition-opacity hover:bg-violet-700 hover:opacity-90 dark:bg-violet-500 dark:hover:bg-violet-400"
         >
           <Wallet size={21} aria-hidden="true" />
           COD cash handovers
@@ -167,9 +158,16 @@ export default function AdminDeliveries() {
                       {delivery.orderNumber}
                     </p>
                   </div>
-                  <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold capitalize text-violet-700">
-                    {delivery.status.toLowerCase()}
-                  </span>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <span className="rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold capitalize text-violet-700 dark:bg-slate-700 dark:text-sky-200">
+                      {delivery.status.toLowerCase().replaceAll("_", " ")}
+                    </span>
+                    {delivery.warehouseReturned ? (
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 dark:bg-amber-950/60 dark:text-amber-200">Returned to warehouse</span>
+                    ) : delivery.failureReason ? (
+                      <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 dark:bg-rose-950/60 dark:text-rose-200">Delivery unsuccessful</span>
+                    ) : null}
+                  </div>
                 </div>
                 <dl className="my-5 grid gap-3 text-sm">
                   {[
@@ -192,9 +190,8 @@ export default function AdminDeliveries() {
                   ))}
                 </dl>
                 {delivery.failureReason && delivery.status === "DISPATCHED" && (
-                  <p className="rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-                    An unsuccessful attempt is recorded. Review the customer
-                    details and warehouse return status.
+                  <p className={`rounded-xl p-3 text-sm font-semibold ${delivery.warehouseReturned ? "bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200" : "bg-rose-50 text-rose-800 dark:bg-rose-950/50 dark:text-rose-200"}`}>
+                    {delivery.warehouseReturned ? "The rider reports that this parcel was returned to the warehouse. Confirm receipt or resolve the delivery." : `The delivery attempt was unsuccessful (${delivery.failureReason.toLowerCase().replaceAll("_", " ")}). The parcel return is not yet reported.`}
                   </p>
                 )}
                 <div className="flex flex-wrap gap-3">

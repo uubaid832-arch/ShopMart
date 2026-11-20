@@ -176,6 +176,13 @@ function OrderCard({ order, onPress }) {
         </View>
         <Status value={order.status} />
       </View>
+      {order.returnedToWarehouse || order.deliveryUnsuccessful ? (
+        <View style={{ marginTop: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10, backgroundColor: order.returnedToWarehouse ? themePalette.warningSoft : themePalette.dangerSoft }}>
+          <Text style={{ color: order.returnedToWarehouse ? themePalette.warning : themePalette.danger, fontSize: 12, fontWeight: "800" }}>
+            {order.returnedToWarehouse ? "Returned to warehouse" : "Delivery unsuccessful"}
+          </Text>
+        </View>
+      ) : null}
       <View style={[s.row, s.cardFoot]}>
         <View style={s.grow}>
           <Text style={s.muted}>{dateLabel(order.createdAt)}</Text>

@@ -66,12 +66,13 @@ public class DeliveryService {
                        o.status, a.rider_id, r.name AS rider_name,
                        r.enabled AS rider_enabled,
                        attempt.reason AS failure_reason,
-                       attempt.note AS failure_note
+                       attempt.note AS failure_note,
+                       attempt.warehouse_reported_at AS warehouse_reported_at
                 FROM public.orders o
                 LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
                 LEFT JOIN public.users r ON r.id = a.rider_id
                 LEFT JOIN LATERAL (
-                    SELECT reason, note
+                    SELECT reason, note, warehouse_reported_at
                     FROM public.delivery_attempts
                     WHERE order_id = o.id AND resolved_at IS NULL
                     ORDER BY created_at DESC, id DESC
@@ -105,6 +106,7 @@ public class DeliveryService {
                             rs.getString("city"),
                             failureReason,
                             rs.getString("failure_note"),
+                            rs.getTimestamp("warehouse_reported_at") != null,
                             canEdit);
                 },
                 filterStatus, filterStatus, size, (long) page * size);
@@ -388,6 +390,7 @@ public class DeliveryService {
             String city,
             String failureReason,
             String failureNote,
+            boolean warehouseReturned,
             boolean canEditDetails) {
     }
 

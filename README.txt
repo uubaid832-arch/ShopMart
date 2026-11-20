@@ -1,30 +1,21 @@
-ShopMart Product Search and Rider Search Update
+ShopMart Delivery Status, Theme, and Cart/Wishlist Update
 
-Replace files by preserving the folder paths in the project root.
+Extract this ZIP into the ShopMart project root and replace the matching files. All files are complete source replacements and retain their project folder paths.
 
-Changes:
-- Customer product search ranks exact/prefix/name matches above category and description matches on web and mobile.
-- Search automatically collapses category and price filters; customers can reopen filters.
-- Added an On sale first sort option to the customer catalog on web and mobile.
-- Added rider order search by order number and customer name on web and mobile.
-- Rider search is applied on the server before pagination, across all deliveries within the chosen rider tab.
+Changes included:
+- Admin delivery cards and recent dashboard orders show clear “Delivery unsuccessful” or “Returned to warehouse” indicators.
+- Updated delivery/revenue panels and campaign sale badges to use light/dark theme colors. Lowered product wishlist-heart stacking and raised the sticky navbar so hearts stay beneath the search bar.
+- Product images and names in the web cart and wishlist open product details. Mobile cart images and names open product details; mobile wishlist product cards already open the same details screen.
+- Includes the previous rider global-search and checkout free-delivery/city-label changes so the shared web and mobile App files stay in sync.
 
 No database migration is required.
 
 Validation performed:
-- Web production build: passed.
-- Web ESLint: passed.
-- Mobile changed files parsed with Babel: passed.
-- Mobile Expo lint could not configure because network access to the Expo lint setup timed out. No TypeScript compiler is installed in the mobile project.
-- Backend Maven compile could not resolve the existing Spring Boot parent because Maven Central DNS was unavailable in this environment.
+- Web production build and ESLint passed.
+- Babel syntax parsing passed for modified mobile JavaScript files.
+- Backend Maven compile could not run because Maven Central was unreachable in this environment. Compile it locally before deploying.
 
-After copying the files, build the backend and web app in your own environment, then commit/push:
-  cd backend/shopmart-api
-  ./mvnw -B -DskipTests compile
-  cd ../../apps/web
-  npm run build
-  npm run lint
-  cd ../..
-  git add apps/web/src/App.jsx apps/web/src/api/riderDeliveries.js apps/web/src/features/rider/RiderDeliveries.jsx apps/mobile/App.js apps/mobile/src/rider/RiderScreen.js backend/shopmart-api/src/main/java/com/shopmart/api/delivery/RiderDeliveryController.java backend/shopmart-api/src/main/java/com/shopmart/api/delivery/RiderDeliveryService.java
-  git commit -m "Improve product relevance and rider order search"
+Push the replacement files:
+  git add apps/web/src/App.jsx apps/web/src/components/Navbar.jsx apps/web/src/features/cart/CartPanel.jsx apps/web/src/features/wishlist/WishlistModal.jsx apps/web/src/features/admin/AdminDeliveries.jsx apps/web/src/features/admin/AdminDashboard.jsx apps/web/src/features/rider/RiderDeliveries.jsx apps/web/src/api/riderDeliveries.js apps/web/src/features/checkout/CheckoutModal.jsx apps/mobile/App.js apps/mobile/src/cart/CartFlow.js apps/mobile/src/cart/CartModal.js apps/mobile/src/admin/AdminLogistics.js apps/mobile/src/admin/AdminScreen.js apps/mobile/src/admin/adminUi.js apps/mobile/src/rider/RiderScreen.js apps/mobile/src/checkout/CheckoutModal.js backend/shopmart-api/src/main/java/com/shopmart/api/delivery/DeliveryService.java backend/shopmart-api/src/main/java/com/shopmart/api/delivery/RiderDeliveryController.java backend/shopmart-api/src/main/java/com/shopmart/api/delivery/RiderDeliveryService.java backend/shopmart-api/src/main/java/com/shopmart/api/admin/AdminDashboardService.java
+  git commit -m "Show delivery alerts and open cart product details"
   git push origin HEAD

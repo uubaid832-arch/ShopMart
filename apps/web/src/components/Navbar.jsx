@@ -106,7 +106,7 @@ export default function Navbar({
       : []),
   ];
   return (
-    <header className="sticky top-0 z-20 border-0 border-b border-solid border-slate-200 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-0 border-b border-solid border-slate-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 lg:flex-nowrap lg:gap-6 lg:px-6">
         <a
           href="#top"

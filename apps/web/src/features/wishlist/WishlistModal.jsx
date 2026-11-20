@@ -8,6 +8,7 @@ export default function WishlistModal({
   cart,
   formatPrice,
   onAdd,
+  onViewProduct,
   onClose,
 }) {
   const { language, direction } = useLanguage();
@@ -102,16 +103,18 @@ export default function WishlistModal({
                   className="border-0 border-b border-solid border-slate-200 py-5 last:border-b-0"
                 >
                   <div className="flex items-start gap-3">
-                    <ProductThumbnail product={product} />
+                    <button type="button" onClick={() => onViewProduct?.(product)} aria-label={text(`View details for ${product.name}`, `${product.name} کی تفصیلات دیکھیں`)} className="shrink-0 rounded-xl border-0 bg-transparent p-0 text-inherit">
+                      <ProductThumbnail product={product} />
+                    </button>
 
                     <div className="min-w-0 flex-1">
                       <p className="m-0 text-xs text-slate-500">
                         <bdi>{product.category}</bdi>
                       </p>
 
-                      <h3 className="my-1 break-words text-base font-bold">
+                      <button type="button" onClick={() => onViewProduct?.(product)} className="my-1 block break-words border-0 bg-transparent p-0 text-start text-base font-bold text-inherit hover:text-violet-700">
                         <bdi>{product.name}</bdi>
-                      </h3>
+                      </button>
 
                       <p className="m-0 font-semibold text-violet-700">
                         {product.discountedPrice != null ? <><del className="me-2 text-slate-500"><bdi>{formatPrice(product.price)}</bdi></del><bdi>{formatPrice(product.discountedPrice)}</bdi></> : <bdi>{formatPrice(product.price)}</bdi>}

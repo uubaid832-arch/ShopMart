@@ -243,7 +243,7 @@ function ProductCard({
       >
         <span
           className={`pointer-events-none absolute start-3 top-3 z-10 rounded-lg bg-white/90 px-2 py-1 text-xs font-semibold ${
-            outOfStock ? "text-rose-700" : "text-emerald-700"
+            outOfStock ? "text-rose-700 dark:text-rose-300" : "text-emerald-700 dark:text-emerald-300"
           }`}
         >
           {outOfStock
@@ -266,7 +266,7 @@ function ProductCard({
                 )
           }
           onClick={() => onToggleWishlist(product.id)}
-          className={`absolute end-3 top-3 z-20 grid size-10 place-items-center rounded-full border-0 p-0 shadow-sm transition hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none ${isWishlisted ? "wishlist-pop" : ""} ${
+          className={`absolute end-3 top-3 z-10 grid size-10 place-items-center rounded-full border-0 p-0 shadow-sm transition hover:scale-110 motion-reduce:transform-none motion-reduce:transition-none ${isWishlisted ? "wishlist-pop" : ""} ${
             isWishlisted
               ? "bg-rose-600 text-white"
               : "bg-white text-rose-600 hover:bg-rose-50"
@@ -341,7 +341,7 @@ function ProductCard({
           <button
             type="button"
             onClick={() => onCampaignClick({ id: product.discountCampaignId, name: product.discountCampaignName })}
-            className="mt-2 inline-flex max-w-full items-center gap-2 self-start rounded-full border border-solid border-amber-200 bg-linear-to-r from-amber-50 to-orange-100 px-3 py-1.5 text-start text-xs font-extrabold text-amber-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            className="mt-2 inline-flex max-w-full items-center gap-2 self-start rounded-full border border-solid border-amber-200 bg-linear-to-r from-amber-50 to-orange-100 px-3 py-1.5 text-start text-xs font-extrabold text-amber-900 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-amber-500/40 dark:from-amber-950/70 dark:to-orange-950/70 dark:text-amber-200"
             aria-label={`Shop ${product.discountCampaignName || "sale"} products`}
           >
             <span aria-hidden="true">✦</span><span className="truncate">{product.discountCampaignName || "Sale"}</span><span aria-hidden="true">↗</span>
@@ -372,11 +372,11 @@ function ProductCard({
           <p className="m-0 text-lg font-extrabold">
             {product.discountedPrice != null ? (
               <span className="grid justify-items-start leading-tight">
-                <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700">
+                <span className="rounded-full bg-rose-100 px-2 py-1 text-xs font-bold text-rose-700 dark:bg-rose-950/60 dark:text-rose-200">
                   {product.discountKind === "PERCENT" ? `${Number(product.discountValue)}% off` : `${formatPrice(product.discountAmount)} off`}
                 </span>
                 <del className="mt-1 text-sm font-medium text-slate-500"><bdi>{formatPrice(product.price)}</bdi></del>
-                <bdi className="text-emerald-700">{formatPrice(product.discountedPrice)}</bdi>
+                <bdi className="text-emerald-700 dark:text-emerald-300">{formatPrice(product.discountedPrice)}</bdi>
               </span>
             ) : <bdi>{formatPrice(product.price)}</bdi>}
           </p>
@@ -1190,6 +1190,10 @@ function Storefront({ products, onRatingSummaryChange }) {
         formatPrice={formatPrice}
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
+        onViewProduct={(product) => {
+          setIsCartOpen(false);
+          handleViewProduct(product);
+        }}
         onCheckout={() => {
           setIsCartOpen(false);
 
@@ -1230,6 +1234,10 @@ function Storefront({ products, onRatingSummaryChange }) {
           cart={cart}
           formatPrice={formatPrice}
           onAdd={handleAdd}
+          onViewProduct={(product) => {
+            setIsWishlistOpen(false);
+            handleViewProduct(product);
+          }}
           onClose={() => setIsWishlistOpen(false)}
         />
       )}

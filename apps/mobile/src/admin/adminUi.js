@@ -100,6 +100,9 @@ export function Badge({ value }) {
   const bad = ["CANCELLED", "REJECTED", "DISABLED", "OUT OF STOCK"].includes(
     String(value).toUpperCase(),
   );
+  const warning = ["DELIVERY UNSUCCESSFUL", "RETURNED TO WAREHOUSE"].includes(
+    String(value).toUpperCase(),
+  );
   const good = [
     "CONFIRMED",
     "DELIVERED",
@@ -109,8 +112,8 @@ export function Badge({ value }) {
     "VISIBLE",
   ].includes(String(value).toUpperCase());
   return (
-    <View style={[ui.badge, { backgroundColor: bad ? (theme.isDark ? "#442330" : "#fff0f3") : good ? (theme.isDark ? "#173a2c" : "#e9f6ee") : palette.accentSoft }]}>
-      <Text style={[ui.badgeText, { color: bad ? palette.danger : good ? palette.success : palette.accent }]}>
+    <View style={[ui.badge, { backgroundColor: bad ? (theme.isDark ? "#442330" : "#fff0f3") : warning ? palette.warningSoft : good ? (theme.isDark ? "#173a2c" : "#e9f6ee") : palette.accentSoft }]}>
+      <Text style={[ui.badgeText, { color: bad ? palette.danger : warning ? palette.warning : good ? palette.success : palette.accent }]}>
         {readable(value)}
       </Text>
     </View>

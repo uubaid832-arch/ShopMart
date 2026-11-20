@@ -29,7 +29,7 @@ function CartProductImage({ item, accentColor, surfaceColor }) {
   );
 }
 
-export default function CartModal({ cart, onClose, onCheckout }) {
+export default function CartModal({ cart, onClose, onCheckout, onViewProduct }) {
   const { theme } = useMobileAppearance();
   const palette = theme.colors;
 
@@ -84,9 +84,13 @@ export default function CartModal({ cart, onClose, onCheckout }) {
             renderItem={({ item }) => (
               <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
                 <View style={styles.productRow}>
-                  <CartProductImage item={item} accentColor={palette.accent} surfaceColor={palette.soft} />
+                  <Pressable accessibilityRole="button" accessibilityLabel={`View details for ${item.name}`} onPress={() => onViewProduct?.(item)} style={{ borderRadius: 14 }}>
+                    <CartProductImage item={item} accentColor={palette.accent} surfaceColor={palette.soft} />
+                  </Pressable>
                   <View style={styles.productCopy}>
-                    <Text style={[styles.name, { color: palette.text }]}>{item.name}</Text>
+                    <Pressable accessibilityRole="button" accessibilityLabel={`View details for ${item.name}`} onPress={() => onViewProduct?.(item)} style={{ alignSelf: "flex-start" }}>
+                      <Text style={[styles.name, { color: palette.text }]}>{item.name}</Text>
+                    </Pressable>
                     {item.discountedPrice != null ? <><Text style={{ color: palette.danger, fontWeight: "800", marginTop: 4 }}>{item.discountKind === "PERCENT" ? `${Number(item.discountValue)}% off` : `${formatPrice(item.discountAmount)} off`}</Text><Text style={[styles.muted, { color: palette.muted, textDecorationLine: "line-through" }]}>{formatPrice(item.price)} each</Text><Text style={[styles.muted, { color: palette.accent }]}>{formatPrice(item.discountedPrice)} each</Text></> : <Text style={[styles.muted, { color: palette.muted }]}>{formatPrice(item.price)} each</Text>}
                   </View>
                 </View>

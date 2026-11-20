@@ -1287,6 +1287,10 @@ function ShopMart() {
           previewMode={isStorePreview}
           auth={auth}
           onClose={() => setCartOpen(false)}
+          onViewProduct={(product) => {
+            setCartOpen(false);
+            setSelectedProduct(product);
+          }}
           onPlaced={() => setReload((value) => value + 1)}
         />
       )}
