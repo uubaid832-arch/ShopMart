@@ -67,6 +67,67 @@
   }
 }
 
+.announcement-ticker {
+  display: flex;
+  width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #263247;
+  border-bottom: 1px solid #263247;
+  background: #080d19;
+  padding: 2px clamp(12px, 4vw, 54px);
+  color: #fff;
+}
+
+.announcement-ticker-arrow {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #1c2638;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.announcement-ticker-arrow:hover { background: #33435c; }
+
+.announcement-ticker-message {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  padding: 5px 0;
+  color: inherit;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.announcement-headline {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  animation: shopmart-headline-slide 480ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes shopmart-headline-slide {
+  from { opacity: 0; transform: translateX(36px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

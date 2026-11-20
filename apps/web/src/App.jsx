@@ -722,6 +722,16 @@ function Storefront({ products, onRatingSummaryChange }) {
         </p>
       )}
 
+      {announcements.length > 0 && (
+        <div className="announcement-ticker" aria-label="ShopMart announcements">
+          <button type="button" aria-label="Previous announcement" onClick={() => setAnnouncementIndex((index) => (index - 1 + announcements.length) % announcements.length)} className="announcement-ticker-arrow">‹</button>
+          <button type="button" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="announcement-ticker-message" aria-live="polite">
+            <span key={announcementIndex} className="announcement-headline">{announcements[announcementIndex % announcements.length]}</span>
+          </button>
+          <button type="button" aria-label="Next announcement" onClick={() => setAnnouncementIndex((index) => (index + 1) % announcements.length)} className="announcement-ticker-arrow">›</button>
+        </div>
+      )}
+
       <Navbar
         search={filters.search}
         isSignedIn={Boolean(session)}
@@ -752,16 +762,6 @@ function Storefront({ products, onRatingSummaryChange }) {
         onProfile={() => setIsProfileOpen(true)}
         onAbout={() => setIsAboutOpen(true)}
       />
-
-      {announcements.length > 0 && (
-        <div className="mx-auto mt-3 flex min-h-11 max-w-7xl items-center justify-between gap-3 rounded-xl border border-solid border-sky-200 bg-slate-950 px-3 text-white shadow-sm dark:border-slate-700 sm:px-5" aria-label="ShopMart announcements">
-          <button type="button" aria-label="Previous announcement" onClick={() => setAnnouncementIndex((index) => (index - 1 + announcements.length) % announcements.length)} className="grid size-8 shrink-0 place-items-center rounded-full border-0 bg-white/10 text-lg font-bold text-white hover:bg-white/20">‹</button>
-          <button type="button" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-w-0 flex-1 truncate border-0 bg-transparent py-2 text-center text-xs font-semibold tracking-wide text-white sm:text-sm">
-            {announcements[announcementIndex % announcements.length]}
-          </button>
-          <button type="button" aria-label="Next announcement" onClick={() => setAnnouncementIndex((index) => (index + 1) % announcements.length)} className="grid size-8 shrink-0 place-items-center rounded-full border-0 bg-white/10 text-lg font-bold text-white hover:bg-white/20">›</button>
-        </div>
-      )}
 
       <main
         id="top"

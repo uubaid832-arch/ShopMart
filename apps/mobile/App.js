@@ -170,6 +170,7 @@ function ShopMart() {
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [announcementMessages, setAnnouncementMessages] = useState([]);
   const [announcementIndex, setAnnouncementIndex] = useState(0);
+  const announcementMotion = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -184,6 +185,11 @@ function ShopMart() {
     const timer = setInterval(() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length), 5000);
     return () => clearInterval(timer);
   }, [announcementMessages.length]);
+
+  useEffect(() => {
+    announcementMotion.setValue(0);
+    Animated.timing(announcementMotion, { toValue: 1, duration: 420, useNativeDriver: true }).start();
+  }, [announcementIndex, announcementMotion]);
 
   const updateRatingSummary = useCallback((productId, summary) => {
     setResult((current) => {
@@ -513,15 +519,20 @@ function ShopMart() {
     </ScrollView>
   );
 
+  const announcementTicker = announcementMessages.length > 0 ? (
+    <View style={{ minHeight: 42, marginHorizontal: 14, marginTop: 8, marginBottom: 2, paddingHorizontal: 8, flexDirection: "row", alignItems: "center", gap: 8, borderRadius: 12, backgroundColor: theme.isDark ? "#090e1b" : "#172033", borderWidth: 1, borderColor: palette.border }} accessibilityLabel="ShopMart announcements">
+      <Pressable accessibilityRole="button" accessibilityLabel="Previous announcement" onPress={() => setAnnouncementIndex((index) => (index - 1 + announcementMessages.length) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>‹</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => catalogOpen ? productsListRef.current?.scrollToOffset({ offset: 0, animated: true }) : openCatalog()} style={{ flex: 1, overflow: "hidden", paddingVertical: 8 }}>
+        <Animated.View style={{ opacity: announcementMotion, transform: [{ translateX: announcementMotion.interpolate({ inputRange: [0, 1], outputRange: [28, 0] }) }] }}>
+          <Text numberOfLines={1} style={{ color: "#fff", textAlign: "center", fontSize: 12, fontWeight: "700" }}>{announcementMessages[announcementIndex % announcementMessages.length]}</Text>
+        </Animated.View>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Next announcement" onPress={() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>›</Text></Pressable>
+    </View>
+  ) : null;
+
   const homeHeader = (
     <View style={styles.homeHeader}>
-      {announcementMessages.length > 0 ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 42, marginBottom: 14, paddingHorizontal: 8, borderRadius: 12, backgroundColor: theme.isDark ? "#111827" : "#172033", borderWidth: 1, borderColor: palette.border }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous announcement" onPress={() => setAnnouncementIndex((index) => (index - 1 + announcementMessages.length) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>‹</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={openCatalog} style={{ flex: 1, paddingVertical: 8 }}><Text numberOfLines={1} style={{ color: "#fff", textAlign: "center", fontSize: 12, fontWeight: "700" }}>{announcementMessages[announcementIndex % announcementMessages.length]}</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next announcement" onPress={() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>›</Text></Pressable>
-        </View>
-      ) : null}
       {!search.trim() && !wishlistOnly ? (
         <View
           style={[
@@ -633,13 +644,6 @@ function ShopMart() {
 
   const catalogHeader = (
     <View style={styles.catalogHeader}>
-      {announcementMessages.length > 0 ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 42, marginBottom: 14, paddingHorizontal: 8, borderRadius: 12, backgroundColor: theme.isDark ? "#111827" : "#172033", borderWidth: 1, borderColor: palette.border }}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous announcement" onPress={() => setAnnouncementIndex((index) => (index - 1 + announcementMessages.length) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>‹</Text></Pressable>
-          <Pressable accessibilityRole="button" onPress={() => productsListRef.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flex: 1, paddingVertical: 8 }}><Text numberOfLines={1} style={{ color: "#fff", textAlign: "center", fontSize: 12, fontWeight: "700" }}>{announcementMessages[announcementIndex % announcementMessages.length]}</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next announcement" onPress={() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>›</Text></Pressable>
-        </View>
-      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Back to home"
@@ -718,6 +722,8 @@ function ShopMart() {
           </IconButton>
         </View>
       </View>
+
+      {announcementTicker}
 
       {cartToast ? (
         <Animated.View
