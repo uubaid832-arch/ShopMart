@@ -42,6 +42,7 @@ export default function SessionProvider({ children }) {
       const shouldNotify = Boolean(
         requestUrl && requestUrl.origin === window.location.origin &&
         requestUrl.pathname.startsWith("/api/") &&
+        !requestUrl.pathname.startsWith("/api/rider/deliveries") &&
         method !== "GET" && method !== "HEAD" &&
         !authHandledPaths.has(requestUrl.pathname),
       );

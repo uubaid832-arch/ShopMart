@@ -198,8 +198,7 @@ export default function RiderDeliveries() {
   const [result, setResult] = useState(null);
   const [savingId, setSavingId] = useState(null);
   const [failureDelivery, setFailureDelivery] = useState(null);
-  const [feedback, setFeedback] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [toast, setToast] = useState(null);
   const inFlight = useRef(false);
 
   useEffect(() => {
@@ -211,7 +210,8 @@ export default function RiderDeliveries() {
           setResult({ token, page, reload, status, data, error: "" });
       })
       .catch((error) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
+          setToast({ type: "error", message: error.message });
           setResult({
             token,
             page,
@@ -220,6 +220,7 @@ export default function RiderDeliveries() {
             data: null,
             error: error.message,
           });
+        }
       });
     return () => controller.abort();
   }, [token, page, reload, status]);
@@ -252,21 +253,21 @@ export default function RiderDeliveries() {
 
     inFlight.current = true;
     setSavingId(delivery.id);
-    setFeedback("");
-    setActionError("");
+    setToast(null);
 
     try {
       await completeRiderDelivery(token, delivery.id);
 
-      setFeedback(
-        isDemo || isPrepaidBankTransfer
+      setToast({
+        type: "success",
+        message: isDemo || isPrepaidBankTransfer
           ? "Delivery completed. No cash payment was recorded."
           : "Delivery completed and cash payment recorded.",
-      );
+      });
 
       setReload((value) => value + 1);
     } catch (failure) {
-      setActionError(failure.message);
+      setToast({ type: "error", message: failure.message });
     } finally {
       inFlight.current = false;
       setSavingId(null);
@@ -281,17 +282,19 @@ export default function RiderDeliveries() {
       : "Confirm that you are leaving the warehouse and starting delivery to the customer?")) return;
     inFlight.current = true;
     setSavingId(delivery.id);
-    setFeedback("");
-    setActionError("");
+    setToast(null);
     try {
       if (pickup) await confirmRiderPickup(token, delivery.id);
       else await startRiderDelivery(token, delivery.id);
-      setFeedback(pickup
-        ? "Pickup confirmed. Start delivery when you leave the warehouse."
-        : "Delivery started. The customer has been notified.");
+      setToast({
+        type: "success",
+        message: pickup
+          ? "Pickup confirmed. Start delivery when you leave the warehouse."
+          : "Delivery started. The customer has been notified.",
+      });
       setReload((value) => value + 1);
     } catch (failure) {
-      setActionError(failure.message);
+      setToast({ type: "error", message: failure.message });
     } finally {
       inFlight.current = false;
       setSavingId(null);
@@ -303,14 +306,14 @@ export default function RiderDeliveries() {
       throw new Error("Please wait for the current request.");
     inFlight.current = true;
     setSavingId(failureDelivery.id);
-    setFeedback("");
-    setActionError("");
+    setToast(null);
     try {
       await reportFailedDelivery(token, failureDelivery.id, values);
       setFailureDelivery(null);
-      setFeedback(
-        "Unsuccessful attempt recorded. The administrator and customer have been notified.",
-      );
+      setToast({
+        type: "success",
+        message: "Unsuccessful attempt recorded. The administrator and customer have been notified.",
+      });
       setReload((value) => value + 1);
     } finally {
       inFlight.current = false;
@@ -355,8 +358,11 @@ export default function RiderDeliveries() {
 
   return (
     <div className="grid gap-5">
-      <Toast message={feedback} onClose={() => setFeedback("")} />
-      <Toast message={actionError} type="error" onClose={() => setActionError("")} />
+      <Toast
+        message={toast?.message ?? ""}
+        type={toast?.type ?? "success"}
+        onClose={() => setToast(null)}
+      />
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="m-0 text-3xl font-bold">My deliveries</h1>
@@ -399,11 +405,7 @@ export default function RiderDeliveries() {
           <p role="status" className="text-sm text-slate-500">
             Loading deliveries…
           </p>
-        ) : error ? (
-          <p role="alert" className="text-rose-700">
-            {error}
-          </p>
-        ) : filtered.length === 0 ? (
+        ) : error ? null : filtered.length === 0 ? (
           <p className="m-0 rounded-2xl bg-white p-8 text-center text-slate-500">
             No matching deliveries on this page.
           </p>
