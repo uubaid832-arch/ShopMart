@@ -9,7 +9,7 @@ import {
 import AssignRiderModal from "./AssignRiderModal";
 import DeliveryDetailsModal from "./DeliveryDetailsModal";
 import WarehouseControls from "../delivery/WarehouseControls";
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight, Warehouse } from "lucide-react";
 
 const buttonStyle =
   "rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40 dark:bg-slate-700 dark:text-sky-200 dark:enabled:hover:bg-slate-600";
@@ -18,7 +18,7 @@ export default function AdminDeliveries() {
   const { session } = useSession();
   const token = session?.accessToken;
   const [search, setSearch] = useState("");
-  const [failedOnly, setFailedOnly] = useState(false);
+  const [failureView, setFailureView] = useState("ALL");
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
@@ -30,19 +30,22 @@ export default function AdminDeliveries() {
     if (!token) return;
     const controller = new AbortController();
     const listRequest = getAdminDeliveries(
-      token, page, controller.signal, failedOnly ? "FAILED" : "ALL",
+      token, page, controller.signal, failureView,
     );
-    const failedCountRequest = failedOnly
-      ? listRequest
-      : getAdminDeliveries(token, 0, controller.signal, "FAILED", 1);
     Promise.all([
       listRequest,
       getDeliveryRiders(token, controller.signal),
-      failedCountRequest,
+      getAdminDeliveries(token, 0, controller.signal, "FAILED", 1),
+      getAdminDeliveries(token, 0, controller.signal, "WAREHOUSE_RETURN", 1),
     ])
-      .then(([data, riders, failedSummary]) => {
+      .then(([data, riders, failedSummary, warehouseSummary]) => {
         if (!controller.signal.aborted)
-          setResult({ token, page, reload, failedOnly, data, riders, failedCount: failedSummary.totalItems, error: "" });
+          setResult({
+            token, page, reload, failureView, data, riders,
+            failedCount: failedSummary.totalItems,
+            warehouseReturnCount: warehouseSummary.totalItems,
+            error: "",
+          });
       })
       .catch((error) => {
         if (!controller.signal.aborted)
@@ -50,21 +53,22 @@ export default function AdminDeliveries() {
             token,
             page,
             reload,
-            failedOnly,
+            failureView,
             data: null,
             riders: [],
             failedCount: 0,
+            warehouseReturnCount: 0,
             error: error.message,
           });
       });
     return () => controller.abort();
-  }, [token, page, reload, failedOnly]);
+  }, [token, page, reload, failureView]);
 
   const current =
     result?.token === token &&
     result?.page === page &&
     result?.reload === reload &&
-    result?.failedOnly === failedOnly;
+    result?.failureView === failureView;
   const loading = !current;
   const data = current ? result.data : null;
   const error = current ? result.error : "";
@@ -94,32 +98,51 @@ export default function AdminDeliveries() {
           Refresh
         </button>
       </header>
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-rose-200 bg-rose-50 p-5 dark:border-rose-900 dark:bg-rose-950/30">
-        <div>
-          <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
-            <AlertTriangle size={21} aria-hidden="true" />
-            <h2 className="m-0 text-lg font-bold">Failed deliveries</h2>
-          </div>
-          <p className="mb-0 mt-2 text-sm text-rose-800 dark:text-rose-200">
-            Review unsuccessful attempts and parcels reported returned to the warehouse.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setFailedOnly(true);
-            setPage(0);
-            setSearch("");
-            document.getElementById("deliveries-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
-          }}
-          disabled={failedOnly}
-          className="flex min-h-12 items-center justify-center gap-3 rounded-xl border-0 bg-rose-700 px-6 py-3 text-sm font-bold text-white shadow-md transition-colors hover:bg-rose-800 disabled:cursor-default disabled:opacity-70 dark:bg-rose-600 dark:hover:bg-rose-500"
-        >
-          <span className="grid size-8 place-items-center rounded-lg bg-white/15 text-base">{loading ? "…" : result?.failedCount ?? 0}</span>
-          {failedOnly ? "Showing failed deliveries" : "View failed deliveries"}
-          {!failedOnly && <ArrowRight size={18} aria-hidden="true" />}
-        </button>
+      <section aria-label="Delivery issues" aria-busy={loading} className="grid gap-4 sm:grid-cols-2">
+        {[
+          {
+            key: "FAILED",
+            label: "Unsuccessful deliveries",
+            description: "Failed attempts awaiting warehouse return.",
+            count: result?.failedCount,
+            Icon: AlertTriangle,
+            iconTone: "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300",
+          },
+          {
+            key: "WAREHOUSE_RETURN",
+            label: "Warehouse returns",
+            description: "Parcels reported back to the warehouse.",
+            count: result?.warehouseReturnCount,
+            Icon: Warehouse,
+            iconTone: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
+          },
+        ].map(({ key, label, description, count, Icon, iconTone }) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={failureView === key}
+            onClick={() => {
+              setFailureView(key);
+              setPage(0);
+              setSearch("");
+              document.getElementById("deliveries-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className={`group rounded-2xl border border-solid p-5 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${failureView === key ? "border-violet-400 ring-2 ring-violet-200 dark:ring-violet-900" : "border-slate-200 dark:border-slate-700"} bg-white dark:bg-slate-800`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-300">{label}</span>
+              <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${iconTone}`}>
+                <Icon size={20} aria-hidden="true" />
+              </span>
+            </div>
+            <p className="mb-0 mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              {loading ? "…" : count ?? 0}
+            </p>
+            <span className="mt-2 flex items-center gap-1 text-xs text-slate-500 group-hover:text-violet-700 dark:text-slate-400 dark:group-hover:text-violet-300">
+              {description} <ArrowRight size={14} aria-hidden="true" />
+            </span>
+          </button>
+        ))}
       </section>
       {feedback && (
         <p
@@ -142,12 +165,16 @@ export default function AdminDeliveries() {
       <section aria-label="Deliveries" aria-busy={loading}>
         <div id="deliveries-list" className="mb-3 flex scroll-mt-24 flex-wrap items-center justify-between gap-3">
           <h2 className="m-0 text-lg font-bold">
-            {failedOnly ? "Failed deliveries and warehouse returns" : "All deliveries"}
+            {failureView === "FAILED"
+              ? "Unsuccessful deliveries"
+              : failureView === "WAREHOUSE_RETURN"
+                ? "Warehouse returns"
+                : "All deliveries"}
           </h2>
-          {failedOnly && (
+          {failureView !== "ALL" && (
             <button
               type="button"
-              onClick={() => { setFailedOnly(false); setPage(0); }}
+              onClick={() => { setFailureView("ALL"); setPage(0); }}
               className={buttonStyle}
             >
               Show all deliveries
@@ -166,8 +193,8 @@ export default function AdminDeliveries() {
           <p className="m-0 rounded-2xl bg-white p-8 text-center text-slate-500">
             {query
               ? "No matching deliveries on this page."
-              : failedOnly
-                ? "No unresolved failed deliveries or warehouse returns."
+              : failureView !== "ALL"
+                ? `No unresolved ${failureView === "FAILED" ? "unsuccessful deliveries" : "warehouse returns"}.`
                 : "No deliveries on this page."}
           </p>
         ) : (

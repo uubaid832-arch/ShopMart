@@ -44,7 +44,7 @@ public class DeliveryService {
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID adminId, int page, int size, String filterStatus) {
         requireAdmin(adminId);
-        if (!java.util.Set.of("ALL", "FAILED", "CONFIRMED", "PICKED_UP", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
+        if (!java.util.Set.of("ALL", "FAILED", "WAREHOUSE_RETURN", "CONFIRMED", "PICKED_UP", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery status.");
         }
 
@@ -54,11 +54,12 @@ public class DeliveryService {
 
         String deliveryFilter = switch (filterStatus) {
             case "ALL" -> "TRUE";
-            case "FAILED" -> "EXISTS (SELECT 1 FROM public.delivery_attempts failed WHERE failed.order_id = o.id AND failed.resolved_at IS NULL)";
+            case "FAILED" -> "EXISTS (SELECT 1 FROM public.delivery_attempts failed WHERE failed.order_id = o.id AND failed.resolved_at IS NULL AND failed.warehouse_reported_at IS NULL)";
+            case "WAREHOUSE_RETURN" -> "EXISTS (SELECT 1 FROM public.delivery_attempts returned WHERE returned.order_id = o.id AND returned.resolved_at IS NULL AND returned.warehouse_reported_at IS NOT NULL)";
             default -> "o.status = ?";
         };
         List<Object> countArgs = new ArrayList<>();
-        if (!"ALL".equals(filterStatus) && !"FAILED".equals(filterStatus)) countArgs.add(filterStatus);
+        if (!"ALL".equals(filterStatus) && !"FAILED".equals(filterStatus) && !"WAREHOUSE_RETURN".equals(filterStatus)) countArgs.add(filterStatus);
 
         long total = jdbc.queryForObject(("""
                 SELECT COUNT(*)
@@ -69,7 +70,7 @@ public class DeliveryService {
                 """).formatted(deliveryFilter), Long.class, countArgs.toArray());
 
         List<Object> itemArgs = new ArrayList<>();
-        if (!"ALL".equals(filterStatus) && !"FAILED".equals(filterStatus)) itemArgs.add(filterStatus);
+        if (!"ALL".equals(filterStatus) && !"FAILED".equals(filterStatus) && !"WAREHOUSE_RETURN".equals(filterStatus)) itemArgs.add(filterStatus);
         itemArgs.add(size);
         itemArgs.add((long) page * size);
         List<DeliveryResponse> items = jdbc.query(("""
