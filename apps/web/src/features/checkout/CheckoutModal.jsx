@@ -69,6 +69,7 @@ function OrderSummary({
   voucherDiscount,
   voucherCode,
   shippingFee = 0,
+  freeDeliveryThreshold = 0,
 }) {
   const { language } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
@@ -120,6 +121,16 @@ function OrderSummary({
         <span>{text("Delivery fee", "ڈیلیوری فیس")}</span>
         <span>{Number(shippingFee || 0) === 0 ? text("Free", "مفت") : formatPrice(shippingFee)}</span>
       </div>
+      {Number(freeDeliveryThreshold) > 0 && (
+        <p className="mb-0 mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+          {Number(subtotal) >= Number(freeDeliveryThreshold)
+            ? text("You qualify for free delivery!", "آپ مفت ڈیلیوری کے اہل ہیں!")
+            : text(
+                `Free delivery on orders of ${formatPrice(freeDeliveryThreshold)} or more. Add ${formatPrice(Number(freeDeliveryThreshold) - Number(subtotal))} more to qualify.`,
+                `${formatPrice(freeDeliveryThreshold)} یا اس سے زیادہ کے آرڈر پر مفت ڈیلیوری۔ اہل ہونے کے لیے مزید ${formatPrice(Number(freeDeliveryThreshold) - Number(subtotal))} کی خریداری کریں۔`,
+              )}
+        </p>
+      )}
     </section>
   );
 }
@@ -754,7 +765,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                               <option value="">{storeSettings ? text("Choose a delivery city", "ڈیلیوری کا شہر منتخب کریں") : text("Loading available cities…", "دستیاب شہر لوڈ ہو رہے ہیں…")}</option>
                               {(storeSettings?.operatingCities || []).map((city) => <option key={city} value={city}>{city}</option>)}
                             </select>
-                            {storeSettingsError ? <span role="alert" className="text-xs text-rose-700">{storeSettingsError}</span> : storeSettings?.operatingCities?.length ? <span className="text-xs text-slate-500">ShopMart currently operates in these cities: {storeSettings.operatingCities.join(", ")}.</span> : null}
+                            {storeSettingsError ? <span role="alert" className="text-xs text-rose-700">{storeSettingsError}</span> : storeSettings?.operatingCities?.length ? <span className="text-xs text-slate-500">Operating cities: {storeSettings.operatingCities.join(", ")}.</span> : null}
                           </>
                         ) : <input
                           name={name}
@@ -824,6 +835,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                     automaticDiscount={voucher.quote?.automaticDiscountAmount}
                     voucherDiscount={voucher.quote?.voucherDiscountAmount}
                     voucherCode={voucher.quote?.code}
+                    freeDeliveryThreshold={freeDeliveryThreshold}
                     formatPrice={formatPrice}
                   />
                 </>

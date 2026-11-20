@@ -433,7 +433,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                         {cityPickerOpen && (storeSettings?.operatingCities || []).map((city) => (
                           <Pressable key={city} accessibilityRole="button" onPress={() => { update("city", city); setCityPickerOpen(false); }} style={[styles.input, { marginTop: 6, backgroundColor: details.city === city ? palette.accentSoft : palette.surface, borderColor: palette.border }]}><Text style={{ color: palette.text }}>{details.city === city ? "✓ " : ""}{city}</Text></Pressable>
                         ))}
-                        {storeSettingsError ? <Text style={{ color: palette.danger, marginTop: 5 }}>{storeSettingsError}</Text> : storeSettings?.operatingCities?.length ? <Text style={{ color: palette.muted, marginTop: 5 }}>ShopMart currently operates in these cities: {storeSettings.operatingCities.join(", ")}.</Text> : null}
+                        {storeSettingsError ? <Text style={{ color: palette.danger, marginTop: 5 }}>{storeSettingsError}</Text> : storeSettings?.operatingCities?.length ? <Text style={{ color: palette.muted, marginTop: 5 }}>Operating cities: {storeSettings.operatingCities.join(", ")}.</Text> : null}
                       </View>
                     ) : <TextInput
                       accessibilityLabel={label}
@@ -501,6 +501,13 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   {campaignSavings > 0 && <Text style={[styles.description, { color: palette.success }]}>Automatic campaign savings: -{formatPrice(campaignSavings)}</Text>}
                   {voucherSavings > 0 && <Text style={[styles.description, { color: palette.success }]}>Voucher savings on full-price products: -{formatPrice(voucherSavings)}</Text>}
                   <Text style={[styles.description, { color: palette.muted }]}>Delivery fee: {summaryShippingFee === 0 ? "Free" : formatPrice(summaryShippingFee)}</Text>
+                  {freeDeliveryThreshold > 0 ? (
+                    <Text style={[styles.description, { color: palette.success, fontWeight: "700", marginTop: 6 }]}>
+                      {productTotalNow >= freeDeliveryThreshold
+                        ? "You qualify for free delivery!"
+                        : `Free delivery on orders of ${formatPrice(freeDeliveryThreshold)} or more. Add ${formatPrice(freeDeliveryThreshold - productTotalNow)} more to qualify.`}
+                    </Text>
+                  ) : null}
                   <Text style={[styles.total, { color: palette.accent }]}>{formatPrice(summaryTotal)}</Text>
                 </View>
 

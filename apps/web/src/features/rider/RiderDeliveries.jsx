@@ -412,6 +412,7 @@ export default function RiderDeliveries() {
           placeholder="Search by order number or customer name"
           aria-label="Search deliveries by order number or customer name"
           className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
+          style={{ border: 0, outline: "none", boxShadow: "none" }}
         />
         {search && <button type="button" aria-label="Clear delivery search" onClick={() => { setSearch(""); setPage(0); }} className="grid size-8 place-items-center rounded-lg border-0 bg-slate-100 text-slate-600"><X size={16} /></button>}
       </label>
