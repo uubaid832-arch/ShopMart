@@ -321,11 +321,13 @@ export default function RiderScreen({
             <Text style={styles.cardEyebrow}>ORDER</Text>
             <Text style={styles.orderNumber}>{item.orderNumber}</Text>
           </View>
-          <Text style={[styles.status, delivered && styles.delivered]}>
+          <Text style={[styles.status, delivered && styles.delivered, item.status === "RETURNED_TO_WAREHOUSE" && styles.returned]}>
             {delivered
               ? "Done"
-              : item.status === "CANCELLED"
-                ? "Cancelled"
+              : item.status === "RETURNED_TO_WAREHOUSE"
+                ? "Returned to warehouse"
+                : item.status === "CANCELLED"
+                  ? "Cancelled"
                 : dispatched
                   ? "Ready to deliver"
                   : "Waiting for dispatch"}
@@ -342,11 +344,17 @@ export default function RiderScreen({
           <View style={styles.grow}>
             <Text style={styles.amountLabel}>Order amount</Text>
             <Text style={styles.payment}>
-              {item.paymentMethod === "BANK_TRANSFER" && item.paymentStatus === "PAID"
-                ? "Paid already · do not collect cash"
-                : item.paymentMethod === "COD"
-                  ? "Cash to collect"
-                  : "Paid already · do not collect cash"}
+              {item.status === "RETURNED_TO_WAREHOUSE"
+                ? "Parcel returned · no payment collected"
+                : item.status === "DELIVERED"
+                  ? item.paymentMethod === "COD"
+                    ? "Cash collected by rider"
+                    : "Paid order · no cash collected"
+                  : item.paymentMethod === "BANK_TRANSFER" && item.paymentStatus === "PAID"
+                    ? "Paid already · do not collect cash"
+                    : item.paymentMethod === "COD"
+                      ? "Cash to collect"
+                      : "Paid already · do not collect cash"}
             </Text>
           </View>
           <Text style={styles.amount}>
@@ -358,6 +366,7 @@ export default function RiderScreen({
           </Text>
         </View>
 
+        {!delivered && item.status !== "RETURNED_TO_WAREHOUSE" && <>
         <Text style={styles.stepLabel}>1 · CONTACT THE CUSTOMER</Text>
         <View style={styles.actions}>
           <Pressable
@@ -381,6 +390,7 @@ export default function RiderScreen({
             <Text style={styles.whatsappText}>WhatsApp</Text>
           </Pressable>
         </View>
+        </>}
 
         {dispatched && !item.warehouseReturnPending && (
           <>
@@ -427,7 +437,7 @@ export default function RiderScreen({
           </>
         )}
 
-        {item.lastAttempt && (
+        {item.lastAttempt && item.status !== "DELIVERED" && (item.status !== "RETURNED_TO_WAREHOUSE" || item.warehouseReturnPending) && (
           <Pressable
             accessibilityRole="button"
             disabled={Boolean(busyId)}
@@ -438,7 +448,7 @@ export default function RiderScreen({
           </Pressable>
         )}
 
-        {!dispatched && !delivered && item.status !== "CANCELLED" && (
+        {!dispatched && !delivered && item.status !== "CANCELLED" && item.status !== "RETURNED_TO_WAREHOUSE" && (
           <Text style={styles.waitingNote}>
             Please wait. The shop will send this order to you before delivery.
           </Text>
@@ -473,7 +483,7 @@ export default function RiderScreen({
                       ? "To deliver"
                       : section === "DELIVERED"
                         ? "Delivered"
-                        : "Cancelled"}
+                        : "Returned to warehouse"}
                   </Text>
                   <Text style={styles.muted}>
                     {data ? `${data.totalItems} orders` : "Loading orders…"}
@@ -498,7 +508,7 @@ export default function RiderScreen({
                 {[
                   ["ASSIGNED", "To do"],
                   ["DELIVERED", "Done"],
-                  ["CANCELLED", "Cancelled"],
+                  ["FAILED", "Returned"],
                 ].map(([value, title]) => (
                   <Pressable
                     key={value}
@@ -909,6 +919,7 @@ const baseStyles = StyleSheet.create({
     textAlign: "center",
   },
   delivered: { backgroundColor: "#e1f4e8", color: "#145a34" },
+  returned: { backgroundColor: "#fff0d1", color: "#8a4b08" },
   customer: { fontSize: 21, fontWeight: "900", color: "#182235", marginTop: 17 },
   addressRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 10 },
   address: { flex: 1, fontSize: 15, color: "#344156", lineHeight: 22 },

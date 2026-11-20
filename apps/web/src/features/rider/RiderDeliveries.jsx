@@ -13,7 +13,7 @@ import RiderLocationSharing from "../delivery/RiderLocationSharing";
 const statuses = [
   ["ASSIGNED", "Assigned"],
   ["DELIVERED", "Delivered"],
-  ["CANCELLED", "Cancelled"],
+  ["FAILED", "Returned to warehouse"],
   ["ALL", "All deliveries"],
 ];
 const reasons = [
@@ -32,7 +32,7 @@ const statusLabel = (value) =>
   ({
     CONFIRMED: "Assigned",
     DISPATCHED: "Out for delivery",
-    RETURNED: "Returned",
+    RETURNED_TO_WAREHOUSE: "Returned to warehouse",
   })[value] ??
   statuses.find(([id]) => id === value)?.[1] ??
   value;
@@ -422,7 +422,7 @@ export default function RiderDeliveries() {
                       </p>
                     </div>
                     <span
-                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${delivery.status === "DELIVERED" ? "bg-emerald-50 text-emerald-700" : delivery.status === "CANCELLED" ? "bg-rose-50 text-rose-700" : "bg-violet-50 text-violet-700"}`}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold ${delivery.status === "DELIVERED" ? "bg-emerald-50 text-emerald-700" : delivery.status === "RETURNED_TO_WAREHOUSE" ? "bg-amber-50 text-amber-800" : "bg-violet-50 text-violet-700"}`}
                     >
                       {statusLabel(delivery.status)}
                     </span>
@@ -431,19 +431,24 @@ export default function RiderDeliveries() {
                     <MapPin size={16} className="mr-2 inline text-slate-400" />
                     {delivery.address}
                   </p>
-                  <a
-                    href={`tel:${delivery.phone}`}
-                    className="text-sm font-semibold text-violet-700"
-                  >
-                    <Phone size={15} className="mr-2 inline" />
-                    {delivery.phone}
-                  </a>
+                  {delivery.status !== "DELIVERED" && delivery.status !== "RETURNED_TO_WAREHOUSE" && (
+                    <a href={`tel:${delivery.phone}`} className="text-sm font-semibold text-violet-700">
+                      <Phone size={15} className="mr-2 inline" />
+                      {delivery.phone}
+                    </a>
+                  )}
                   <div className="mt-4 rounded-xl bg-slate-50 p-4">
                     <p className="m-0 text-xs text-slate-500">
-                      {delivery.paymentMethod === "DEMO"
-                        ? delivery.status === "CANCELLED"
-                          ? "Demo payment voided — no cash collection"
-                          : "Paid Order — do not collect cash"
+                      {delivery.status === "RETURNED_TO_WAREHOUSE"
+                        ? "Parcel returned to warehouse — no payment collected"
+                        : delivery.status === "DELIVERED"
+                          ? delivery.paymentMethod === "DEMO"
+                            ? "Demo payment — no cash collection"
+                            : delivery.paymentMethod === "BANK_TRANSFER"
+                              ? "Bank transfer confirmed — no cash collection"
+                              : "Cash collected by rider"
+                        : delivery.paymentMethod === "DEMO"
+                        ? "Paid order — do not collect cash"
                         : delivery.paymentMethod === "BANK_TRANSFER" && delivery.paymentStatus === "PAID"
                           ? "Bank transfer received — do not collect cash"
                         : `Cash on delivery · ${delivery.paymentStatus}`}
@@ -452,7 +457,7 @@ export default function RiderDeliveries() {
                       {formatPrice(delivery.total, delivery.currency)}
                     </p>
                   </div>
-                  {delivery.lastAttempt && (
+                  {delivery.lastAttempt && delivery.status !== "DELIVERED" && (
                     <section className="mt-4 rounded-xl bg-amber-50 p-4">
                       <h3 className="m-0 text-sm font-bold text-amber-900">
                         Last unsuccessful attempt

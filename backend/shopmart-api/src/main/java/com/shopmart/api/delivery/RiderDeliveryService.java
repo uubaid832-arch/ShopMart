@@ -44,11 +44,14 @@ public class RiderDeliveryService {
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID riderId, int page, int size, String section) {
         requireRider(riderId);
+        String deliveredByRider = "EXISTS (SELECT 1 FROM public.order_status_history h WHERE h.order_id=o.id AND h.changed_by=rider.id AND h.status='DELIVERED')";
+        String activeForRider = "a.rider_id = rider.id AND o.status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED') AND NOT EXISTS (SELECT 1 FROM public.delivery_attempts pending WHERE pending.order_id=o.id AND pending.rider_id=rider.id AND pending.warehouse_reported_at IS NOT NULL AND pending.resolved_at IS NULL)";
+        String returnedByRider = "EXISTS (SELECT 1 FROM public.delivery_attempts returned WHERE returned.order_id=o.id AND returned.rider_id=rider.id AND returned.warehouse_reported_at IS NOT NULL AND NOT COALESCE((returned.resolution='RETRY' AND returned.resolution_rider_id=rider.id AND a.rider_id=rider.id), FALSE) AND NOT EXISTS (SELECT 1 FROM public.order_status_history delivered_after WHERE delivered_after.order_id=o.id AND delivered_after.changed_by=rider.id AND delivered_after.status='DELIVERED' AND delivered_after.created_at > returned.warehouse_reported_at))";
         String filter = switch (section) {
-            case "ALL" -> "TRUE";
-            case "DELIVERED" -> "o.status = 'DELIVERED'";
-            case "FAILED", "CANCELLED" -> "o.status = 'CANCELLED'";
-            case "ASSIGNED" -> "o.status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED')";
+            case "ALL" -> "(" + activeForRider + " OR " + deliveredByRider + " OR " + returnedByRider + ")";
+            case "DELIVERED" -> deliveredByRider;
+            case "FAILED", "CANCELLED" -> returnedByRider;
+            case "ASSIGNED" -> activeForRider;
             default -> throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery section.");
         };
 
@@ -57,20 +60,31 @@ public class RiderDeliveryService {
         }
 
         long total = jdbc.queryForObject("""
+                WITH rider AS (SELECT ?::uuid AS id)
                 SELECT COUNT(*)
-                FROM public.delivery_assignments a
-                JOIN public.orders o ON o.id = a.order_id
-                LEFT JOIN LATERAL (
-                    SELECT id, resolved_at, resolution FROM public.delivery_attempts
-                    WHERE order_id = o.id ORDER BY created_at DESC, id DESC LIMIT 1
-                ) attempt ON TRUE
-                WHERE a.rider_id = ? AND (%s)
+                FROM public.orders o
+                LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
+                CROSS JOIN rider
+                WHERE (%s)
                 """.formatted(filter), Long.class, riderId);
 
         List<RiderDelivery> items = jdbc.query("""
+                WITH rider AS (SELECT ?::uuid AS id)
                 SELECT o.id, o.order_number, o.recipient_name,
                        o.address_line, o.city, o.phone,
-                       o.status, o.payment_method, o.payment_status,
+                       CASE
+                           WHEN %s THEN 'DELIVERED'
+                           WHEN %s THEN o.status
+                           WHEN %s THEN 'RETURNED_TO_WAREHOUSE'
+                           ELSE o.status
+                       END AS rider_status,
+                       o.payment_method,
+                       CASE
+                           WHEN %s THEN CASE WHEN o.payment_method='DEMO' THEN 'DEMO_PAID' ELSE 'PAID' END
+                           WHEN %s THEN o.payment_status
+                           WHEN %s THEN 'NOT_COLLECTED'
+                           ELSE o.payment_status
+                       END AS rider_payment_status,
                        o.total, o.currency,
                        attempt.reason AS attempt_reason,
                        attempt.note AS attempt_note,
@@ -78,22 +92,24 @@ public class RiderDeliveryService {
                        EXISTS (
                            SELECT 1 FROM public.delivery_attempts pending_return
                            WHERE pending_return.order_id = o.id
+                             AND pending_return.rider_id = rider.id
                              AND pending_return.warehouse_reported_at IS NOT NULL
                              AND pending_return.resolved_at IS NULL
                        ) AS warehouse_return_pending
-                FROM public.delivery_assignments a
-                JOIN public.orders o ON o.id = a.order_id
+                FROM public.orders o
+                LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
+                CROSS JOIN rider
                 LEFT JOIN LATERAL (
                     SELECT id, reason, note, created_at, resolved_at, resolution
                     FROM public.delivery_attempts
-                    WHERE order_id = o.id
+                    WHERE order_id = o.id AND rider_id = rider.id
                     ORDER BY created_at DESC, id DESC
                     LIMIT 1
                 ) attempt ON TRUE
-                WHERE a.rider_id = ? AND (%s)
-                ORDER BY a.assigned_at DESC, o.id DESC
+                WHERE (%s)
+                ORDER BY COALESCE(a.assigned_at, o.updated_at) DESC, o.id DESC
                 LIMIT ? OFFSET ?
-                """.formatted(filter),
+                """.formatted(deliveredByRider, activeForRider, returnedByRider, deliveredByRider, activeForRider, returnedByRider, filter),
                 (rs, row) -> {
                     var attemptAt = rs.getTimestamp("attempt_at");
 
@@ -110,9 +126,9 @@ public class RiderDeliveryService {
                             rs.getString("recipient_name"),
                             rs.getString("address_line") + ", " + rs.getString("city"),
                             rs.getString("phone"),
-                            rs.getString("status"),
+                            rs.getString("rider_status"),
                             rs.getString("payment_method"),
-                            rs.getString("payment_status"),
+                            rs.getString("rider_payment_status"),
                             rs.getBigDecimal("total").toPlainString(),
                             rs.getString("currency"),
                             lastAttempt,
