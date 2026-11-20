@@ -6,11 +6,10 @@ import {
   assignDeliveryRider,
   updateDeliveryDetails,
 } from "../../api/deliveries";
-import AdminCodModal from "./AdminCodModal";
 import AssignRiderModal from "./AssignRiderModal";
 import DeliveryDetailsModal from "./DeliveryDetailsModal";
 import WarehouseControls from "../delivery/WarehouseControls";
-import { Wallet } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 
 const buttonStyle =
   "rounded-xl border-0 bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 enabled:hover:bg-violet-200 disabled:opacity-40 dark:bg-slate-700 dark:text-sky-200 dark:enabled:hover:bg-slate-600";
@@ -18,8 +17,8 @@ const buttonStyle =
 export default function AdminDeliveries() {
   const { session } = useSession();
   const token = session?.accessToken;
-  const [codOpen, setCodOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [failedOnly, setFailedOnly] = useState(false);
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
@@ -30,13 +29,20 @@ export default function AdminDeliveries() {
   useEffect(() => {
     if (!token) return;
     const controller = new AbortController();
+    const listRequest = getAdminDeliveries(
+      token, page, controller.signal, failedOnly ? "FAILED" : "ALL",
+    );
+    const failedCountRequest = failedOnly
+      ? listRequest
+      : getAdminDeliveries(token, 0, controller.signal, "FAILED", 1);
     Promise.all([
-      getAdminDeliveries(token, page, controller.signal),
+      listRequest,
       getDeliveryRiders(token, controller.signal),
+      failedCountRequest,
     ])
-      .then(([data, riders]) => {
+      .then(([data, riders, failedSummary]) => {
         if (!controller.signal.aborted)
-          setResult({ token, page, reload, data, riders, error: "" });
+          setResult({ token, page, reload, failedOnly, data, riders, failedCount: failedSummary.totalItems, error: "" });
       })
       .catch((error) => {
         if (!controller.signal.aborted)
@@ -44,18 +50,21 @@ export default function AdminDeliveries() {
             token,
             page,
             reload,
+            failedOnly,
             data: null,
             riders: [],
+            failedCount: 0,
             error: error.message,
           });
       });
     return () => controller.abort();
-  }, [token, page, reload]);
+  }, [token, page, reload, failedOnly]);
 
   const current =
     result?.token === token &&
     result?.page === page &&
-    result?.reload === reload;
+    result?.reload === reload &&
+    result?.failedOnly === failedOnly;
   const loading = !current;
   const data = current ? result.data : null;
   const error = current ? result.error : "";
@@ -85,30 +94,33 @@ export default function AdminDeliveries() {
           Refresh
         </button>
       </header>
-      <section
-        className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-800"
-      >
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-solid border-rose-200 bg-rose-50 p-5 dark:border-rose-900 dark:bg-rose-950/30">
         <div>
-          <h2 className="m-0 text-lg font-bold text-slate-900 dark:text-white">
-            Cash reconciliation
-          </h2>
-          <p className="mb-0 mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Review rider handovers and confirm COD cash received.
+          <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
+            <AlertTriangle size={21} aria-hidden="true" />
+            <h2 className="m-0 text-lg font-bold">Failed deliveries</h2>
+          </div>
+          <p className="mb-0 mt-2 text-sm text-rose-800 dark:text-rose-200">
+            Review unsuccessful attempts and parcels reported returned to the warehouse.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setCodOpen(true)}
-          className="flex min-h-12 items-center justify-center gap-3 rounded-xl border-0 bg-violet-600 px-6 py-3 text-sm font-bold text-white shadow-md transition-opacity hover:bg-violet-700 hover:opacity-90 dark:bg-violet-500 dark:hover:bg-violet-400"
+          onClick={() => {
+            setFailedOnly(true);
+            setPage(0);
+            setSearch("");
+            document.getElementById("deliveries-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          disabled={failedOnly}
+          className="flex min-h-12 items-center justify-center gap-3 rounded-xl border-0 bg-rose-700 px-6 py-3 text-sm font-bold text-white shadow-md transition-colors hover:bg-rose-800 disabled:cursor-default disabled:opacity-70 dark:bg-rose-600 dark:hover:bg-rose-500"
         >
-          <Wallet size={21} aria-hidden="true" />
-          COD cash handovers
+          <span className="grid size-8 place-items-center rounded-lg bg-white/15 text-base">{loading ? "…" : result?.failedCount ?? 0}</span>
+          {failedOnly ? "Showing failed deliveries" : "View failed deliveries"}
+          {!failedOnly && <ArrowRight size={18} aria-hidden="true" />}
         </button>
       </section>
-      {codOpen && token && (
-        <AdminCodModal token={token} onClose={() => setCodOpen(false)} />
-      )}
       {feedback && (
         <p
           role="status"
@@ -128,6 +140,20 @@ export default function AdminDeliveries() {
         />
       </label>
       <section aria-label="Deliveries" aria-busy={loading}>
+        <div id="deliveries-list" className="mb-3 flex scroll-mt-24 flex-wrap items-center justify-between gap-3">
+          <h2 className="m-0 text-lg font-bold">
+            {failedOnly ? "Failed deliveries and warehouse returns" : "All deliveries"}
+          </h2>
+          {failedOnly && (
+            <button
+              type="button"
+              onClick={() => { setFailedOnly(false); setPage(0); }}
+              className={buttonStyle}
+            >
+              Show all deliveries
+            </button>
+          )}
+        </div>
         {loading ? (
           <p role="status" className="text-sm text-slate-500">
             Loading deliveries…
@@ -140,7 +166,9 @@ export default function AdminDeliveries() {
           <p className="m-0 rounded-2xl bg-white p-8 text-center text-slate-500">
             {query
               ? "No matching deliveries on this page."
-              : "No deliveries on this page."}
+              : failedOnly
+                ? "No unresolved failed deliveries or warehouse returns."
+                : "No deliveries on this page."}
           </p>
         ) : (
           <ul className="m-0 grid list-none gap-4 p-0">

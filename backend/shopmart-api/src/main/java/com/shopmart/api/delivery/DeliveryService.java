@@ -1,6 +1,7 @@
 package com.shopmart.api.delivery;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
@@ -43,7 +44,7 @@ public class DeliveryService {
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID adminId, int page, int size, String filterStatus) {
         requireAdmin(adminId);
-        if (!java.util.Set.of("ALL", "CONFIRMED", "PICKED_UP", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
+        if (!java.util.Set.of("ALL", "FAILED", "CONFIRMED", "PICKED_UP", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery status.");
         }
 
@@ -51,15 +52,27 @@ public class DeliveryService {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid pagination.");
         }
 
-        long total = jdbc.queryForObject("""
+        String deliveryFilter = switch (filterStatus) {
+            case "ALL" -> "TRUE";
+            case "FAILED" -> "EXISTS (SELECT 1 FROM public.delivery_attempts failed WHERE failed.order_id = o.id AND failed.resolved_at IS NULL)";
+            default -> "o.status = ?";
+        };
+        List<Object> countArgs = new ArrayList<>();
+        if (!"ALL".equals(filterStatus) && !"FAILED".equals(filterStatus)) countArgs.add(filterStatus);
+
+        long total = jdbc.queryForObject(("""
                 SELECT COUNT(*)
                 FROM public.orders o
                 LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
                 WHERE (o.status IN ('CONFIRMED', 'PICKED_UP', 'DISPATCHED') OR a.id IS NOT NULL)
-                  AND (? = 'ALL' OR o.status = ?)
-                """, Long.class, filterStatus, filterStatus);
+                  AND (%s)
+                """).formatted(deliveryFilter), Long.class, countArgs.toArray());
 
-        List<DeliveryResponse> items = jdbc.query("""
+        List<Object> itemArgs = new ArrayList<>();
+        if (!"ALL".equals(filterStatus) && !"FAILED".equals(filterStatus)) itemArgs.add(filterStatus);
+        itemArgs.add(size);
+        itemArgs.add((long) page * size);
+        List<DeliveryResponse> items = jdbc.query(("""
                 SELECT o.id AS order_id, o.order_number,
                        o.recipient_name, o.email,
                        o.address_line, o.city, o.phone,
@@ -79,10 +92,10 @@ public class DeliveryService {
                     LIMIT 1
                 ) attempt ON TRUE
                 WHERE (o.status IN ('CONFIRMED', 'PICKED_UP', 'DISPATCHED') OR a.id IS NOT NULL)
-                  AND (? = 'ALL' OR o.status = ?)
+                  AND (%s)
                 ORDER BY o.created_at DESC, o.id DESC
                 LIMIT ? OFFSET ?
-                """,
+                """).formatted(deliveryFilter),
                 (rs, row) -> {
                     String status = rs.getString("status");
                     String failureReason = rs.getString("failure_reason");
@@ -108,8 +121,7 @@ public class DeliveryService {
                             rs.getString("failure_note"),
                             rs.getTimestamp("warehouse_reported_at") != null,
                             canEdit);
-                },
-                filterStatus, filterStatus, size, (long) page * size);
+                }, itemArgs.toArray());
 
         return new DeliveryPage(
                 items, page, size, total,

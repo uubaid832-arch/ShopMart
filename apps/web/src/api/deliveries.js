@@ -58,8 +58,8 @@ async function deliveryRequest(
   return response.status === 204 ? null : response.json();
 }
 
-export const getAdminDeliveries = (token, page, signal) =>
-  deliveryRequest(token, `?page=${page}&size=20`, { signal });
+export const getAdminDeliveries = (token, page, signal, status = "ALL", size = 20) =>
+  deliveryRequest(token, `?page=${page}&size=${size}&status=${encodeURIComponent(status)}`, { signal });
 
 export const getDeliveryRiders = (token, signal) =>
   deliveryRequest(token, "/riders", { signal });

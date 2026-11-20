@@ -92,6 +92,14 @@ public class MobileApiSecurityConfig {
                                 "/api/mobile/rider/deliveries")
                         .hasRole("RIDER")
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/mobile/rider/deliveries/availability")
+                        .hasRole("RIDER")
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/mobile/rider/deliveries/availability")
+                        .hasRole("RIDER")
+                        .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/api/mobile/rider/deliveries/*/complete",
                                 "/api/mobile/rider/deliveries/*/pickup",

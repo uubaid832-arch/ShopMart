@@ -156,6 +156,14 @@ public class SecurityConfig {
                                                                 "/api/rider/deliveries")
                                                 .hasRole("RIDER")
                                                 .requestMatchers(
+                                                                HttpMethod.GET,
+                                                                "/api/rider/deliveries/availability")
+                                                .hasRole("RIDER")
+                                                .requestMatchers(
+                                                                HttpMethod.PUT,
+                                                                "/api/rider/deliveries/availability")
+                                                .hasRole("RIDER")
+                                                .requestMatchers(
                                                                 HttpMethod.PATCH,
                                                                 "/api/rider/deliveries/*/complete",
                                                                 "/api/rider/deliveries/*/pickup",
