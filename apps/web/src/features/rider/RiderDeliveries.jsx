@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Package, MapPin, Phone, RefreshCw } from "lucide-react";
+import { Package, MapPin, Phone, RefreshCw, Search, X } from "lucide-react";
 import Modal from "../../components/Modal";
 import WarehouseControls from "../delivery/WarehouseControls";
 import { useSession } from "../auth/useSession";
@@ -193,6 +193,7 @@ export default function RiderDeliveries() {
   const { session } = useSession();
   const token = session?.accessToken;
   const [status, setStatus] = useState("ASSIGNED");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
   const [result, setResult] = useState(null);
@@ -204,10 +205,10 @@ export default function RiderDeliveries() {
   useEffect(() => {
     if (!token) return;
     const controller = new AbortController();
-    getRiderDeliveries(token, page, controller.signal, status)
+    getRiderDeliveries(token, page, controller.signal, status, search.trim())
       .then((data) => {
         if (!controller.signal.aborted)
-          setResult({ token, page, reload, status, data, error: "" });
+          setResult({ token, page, reload, status, search, data, error: "" });
       })
       .catch((error) => {
         if (!controller.signal.aborted) {
@@ -217,19 +218,21 @@ export default function RiderDeliveries() {
             page,
             reload,
             status,
+            search,
             data: null,
             error: error.message,
           });
         }
       });
     return () => controller.abort();
-  }, [token, page, reload, status]);
+  }, [token, page, reload, status, search]);
 
   const current =
     result?.token === token &&
     result?.page === page &&
     result?.reload === reload &&
-    result?.status === status;
+    result?.status === status &&
+    result?.search === search;
   const loading = !current;
   const data = current ? result.data : null;
   const error = current ? result.error : "";
@@ -400,6 +403,18 @@ export default function RiderDeliveries() {
           </button>
         ))}
       </nav>
+      <label className="flex items-center gap-3 rounded-2xl border border-solid border-slate-200 bg-white px-4 py-3">
+        <Search size={19} aria-hidden="true" className="shrink-0 text-slate-400" />
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => { setSearch(event.target.value); setPage(0); }}
+          placeholder="Search by order number or customer name"
+          aria-label="Search deliveries by order number or customer name"
+          className="min-w-0 flex-1 border-0 bg-transparent text-sm outline-none"
+        />
+        {search && <button type="button" aria-label="Clear delivery search" onClick={() => { setSearch(""); setPage(0); }} className="grid size-8 place-items-center rounded-lg border-0 bg-slate-100 text-slate-600"><X size={16} /></button>}
+      </label>
       <section aria-label="Assigned deliveries" aria-busy={loading}>
         {loading ? (
           <p role="status" className="text-sm text-slate-500">

@@ -30,11 +30,12 @@ public class RiderDeliveryController {
       @AuthenticationPrincipal Jwt jwt,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,
-      @RequestParam(defaultValue = "ALL") String section) {
+      @RequestParam(defaultValue = "ALL") String section,
+      @RequestParam(defaultValue = "") String q) {
 
     return ResponseEntity.ok()
         .cacheControl(CacheControl.noStore())
-        .body(deliveries.list(userId(jwt), page, size, section));
+        .body(deliveries.list(userId(jwt), page, size, section, q));
   }
 
   @PatchMapping("/{id}/complete")

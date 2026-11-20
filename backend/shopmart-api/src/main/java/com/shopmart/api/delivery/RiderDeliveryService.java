@@ -43,7 +43,13 @@ public class RiderDeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID riderId, int page, int size, String section) {
+        return list(riderId, page, size, section, "");
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryPage list(UUID riderId, int page, int size, String section, String query) {
         requireRider(riderId);
+        String search = query == null ? "" : query.strip();
         String deliveredByRider = "EXISTS (SELECT 1 FROM public.order_status_history h WHERE h.order_id=o.id AND h.changed_by=rider.id AND h.status='DELIVERED')";
         String activeForRider = "a.rider_id = rider.id AND o.status NOT IN ('DELIVERED', 'CANCELLED', 'RETURNED') AND NOT EXISTS (SELECT 1 FROM public.delivery_attempts pending WHERE pending.order_id=o.id AND pending.rider_id=rider.id AND pending.warehouse_reported_at IS NOT NULL AND pending.resolved_at IS NULL)";
         String returnedByRider = "EXISTS (SELECT 1 FROM public.delivery_attempts returned WHERE returned.order_id=o.id AND returned.rider_id=rider.id AND returned.warehouse_reported_at IS NOT NULL AND NOT COALESCE((returned.resolution='RETRY' AND returned.resolution_rider_id=rider.id AND a.rider_id=rider.id), FALSE) AND NOT EXISTS (SELECT 1 FROM public.order_status_history delivered_after WHERE delivered_after.order_id=o.id AND delivered_after.changed_by=rider.id AND delivered_after.status='DELIVERED' AND delivered_after.created_at > returned.warehouse_reported_at))";
@@ -66,7 +72,8 @@ public class RiderDeliveryService {
                 LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
                 CROSS JOIN rider
                 WHERE (%s)
-                """.formatted(filter), Long.class, riderId);
+                  AND (? = '' OR o.order_number ILIKE '%%' || ? || '%%' OR o.recipient_name ILIKE '%%' || ? || '%%')
+                """.formatted(filter), Long.class, riderId, search, search, search);
 
         List<RiderDelivery> items = jdbc.query("""
                 WITH rider AS (SELECT ?::uuid AS id)
@@ -107,6 +114,7 @@ public class RiderDeliveryService {
                     LIMIT 1
                 ) attempt ON TRUE
                 WHERE (%s)
+                  AND (? = '' OR o.order_number ILIKE '%%' || ? || '%%' OR o.recipient_name ILIKE '%%' || ? || '%%')
                 ORDER BY COALESCE(a.assigned_at, o.updated_at) DESC, o.id DESC
                 LIMIT ? OFFSET ?
                 """.formatted(deliveredByRider, activeForRider, returnedByRider, deliveredByRider, activeForRider, returnedByRider, filter),
@@ -134,7 +142,7 @@ public class RiderDeliveryService {
                             lastAttempt,
                             rs.getBoolean("warehouse_return_pending"));
                 },
-                riderId, size, (long) page * size);
+                riderId, search, search, search, size, (long) page * size);
 
         return new DeliveryPage(
                 items, page, size, total,

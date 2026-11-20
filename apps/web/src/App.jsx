@@ -423,6 +423,7 @@ function Storefront({ products, onRatingSummaryChange }) {
   const text = (en, ur) => (language === "ur" ? ur : en);
 
   const [filters, setFilters] = useState(defaultFilters);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
   const [publicSettings, setPublicSettings] = useState(null);
@@ -536,9 +537,8 @@ function Storefront({ products, onRatingSummaryChange }) {
     .map((product, index) => {
       const name = normalize(product.name);
       const category = normalize(product.category);
-      const searchable = normalize(
-        `${product.name} ${product.category} ${product.description ?? ""}`,
-      );
+      const description = normalize(product.description ?? "");
+      const searchable = normalize(`${product.name} ${product.category} ${description}`);
 
       const matchesSearch = words.every((word) => searchable.includes(word));
 
@@ -552,13 +552,8 @@ function Storefront({ products, onRatingSummaryChange }) {
       const matchesCampaign = !selectedCampaign || product.discountCampaignId === selectedCampaign.id;
 
       const score = query
-        ? (name === query ? 100 : name.includes(query) ? 50 : 0) +
-          words.reduce(
-            (total, word) =>
-              total +
-              (name.includes(word) ? 10 : category.includes(word) ? 5 : 1),
-            0,
-          )
+        ? (name === query ? 1000 : name.startsWith(query) ? 800 : name.includes(query) ? 600 : 0) +
+          words.reduce((total, word) => total + (name.includes(word) ? 100 : category.includes(word) ? 30 : description.includes(word) ? 10 : 0), 0)
         : 0;
 
       return {
@@ -576,6 +571,12 @@ function Storefront({ products, onRatingSummaryChange }) {
     })
     .filter((entry) => entry.matches)
     .sort((a, b) => {
+      if (query && a.score !== b.score) return b.score - a.score;
+      if (filters.sort === "sale-first") {
+        const aOnSale = a.product.discountedPrice != null && Number(a.product.discountedPrice) < Number(a.product.price);
+        const bOnSale = b.product.discountedPrice != null && Number(b.product.discountedPrice) < Number(b.product.price);
+        if (aOnSale !== bOnSale) return Number(bOnSale) - Number(aOnSale);
+      }
       const byName = a.product.name.localeCompare(
         b.product.name,
         language === "ur" ? "ur" : "en",
@@ -630,6 +631,7 @@ function Storefront({ products, onRatingSummaryChange }) {
 
   function updateFilters(values) {
     setFilters((current) => ({ ...current, ...values }));
+    if (Object.hasOwn(values, "search")) setFiltersOpen(!String(values.search || "").trim());
     setPage(0);
   }
 
@@ -904,7 +906,13 @@ function Storefront({ products, onRatingSummaryChange }) {
             </section>
           )}
 
-          <div className="grid gap-5 rounded-2xl border border-solid border-slate-200 bg-white p-4 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)} className="rounded-xl border border-solid border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-violet-50">
+              {filtersOpen ? text("Hide filters", "فلٹر چھپائیں") : text("Filters & sort", "فلٹر اور ترتیب")}
+            </button>
+            {query && <p className="m-0 text-sm text-slate-500">{text("Search results for", "تلاش کے نتائج")}: <bdi>“{filters.search.trim()}”</bdi></p>}
+          </div>
+          {filtersOpen && <div className="grid gap-5 rounded-2xl border border-solid border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div
                 role="group"
@@ -968,6 +976,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                   <option value="price-high">
                     {text("Price: high to low", "قیمت: زیادہ سے کم")}
                   </option>
+                  <option value="sale-first">{text("On sale first", "پہلے رعایتی مصنوعات")}</option>
                   <option value="name">{text("Name: A–Z", "نام: A–Z")}</option>
                   <option value="name-desc">
                     {text("Name: Z–A", "نام: Z–A")}
@@ -1046,7 +1055,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                 <bdi>“{filters.search.trim()}”</bdi>
               </p>
             )}
-          </div>
+          </div>}
 
           <Toast
             message={notice ? `${notice.name} ${text("added to your cart.", "آپ کی ٹوکری میں شامل ہو گیا۔")}` : ""}

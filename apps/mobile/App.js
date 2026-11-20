@@ -140,6 +140,8 @@ function ShopMart() {
   const isStorePreview = canPreviewStore(auth.session?.user.role, auth.session?.user.id, previewAdminId);
   const [reload, setReload] = useState(0);
   const [search, setSearch] = useState("");
+  const [catalogFiltersOpen, setCatalogFiltersOpen] = useState(true);
+  const [saleFirst, setSaleFirst] = useState(false);
   const [productPage, setProductPage] = useState(0);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const productsListRef = useRef(null);
@@ -258,10 +260,11 @@ function ShopMart() {
     .map((product, index) => {
       const name = String(product.name || "").normalize("NFKC").toLocaleLowerCase();
       const categoryName = String(product.category || "").normalize("NFKC").toLocaleLowerCase();
-      const searchable = `${name} ${categoryName} ${product.description || ""}`;
+      const description = String(product.description || "").normalize("NFKC").toLocaleLowerCase();
+      const searchable = `${name} ${categoryName} ${description}`;
       const score = query
-        ? (name === query ? 100 : name.startsWith(query) ? 70 : name.includes(query) ? 50 : 0) +
-          searchWords.reduce((total, word) => total + (name.includes(word) ? 10 : categoryName.includes(word) ? 5 : 1), 0)
+        ? (name === query ? 1000 : name.startsWith(query) ? 800 : name.includes(query) ? 600 : 0) +
+          searchWords.reduce((total, word) => total + (name.includes(word) ? 100 : categoryName.includes(word) ? 30 : description.includes(word) ? 10 : 0), 0)
         : 0;
       return {
         product,
@@ -275,7 +278,15 @@ function ShopMart() {
       };
     })
     .filter((entry) => entry.matches)
-    .sort((a, b) => (query ? b.score - a.score || a.index - b.index : a.index - b.index))
+    .sort((a, b) => {
+      if (query && a.score !== b.score) return b.score - a.score;
+      if (saleFirst) {
+        const aSale = a.product.discountedPrice != null && Number(a.product.discountedPrice) < Number(a.product.price);
+        const bSale = b.product.discountedPrice != null && Number(b.product.discountedPrice) < Number(b.product.price);
+        if (aSale !== bSale) return Number(bSale) - Number(aSale);
+      }
+      return a.index - b.index;
+    })
     .map(({ product }) => product);
   const namedPromotions = [...new Map((loading ? [] : result.items)
     .filter((product) => product.discountedPrice != null && product.discountCampaignId && product.discountCampaignName)
@@ -440,6 +451,7 @@ function ShopMart() {
         value={search}
         onChangeText={(value) => {
           setSearch(value);
+          setCatalogFiltersOpen(!value.trim());
           resetProductPage();
         }}
         placeholder="Search products, brands, categories"
@@ -453,6 +465,7 @@ function ShopMart() {
           label="Clear search"
           onPress={() => {
             setSearch("");
+            setCatalogFiltersOpen(true);
             resetProductPage();
           }}
         />
@@ -580,7 +593,7 @@ function ShopMart() {
           {loading ? <ActivityIndicator size="small" color={palette.accent} /> : <Icon name="refresh" size={19} color={palette.accent} />}
         </Pressable>
       </View>
-      {categorySlider}
+      {!search.trim() ? categorySlider : null}
 
       {!loading && !search.trim() && !wishlistOnly && !selectedCampaign && namedPromotions.length > 0 ? (
         <View style={{ marginTop: 18 }}>
@@ -675,8 +688,23 @@ function ShopMart() {
         </View>
       ) : null}
       {searchBar}
-      <Text style={[styles.categoryLabel, { color: palette.text }]}>Browse categories</Text>
-      {categorySlider}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: catalogFiltersOpen }} onPress={() => setCatalogFiltersOpen((open) => !open)} style={{ paddingHorizontal: 13, paddingVertical: 9, borderRadius: 12, backgroundColor: palette.surface, borderWidth: 1, borderColor: palette.border }}>
+          <Text style={{ color: palette.text, fontWeight: "700" }}>{catalogFiltersOpen ? "Hide filters" : "Filters & sort"}</Text>
+        </Pressable>
+      </View>
+      {catalogFiltersOpen ? <>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
+          <Text style={{ color: palette.muted, fontWeight: "700" }}>Sort by</Text>
+          {[{ label: "Recommended", value: false }, { label: "On sale first", value: true }].map((option) => (
+            <Pressable key={option.label} accessibilityRole="button" accessibilityState={{ selected: saleFirst === option.value }} onPress={() => { setSaleFirst(option.value); resetProductPage(); }} style={{ paddingHorizontal: 13, paddingVertical: 9, borderRadius: 12, backgroundColor: saleFirst === option.value ? palette.accent : palette.surface, borderWidth: 1, borderColor: saleFirst === option.value ? palette.accent : palette.border }}>
+              <Text style={{ color: saleFirst === option.value ? "#fff" : palette.text, fontWeight: "800" }}>{option.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Text style={[styles.categoryLabel, { color: palette.text }]}>Browse categories</Text>
+        {categorySlider}
+      </> : null}
       <View style={styles.catalogListHeading}>
         <Text style={[styles.sectionTitle, { color: palette.text }]}>
             {search.trim() ? "Search results" : selectedCampaign?.name || (category === "All" ? "All products" : category)}

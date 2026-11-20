@@ -1,6 +1,6 @@
 import { Text } from "../i18n/LocalizedNativeComponents.js";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, StyleSheet, Text as NativeText, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, StyleSheet, Text as NativeText, TextInput as NativeTextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Svg, { Path } from "react-native-svg";
@@ -93,6 +93,7 @@ export default function RiderScreen({
   const [cashRevision, setCashRevision] = useState(0);
   const gps = useRiderLocation(session);
   const [section, setSection] = useState("ASSIGNED");
+  const [search, setSearch] = useState("");
   const [warehouseDelivery, setWarehouseDelivery] = useState(null);
   const [page, setPage] = useState(0);
   const [reload, setReload] = useState(0);
@@ -109,7 +110,7 @@ export default function RiderScreen({
     const controller = new AbortController();
     request(
       token,
-      `?page=${page}&size=10&section=${section}`,
+      `?page=${page}&size=10&section=${section}&q=${encodeURIComponent(search.trim())}`,
       "GET",
       controller.signal,
     )
@@ -123,7 +124,7 @@ export default function RiderScreen({
         const sharing = data.items.find((item) => item.id === gps.orderId);
         if (sharing?.warehouseReturnPending) gps.stop();
         if (!controller.signal.aborted)
-          setResult({ token, section, page, reload, data, error: "" });
+          setResult({ token, section, page, reload, search, data, error: "" });
       })
       .catch((failure) => {
         if (!controller.signal.aborted)
@@ -132,18 +133,20 @@ export default function RiderScreen({
             section,
             page,
             reload,
+            search,
             data: null,
             error: failure.message,
           });
       });
     return () => controller.abort();
-  }, [token, section, page, reload]);
+  }, [token, section, page, reload, search]);
 
   const current =
     result?.token === token &&
     result?.section === section &&
     result?.page === page &&
-    result?.reload === reload;
+    result?.reload === reload &&
+    result?.search === search;
   const data = current ? result.data : null;
 
   async function openLink(url) {
@@ -594,6 +597,18 @@ export default function RiderScreen({
                     </Text>
                   </Pressable>
                 ))}
+              </View>
+              <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4, minHeight: 48, flexDirection: "row", alignItems: "center", borderRadius: 14, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.surface, paddingHorizontal: 12 }}>
+                <NativeTextInput
+                  accessibilityLabel="Search orders by order number or customer name"
+                  value={search}
+                  onChangeText={(value) => { setSearch(value); setPage(0); }}
+                  placeholder="Search order number or customer"
+                  placeholderTextColor={palette.muted}
+                  autoCorrect={false}
+                  style={{ flex: 1, minWidth: 0, color: palette.text, paddingVertical: 10, fontSize: 14 }}
+                />
+                {search ? <Pressable accessibilityRole="button" accessibilityLabel="Clear order search" onPress={() => { setSearch(""); setPage(0); }} hitSlop={10}><NativeText style={{ color: palette.muted, fontSize: 20 }}>×</NativeText></Pressable> : null}
               </View>
               <View style={styles.locationBanner}>
                 <Icon name="pin" size={18} color={palette.success} />
