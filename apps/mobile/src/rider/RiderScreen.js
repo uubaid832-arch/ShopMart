@@ -195,6 +195,42 @@ export default function RiderScreen({
     }
   }
 
+  async function advanceDelivery(item, stage) {
+    if (pending.current) return;
+    pending.current = true;
+    setBusyId(item.id);
+    setError("");
+    setNotice("");
+    try {
+      const endpoint = stage === "pickup" ? "pickup" : "start";
+      await request(token, `/${encodeURIComponent(item.id)}/${endpoint}`, "PATCH");
+      setNotice(stage === "pickup"
+        ? `${item.orderNumber}: warehouse pickup confirmed.`
+        : `${item.orderNumber}: delivery started.`);
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      pending.current = false;
+      setBusyId(null);
+      setReload((value) => value + 1);
+    }
+  }
+
+  function confirmDeliveryStage(item, stage) {
+    if (pending.current) return;
+    const pickup = stage === "pickup";
+    Alert.alert(
+      pickup ? "Confirm warehouse pickup" : "Start delivery",
+      pickup
+        ? "Only confirm after the warehouse has handed this parcel to you."
+        : "Confirm when you leave the warehouse to deliver this parcel to the customer.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: pickup ? "Confirm pickup" : "Start delivery", onPress: () => advanceDelivery(item, stage) },
+      ],
+    );
+  }
+
   function confirmDelivery(item) {
     if (pending.current || item.warehouseReturnPending) return;
     const amount = new Intl.NumberFormat("en-PK", {
@@ -314,6 +350,7 @@ export default function RiderScreen({
   function renderDeliveryCard(item) {
     const delivered = item.status === "DELIVERED";
     const dispatched = item.status === "DISPATCHED";
+    const pickedUp = item.status === "PICKED_UP";
     return (
       <View key={item.id} style={styles.card}>
         <View style={styles.cardHeader}>
@@ -330,7 +367,9 @@ export default function RiderScreen({
                   ? "Cancelled"
                 : dispatched
                   ? "Ready to deliver"
-                  : "Waiting for dispatch"}
+                  : pickedUp
+                    ? "Picked up · start delivery"
+                    : "Assigned · collect from warehouse"}
           </Text>
         </View>
 
@@ -437,6 +476,27 @@ export default function RiderScreen({
           </>
         )}
 
+        {item.status === "CONFIRMED" && (
+          <Pressable
+            accessibilityRole="button"
+            disabled={Boolean(busyId)}
+            onPress={() => confirmDeliveryStage(item, "pickup")}
+            style={[styles.primary, Boolean(busyId) && styles.dim]}
+          >
+            <Text style={styles.white}>{busyId === item.id ? "Saving…" : "Confirm pickup from warehouse"}</Text>
+          </Pressable>
+        )}
+        {pickedUp && (
+          <Pressable
+            accessibilityRole="button"
+            disabled={Boolean(busyId)}
+            onPress={() => confirmDeliveryStage(item, "start")}
+            style={[styles.primary, Boolean(busyId) && styles.dim]}
+          >
+            <Text style={styles.white}>{busyId === item.id ? "Saving…" : "Start delivery"}</Text>
+          </Pressable>
+        )}
+
         {item.lastAttempt && item.status !== "DELIVERED" && (item.status !== "RETURNED_TO_WAREHOUSE" || item.warehouseReturnPending) && (
           <Pressable
             accessibilityRole="button"
@@ -448,11 +508,12 @@ export default function RiderScreen({
           </Pressable>
         )}
 
-        {!dispatched && !delivered && item.status !== "CANCELLED" && item.status !== "RETURNED_TO_WAREHOUSE" && (
+        {!dispatched && !delivered && item.status !== "PICKED_UP" && item.status !== "CANCELLED" && item.status !== "RETURNED_TO_WAREHOUSE" && (
           <Text style={styles.waitingNote}>
-            Please wait. The shop will send this order to you before delivery.
+            Collect the parcel from the warehouse, then confirm pickup to unlock delivery.
           </Text>
         )}
+        {pickedUp && !item.warehouseReturnPending && <Text style={styles.waitingNote}>Pickup recorded. Start delivery when you leave for the customer.</Text>}
         {item.warehouseReturnPending && (
           <Text style={styles.waitingNote}>
             Parcel is back at the shop. Wait for the shop to arrange the next step.

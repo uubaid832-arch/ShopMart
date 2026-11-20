@@ -10,6 +10,7 @@ let trackingPalette = null;
 const messages = {
   PENDING: "Order placed and awaiting confirmation.",
   CONFIRMED: "Order confirmed and being prepared for delivery.",
+  PICKED_UP: "Rider collected the parcel from the warehouse.",
   DISPATCHED: "Parcel dispatched with the assigned rider.",
   DELIVERED: "Delivery completed.",
   CANCELLED: "Order cancelled.",
@@ -93,6 +94,7 @@ export default function AdminOrderTracking({ session, order, revision = 0 }) {
       [
         "PENDING",
         "CONFIRMED",
+        "PICKED_UP",
         "DISPATCHED",
         "DELIVERED",
         "CANCELLED",

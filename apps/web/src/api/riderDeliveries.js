@@ -64,6 +64,12 @@ export const getRiderDeliveries = (token, page, signal, section = "ALL") =>
 export const completeRiderDelivery = (token, id) =>
   riderRequest(token, `/${id}/complete`, { method: "PATCH" });
 
+export const confirmRiderPickup = (token, id) =>
+  riderRequest(token, `/${id}/pickup`, { method: "PATCH" });
+
+export const startRiderDelivery = (token, id) =>
+  riderRequest(token, `/${id}/start`, { method: "PATCH" });
+
 export const reportFailedDelivery = (token, id, values) =>
   riderRequest(token, `/${id}/failed`, {
     method: "PATCH",

@@ -43,7 +43,7 @@ public class DeliveryService {
     @Transactional(readOnly = true)
     public DeliveryPage list(UUID adminId, int page, int size, String filterStatus) {
         requireAdmin(adminId);
-        if (!java.util.Set.of("ALL", "CONFIRMED", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
+        if (!java.util.Set.of("ALL", "CONFIRMED", "PICKED_UP", "DISPATCHED", "DELIVERED", "CANCELLED", "RETURNED").contains(filterStatus)) {
             throw failure(HttpStatus.BAD_REQUEST, "Invalid delivery status.");
         }
 
@@ -55,7 +55,7 @@ public class DeliveryService {
                 SELECT COUNT(*)
                 FROM public.orders o
                 LEFT JOIN public.delivery_assignments a ON a.order_id = o.id
-                WHERE (o.status IN ('CONFIRMED', 'DISPATCHED') OR a.id IS NOT NULL)
+                WHERE (o.status IN ('CONFIRMED', 'PICKED_UP', 'DISPATCHED') OR a.id IS NOT NULL)
                   AND (? = 'ALL' OR o.status = ?)
                 """, Long.class, filterStatus, filterStatus);
 
@@ -77,7 +77,7 @@ public class DeliveryService {
                     ORDER BY created_at DESC, id DESC
                     LIMIT 1
                 ) attempt ON TRUE
-                WHERE (o.status IN ('CONFIRMED', 'DISPATCHED') OR a.id IS NOT NULL)
+                WHERE (o.status IN ('CONFIRMED', 'PICKED_UP', 'DISPATCHED') OR a.id IS NOT NULL)
                   AND (? = 'ALL' OR o.status = ?)
                 ORDER BY o.created_at DESC, o.id DESC
                 LIMIT ? OFFSET ?

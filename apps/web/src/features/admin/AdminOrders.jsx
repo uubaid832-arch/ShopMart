@@ -3,7 +3,8 @@ import { useState } from "react";
 const statuses = [
   "Pending",
   "Confirmed",
-  "Dispatched",
+  "Picked up",
+  "Out for delivery",
   "Delivered",
   "Returned",
   "Cancelled",
@@ -11,7 +12,8 @@ const statuses = [
 const statusColors = {
   Pending: "bg-amber-100 text-amber-800",
   Confirmed: "bg-blue-100 text-blue-800",
-  Dispatched: "bg-violet-100 text-violet-800",
+  "Picked up": "bg-cyan-100 text-cyan-800",
+  "Out for delivery": "bg-violet-100 text-violet-800",
   Delivered: "bg-emerald-100 text-emerald-800",
   Cancelled: "bg-rose-100 text-rose-800",
   Returned: "bg-slate-200 text-slate-700",

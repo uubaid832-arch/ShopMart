@@ -24,6 +24,7 @@ const shortcuts = [
 const statusColors = {
   PENDING: "bg-amber-50 text-amber-700",
   CONFIRMED: "bg-blue-50 text-blue-700",
+  PICKED_UP: "bg-cyan-50 text-cyan-700",
   DISPATCHED: "bg-violet-50 text-violet-700",
   DELIVERED: "bg-emerald-50 text-emerald-700",
   CANCELLED: "bg-rose-50 text-rose-700",

@@ -5,6 +5,7 @@ import InvoiceDownload from "../../components/InvoiceDownload";
 const statusColors = {
   PENDING: "bg-amber-50 text-amber-700",
   CONFIRMED: "bg-blue-50 text-blue-700",
+  PICKED_UP: "bg-cyan-50 text-cyan-700",
   DISPATCHED: "bg-violet-50 text-violet-700",
   DELIVERED: "bg-emerald-50 text-emerald-700",
   CANCELLED: "bg-rose-50 text-rose-700",
@@ -14,6 +15,7 @@ const statusColors = {
 const labels = {
   PENDING: ["Pending", "زیرِ التوا"],
   CONFIRMED: ["Confirmed", "تصدیق شدہ"],
+  PICKED_UP: ["Picked up", "گودام سے وصول کر لیا گیا"],
   DISPATCHED: ["Dispatched", "روانہ ہو گیا"],
   DELIVERED: ["Delivered", "پہنچا دیا گیا"],
   CANCELLED: ["Cancelled", "منسوخ"],
@@ -217,7 +219,7 @@ export default function OrdersModal({
                         </div>
 
                         <span className="shrink-0 font-semibold text-slate-700">
-                          <bdi>{formatPrice(item.price * item.quantity)}</bdi>
+                          <bdi>{formatPrice(item.price * item.quantity - Number(item.discountAmount || 0))}</bdi>
                         </span>
                       </li>
                     ))}
@@ -227,7 +229,7 @@ export default function OrdersModal({
                   <InvoiceDownload orderId={order.id} />
                 </div>
                 <div className="flex flex-wrap gap-2 px-5 pb-4">
-                  {["PENDING", "CONFIRMED", "DISPATCHED"].includes(normalize(order.status)) && onTrackOrder && (
+                  {["PENDING", "CONFIRMED", "PICKED_UP", "DISPATCHED"].includes(normalize(order.status)) && onTrackOrder && (
                     <button type="button" onClick={() => onTrackOrder(order)} className="rounded-xl border-0 bg-violet-600 px-4 py-2 text-sm font-semibold text-white">
                       {text("Track order", "آرڈر ٹریک کریں")}
                     </button>

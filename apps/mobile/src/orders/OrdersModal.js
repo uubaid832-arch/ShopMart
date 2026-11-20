@@ -77,6 +77,7 @@ function Status({ value, palette, isDark }) {
 const progressSteps = [
   { status: "PENDING", label: "Placed" },
   { status: "CONFIRMED", label: "Confirmed" },
+  { status: "PICKED_UP", label: "Picked up" },
   { status: "DISPATCHED", label: "Dispatched" },
   { status: "DELIVERED", label: "Delivered" },
 ];

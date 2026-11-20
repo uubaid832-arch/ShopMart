@@ -427,6 +427,7 @@ export default function LogisticsModule({
                   options={[
                     "ALL",
                     "CONFIRMED",
+                    "PICKED_UP",
                     "DISPATCHED",
                     "DELIVERED",
                     "CANCELLED",

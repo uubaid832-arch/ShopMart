@@ -2,12 +2,19 @@ import { useRef } from "react";
 import { X, Package, MapPin, CreditCard } from "lucide-react";
 import Modal from "../../components/Modal";
 
-const stages = ["Pending", "Confirmed", "Dispatched", "Delivered"];
+const stages = [
+  ["PENDING", "Pending"],
+  ["CONFIRMED", "Confirmed"],
+  ["PICKED_UP", "Picked up"],
+  ["DISPATCHED", "Out for delivery"],
+  ["DELIVERED", "Delivered"],
+];
 
 const statusColors = {
   Pending: "bg-amber-100 text-amber-800",
   Confirmed: "bg-blue-100 text-blue-800",
-  Dispatched: "bg-violet-100 text-violet-800",
+  "Picked up": "bg-cyan-100 text-cyan-800",
+  "Out for delivery": "bg-violet-100 text-violet-800",
   Delivered: "bg-emerald-100 text-emerald-800",
   Cancelled: "bg-rose-100 text-rose-800",
   Returned: "bg-slate-200 text-slate-700",
@@ -22,7 +29,7 @@ export default function AdminOrderDetails({ order, onClose }) {
       currency: order.currency ?? "PKR",
     }).format(amount);
 
-  const stage = stages.indexOf(order.status);
+  const stage = stages.findIndex(([status]) => status === String(order.status).toUpperCase());
 
   function close() {
     if (!inFlight.current) onClose();
@@ -92,9 +99,9 @@ export default function AdminOrderDetails({ order, onClose }) {
             aria-label="Order progress"
             className="mb-5 mt-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-4"
           >
-            {stages.map((label, index) => (
+            {stages.map(([status, label], index) => (
               <li
-                key={label}
+                key={status}
                 aria-current={index === stage ? "step" : undefined}
                 className={`rounded-xl p-3 text-xs font-semibold ${
                   index <= stage

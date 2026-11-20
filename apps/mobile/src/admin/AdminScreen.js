@@ -267,8 +267,6 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
   function changeStatus(status) {
     const messages = {
       CONFIRMED: "Confirm this customer order?",
-      DISPATCHED:
-        "Confirm the parcel has been handed to the assigned rider? The customer and rider will receive an update.",
       CANCELLED:
         "Cancel this order? Product stock will be restored. This does not issue a payment refund.",
     };
@@ -306,8 +304,6 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
     );
   }
   const loading = detail.loading || assignment.loading;
-  const canDispatch =
-    assignment.data?.delivery.riderId && assignment.data.delivery.riderEnabled;
   const locked =
     busy || uncertain || loading || Boolean(detail.error || assignment.error);
   if (warehouseDelivery)
@@ -495,7 +491,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                     {order.status === "CONFIRMED" ? (
                       <>
                         <Text style={s.muted}>
-                          Choose an active rider before dispatching.
+                          Choose an active rider before pickup.
                         </Text>
                         {(assignment.data?.riders ?? []).length ? (
                           <>
@@ -597,7 +593,7 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                                 order.status,
                               )
                             ? "This delivery is closed. Its history is shown below."
-                            : "Rider changes are managed through the delivery and warehouse workflow after dispatch."}
+                            : "Rider changes are managed through the delivery and warehouse workflow after pickup."}
                       </Text>
                     )}
                   </>
@@ -625,19 +621,12 @@ function OrderDetails({ session, orderId, onBack, onChanged, onBusyChanged }) {
                     </>
                   )}
                   {order.status === "CONFIRMED" && (
-                    <>
-                      <Button
-                        title="Mark as dispatched"
-                        icon="truck"
-                        disabled={locked || !canDispatch}
-                        onPress={() => changeStatus("DISPATCHED")}
-                      />
-                      {!canDispatch && (
-                        <Text style={s.muted}>
-                          Save an enabled rider assignment before dispatching.
-                        </Text>
-                      )}
-                    </>
+                    <View style={s.info}>
+                      <Icon name="truck" />
+                      <Text style={[s.body, s.grow]}>
+                        The assigned rider will confirm warehouse pickup, then start delivery from the rider app.
+                      </Text>
+                    </View>
                   )}
                   {!(order.paymentMethod === "BANK_TRANSFER" && order.paymentStatus === "PAID") && (
                     <Button

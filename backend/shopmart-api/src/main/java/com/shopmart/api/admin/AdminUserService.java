@@ -229,7 +229,7 @@ public class AdminUserService {
               FROM public.delivery_assignments a
               JOIN public.orders o ON o.id = a.order_id
               WHERE a.rider_id = ?
-                AND o.status IN ('CONFIRMED', 'DISPATCHED')
+                AND o.status IN ('CONFIRMED', 'PICKED_UP', 'DISPATCHED')
           )
           """, Boolean.class, userId);
 
@@ -237,7 +237,7 @@ public class AdminUserService {
         throw failure(
             HttpStatus.CONFLICT,
             "This rider has active deliveries."
-                + " Reassign confirmed orders or resolve dispatched deliveries first.");
+                + " Reassign confirmed orders or resolve active deliveries first.");
       }
     }
 

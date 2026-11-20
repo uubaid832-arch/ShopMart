@@ -144,7 +144,7 @@ public class AdminOrderService {
     }
 
     if (next == null
-        || !Set.of("CONFIRMED", "DISPATCHED", "CANCELLED").contains(next)) {
+        || !Set.of("CONFIRMED", "CANCELLED").contains(next)) {
       throw failure(HttpStatus.BAD_REQUEST, "Invalid order status.");
     }
 
@@ -171,7 +171,7 @@ public class AdminOrderService {
       case "PENDING" ->
         next.equals("CONFIRMED") || next.equals("CANCELLED");
       case "CONFIRMED" ->
-        next.equals("DISPATCHED") || next.equals("CANCELLED");
+        next.equals("CANCELLED");
       default -> false;
     };
 
@@ -194,24 +194,6 @@ public class AdminOrderService {
           HttpStatus.CONFLICT,
           "This order does not have a supported payment state.");
     }
-    if (next.equals("DISPATCHED")) {
-      var assignedRiders = jdbc.queryForList("""
-          SELECT u.id
-          FROM public.delivery_assignments a
-          JOIN public.users u ON u.id = a.rider_id
-          WHERE a.order_id = ?
-            AND u.role = 'RIDER'
-            AND u.enabled = TRUE
-          FOR SHARE OF u
-          """, orderId);
-
-      if (assignedRiders.isEmpty()) {
-        throw failure(
-            HttpStatus.CONFLICT,
-            "Assign an enabled rider before dispatching this order.");
-      }
-    }
-
     if (next.equals("CANCELLED")) {
       var items = jdbc.queryForList("""
           SELECT product_id, quantity
@@ -309,7 +291,7 @@ public class AdminOrderService {
   }
 
   public record StatusRequest(
-      @NotBlank @Pattern(regexp = "CONFIRMED|DISPATCHED|CANCELLED") String status) {
+      @NotBlank @Pattern(regexp = "CONFIRMED|CANCELLED") String status) {
   }
 
   public record OrderSummary(

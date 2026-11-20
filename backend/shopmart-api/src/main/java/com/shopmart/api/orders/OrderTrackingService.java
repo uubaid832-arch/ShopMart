@@ -48,6 +48,7 @@ public class OrderTrackingService {
     return switch (status) {
       case "PENDING" -> "Your order has been placed.";
       case "CONFIRMED" -> "Your order has been confirmed.";
+      case "PICKED_UP" -> "The rider has picked up your order from the warehouse.";
       case "DISPATCHED" -> "Your order has been dispatched.";
       case "DELIVERED" -> "Your order has been delivered.";
       case "CANCELLED" -> "Your order has been cancelled.";

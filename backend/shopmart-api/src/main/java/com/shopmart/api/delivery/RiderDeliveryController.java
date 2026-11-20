@@ -49,6 +49,26 @@ public class RiderDeliveryController {
         .build();
   }
 
+  @PatchMapping("/{id}/pickup")
+  public ResponseEntity<Void> confirmPickup(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID id) {
+    deliveries.confirmPickup(userId(jwt), id);
+    return ResponseEntity.noContent()
+        .cacheControl(CacheControl.noStore())
+        .build();
+  }
+
+  @PatchMapping("/{id}/start")
+  public ResponseEntity<Void> startDelivery(
+      @AuthenticationPrincipal Jwt jwt,
+      @PathVariable UUID id) {
+    deliveries.startDelivery(userId(jwt), id);
+    return ResponseEntity.noContent()
+        .cacheControl(CacheControl.noStore())
+        .build();
+  }
+
   @PatchMapping("/{id}/failed")
   public ResponseEntity<Void> reportFailure(
       @AuthenticationPrincipal Jwt jwt,

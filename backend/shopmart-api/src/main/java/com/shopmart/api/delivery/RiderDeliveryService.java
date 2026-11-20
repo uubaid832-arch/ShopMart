@@ -142,6 +142,59 @@ public class RiderDeliveryService {
     }
 
     @Transactional
+    public void confirmPickup(UUID riderId, UUID orderId) {
+        requireRider(riderId);
+        var order = lockDelivery(riderId, orderId);
+        String status = (String) order.get("status");
+
+        // A retry after a successful request is safe, including if the rider
+        // already started the next step.
+        if ("PICKED_UP".equals(status) || "DISPATCHED".equals(status)) return;
+        if (!"CONFIRMED".equals(status) || !OrderPaymentRules.supportsDelivery(order)) {
+            throw failure(HttpStatus.CONFLICT,
+                    "Only a confirmed, assigned order can be picked up.");
+        }
+        requireParcelOutsideWarehouse(orderId);
+
+        jdbc.update("""
+                UPDATE public.orders
+                SET status = 'PICKED_UP', version = version + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, orderId);
+        jdbc.update("""
+                INSERT INTO public.order_status_history (order_id, status, changed_by)
+                VALUES (?, 'PICKED_UP', ?)
+                """, orderId, riderId);
+        notifications.orderStatusChanged(orderId, "PICKED_UP");
+    }
+
+    @Transactional
+    public void startDelivery(UUID riderId, UUID orderId) {
+        requireRider(riderId);
+        var order = lockDelivery(riderId, orderId);
+        String status = (String) order.get("status");
+        if ("DISPATCHED".equals(status)) return;
+        if (!"PICKED_UP".equals(status) || !OrderPaymentRules.supportsDelivery(order)) {
+            throw failure(HttpStatus.CONFLICT,
+                    "Confirm warehouse pickup before starting delivery.");
+        }
+        requireParcelOutsideWarehouse(orderId);
+
+        jdbc.update("""
+                UPDATE public.orders
+                SET status = 'DISPATCHED', version = version + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, orderId);
+        jdbc.update("""
+                INSERT INTO public.order_status_history (order_id, status, changed_by)
+                VALUES (?, 'DISPATCHED', ?)
+                """, orderId, riderId);
+        notifications.orderStatusChanged(orderId, "DISPATCHED");
+    }
+
+    @Transactional
     public void complete(UUID riderId, UUID orderId) {
         requireRider(riderId);
 

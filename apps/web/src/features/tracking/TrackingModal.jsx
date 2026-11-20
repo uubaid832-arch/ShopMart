@@ -11,6 +11,7 @@ const buttonStyle =
 const statusTranslations = {
   PENDING: ["Pending", "زیرِ التوا"],
   CONFIRMED: ["Confirmed", "تصدیق شدہ"],
+  PICKED_UP: ["Picked up", "گودام سے وصول کر لیا گیا"],
   DISPATCHED: ["Dispatched", "روانہ ہو گیا"],
   DELIVERED: ["Delivered", "پہنچا دیا گیا"],
   CANCELLED: ["Cancelled", "منسوخ"],
@@ -88,12 +89,12 @@ export default function TrackingModal({ accessToken, onClose, initialOrder = nul
   const data = ordersCurrent ? ordersResult.data : null;
   const orders = data?.items ?? [];
   const listedOrders = mode === "track"
-    ? orders.filter((item) => ["PENDING", "CONFIRMED", "DISPATCHED"].includes(String(item.status).toUpperCase()))
+    ? orders.filter((item) => ["PENDING", "CONFIRMED", "PICKED_UP", "DISPATCHED"].includes(String(item.status).toUpperCase()))
     : mode === "history"
       ? orders.filter((item) => ["DELIVERED", "RETURNED", "CANCELLED"].includes(String(item.status).toUpperCase()))
       : orders;
   const initialMatches = initialOrder && (mode === "all"
-    || (mode === "track" && ["PENDING", "CONFIRMED", "DISPATCHED"].includes(String(initialOrder.status).toUpperCase()))
+    || (mode === "track" && ["PENDING", "CONFIRMED", "PICKED_UP", "DISPATCHED"].includes(String(initialOrder.status).toUpperCase()))
     || (mode === "history" && ["DELIVERED", "RETURNED", "CANCELLED"].includes(String(initialOrder.status).toUpperCase())));
   const selectableOrders = initialMatches && !listedOrders.some((item) => item.id === initialOrder.id)
     ? [initialOrder, ...listedOrders]

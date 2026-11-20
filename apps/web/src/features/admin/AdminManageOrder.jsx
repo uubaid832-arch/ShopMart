@@ -14,12 +14,13 @@ import {
   resolveWarehouseReturn,
 } from "../../api/warehouse";
 
-const stages = ["PENDING", "CONFIRMED", "DISPATCHED", "DELIVERED"];
+const stages = ["PENDING", "CONFIRMED", "PICKED_UP", "DISPATCHED", "DELIVERED"];
 
 const labels = {
   PENDING: "Pending",
   CONFIRMED: "Confirmed",
-  DISPATCHED: "Dispatched",
+  PICKED_UP: "Picked up",
+  DISPATCHED: "Out for delivery",
   DELIVERED: "Delivered",
   CANCELLED: "Cancelled",
   RETURNED: "Returned",
@@ -147,9 +148,7 @@ export default function AdminManageOrder({ id, onClose }) {
       () => updateAdminOrderStatus(token, id, status),
       status === "CONFIRMED"
         ? "Order confirmed. Assign a rider below."
-        : status === "DISPATCHED"
-          ? "Order dispatched. The rider has been notified."
-          : "Order cancelled and stock restored.",
+        : "Order cancelled and stock restored.",
     );
   }
 
@@ -174,7 +173,7 @@ export default function AdminManageOrder({ id, onClose }) {
 
     try {
       await assignDeliveryRider(token, id, riderId);
-      setFeedback("Rider assigned. The order is ready to dispatch.");
+      setFeedback("Rider assigned. They can collect the parcel from the warehouse.");
       setReload((value) => value + 1);
     } finally {
       inFlight.current = false;
@@ -211,7 +210,7 @@ export default function AdminManageOrder({ id, onClose }) {
     const message =
       action === "CANCEL"
         ? "Cancel this order and restore stock? Confirm that the goods were received back."
-        : "Arrange another delivery with the selected rider? The order will await dispatch.";
+        : "Arrange another delivery with the selected rider? The rider will collect it from the warehouse.";
 
     if (!window.confirm(message)) return;
 
@@ -224,7 +223,7 @@ export default function AdminManageOrder({ id, onClose }) {
           riderId: action === "RETRY" ? riderId : null,
         }),
       action === "RETRY"
-        ? "Another delivery arranged. Mark the order dispatched when ready."
+        ? "Another delivery arranged. The rider can collect the parcel from the warehouse."
         : "Order cancelled and stock restored.",
     );
   }
@@ -319,7 +318,6 @@ export default function AdminManageOrder({ id, onClose }) {
   const canAssign = supportsDelivery && status === "CONFIRMED";
   const riderReady = Boolean(delivery?.riderId && delivery.riderEnabled);
   const returning = Boolean(warehouse?.reportedAt && !warehouse.resolvedAt);
-  const canDispatch = canAssign && riderReady && !returning;
   const canCancel =
     (pendingBankTransfer || (supportsDelivery && !bankTransferPaid)) && ["PENDING", "CONFIRMED"].includes(status) && !returning;
   const stage = stages.indexOf(status);
@@ -343,8 +341,9 @@ export default function AdminManageOrder({ id, onClose }) {
         ? "Bank transfer receipt confirmed. Confirm the order, then assign a rider."
       : "Confirm this order, then assign a rider.",
     CONFIRMED: riderReady
-      ? "A rider is assigned. Dispatch when the parcel is ready."
-      : "Assign an enabled rider before dispatch.",
+      ? "A rider is assigned. They must confirm warehouse pickup, then start delivery."
+      : "Assign an enabled rider. The rider will confirm pickup and start delivery.",
+    PICKED_UP: "The rider has collected the parcel. They must start delivery before delivery actions are available.",
     DISPATCHED: returning
       ? "This parcel is in the warehouse return process. Use the controls below."
       : isDemo
@@ -432,7 +431,7 @@ export default function AdminManageOrder({ id, onClose }) {
           {stage >= 0 && (
             <ol
               aria-label="Order progress"
-              className="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-4"
+              className="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-5"
             >
               {stages.map((value, index) => (
                 <li
@@ -552,19 +551,6 @@ export default function AdminManageOrder({ id, onClose }) {
                   </button>
                 )}
 
-                {canDispatch && (
-                  <button
-                    type="button"
-                    disabled={Boolean(saving)}
-                    onClick={() => changeStatus("DISPATCHED")}
-                    className={primary}
-                  >
-                    {saving === "DISPATCHED"
-                      ? "Dispatching…"
-                      : "Mark dispatched"}
-                  </button>
-                )}
-
                 {canCancel && (
                   <button
                     type="button"
@@ -627,7 +613,7 @@ export default function AdminManageOrder({ id, onClose }) {
                   {delivery?.riderId
                     ? delivery.riderEnabled
                       ? "Enabled rider account"
-                      : "This rider is unavailable. Assign an enabled rider before dispatch."
+                      : "This rider is unavailable. Assign an enabled rider before pickup."
                     : "Assign a rider after confirming the order."}
                 </p>
 

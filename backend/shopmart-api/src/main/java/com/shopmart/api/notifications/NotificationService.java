@@ -38,7 +38,8 @@ public class NotificationService {
     String event = UUID.randomUUID().toString();
     send(riderId, "RIDER_ASSIGNED:" + event, "DELIVERY_ASSIGNED", "New delivery assigned",
         "Order " + number + " has been assigned to you. "
-            + (dispatched ? "It is already dispatched." : "Wait for dispatch before delivering."),
+            + (dispatched ? "It is already out for delivery."
+                : "Collect the parcel from the warehouse, confirm pickup, then start delivery."),
         orderId);
     if (previousRiderId != null && !previousRiderId.equals(riderId)) {
       send(previousRiderId, "RIDER_REASSIGNED:" + event, "DELIVERY_REASSIGNED",
@@ -60,6 +61,7 @@ public class NotificationService {
 
     String message = switch (status) {
       case "CONFIRMED" -> "has been confirmed.";
+      case "PICKED_UP" -> "has been picked up from the warehouse by the rider.";
       case "DISPATCHED" -> "is out for delivery.";
       case "DELIVERED" -> "has been delivered.";
       case "CANCELLED" -> "has been cancelled.";
@@ -67,7 +69,8 @@ public class NotificationService {
       default -> "has a new status: " + status + ".";
     };
     send(customerId, "CUSTOMER_ORDER_STATUS:" + key, "ORDER_STATUS",
-        "DISPATCHED".equals(status) ? "Out for delivery" : "Order update",
+        "DISPATCHED".equals(status) ? "Out for delivery"
+            : "PICKED_UP".equals(status) ? "Picked up by rider" : "Order update",
         "Your order " + number + " " + message, orderId);
     notifyAdmins("ADMIN_ORDER_STATUS:" + key, "ORDER_STATUS", "Order status updated",
         "Order " + number + " " + message, orderId);

@@ -7,7 +7,7 @@ export function canTrackLive(status) {
 }
 
 export function isProcessingOrder(status) {
-  return ["PENDING", "CONFIRMED", "DISPATCHED"].includes(status);
+  return ["PENDING", "CONFIRMED", "PICKED_UP", "DISPATCHED"].includes(status);
 }
 
 export function hasFinalOrderHistory(status) {

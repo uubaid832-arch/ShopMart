@@ -5,6 +5,8 @@ import WarehouseControls from "../delivery/WarehouseControls";
 import { useSession } from "../auth/useSession";
 import {
   getRiderDeliveries,
+  confirmRiderPickup,
+  startRiderDelivery,
   completeRiderDelivery,
   reportFailedDelivery,
 } from "../../api/riderDeliveries";
@@ -31,6 +33,7 @@ const inputStyle =
 const statusLabel = (value) =>
   ({
     CONFIRMED: "Assigned",
+    PICKED_UP: "Picked up from warehouse",
     DISPATCHED: "Out for delivery",
     RETURNED_TO_WAREHOUSE: "Returned to warehouse",
   })[value] ??
@@ -269,6 +272,31 @@ export default function RiderDeliveries() {
     }
   }
 
+  async function advanceDelivery(delivery, action) {
+    if (inFlight.current) return;
+    const pickup = action === "pickup";
+    if (!window.confirm(pickup
+      ? "Confirm that you physically collected this parcel from the warehouse?"
+      : "Confirm that you are leaving the warehouse and starting delivery to the customer?")) return;
+    inFlight.current = true;
+    setSavingId(delivery.id);
+    setFeedback("");
+    setActionError("");
+    try {
+      if (pickup) await confirmRiderPickup(token, delivery.id);
+      else await startRiderDelivery(token, delivery.id);
+      setFeedback(pickup
+        ? "Pickup confirmed. Start delivery when you leave the warehouse."
+        : "Delivery started. The customer has been notified.");
+      setReload((value) => value + 1);
+    } catch (failure) {
+      setActionError(failure.message);
+    } finally {
+      inFlight.current = false;
+      setSavingId(null);
+    }
+  }
+
   async function saveFailure(values) {
     if (inFlight.current || !failureDelivery)
       throw new Error("Please wait for the current request.");
@@ -480,6 +508,16 @@ export default function RiderDeliveries() {
                       </time>
                     </section>
                   )}
+                  {delivery.status === "CONFIRMED" && (
+                    <button type="button" disabled={Boolean(savingId)} onClick={() => advanceDelivery(delivery, "pickup")} className="mt-4 rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                      {savingId === delivery.id ? "Updating…" : "Confirm pickup from warehouse"}
+                    </button>
+                  )}
+                  {delivery.status === "PICKED_UP" && (
+                    <button type="button" disabled={Boolean(savingId)} onClick={() => advanceDelivery(delivery, "start")} className="mt-4 rounded-xl border-0 bg-violet-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+                      {savingId === delivery.id ? "Updating…" : "Start delivery"}
+                    </button>
+                  )}
                   {canUpdate && (
                     <div className="mt-4">
                       {delivery.lastAttempt ? (
@@ -498,9 +536,11 @@ export default function RiderDeliveries() {
                       )}
                     </div>
                   )}
-                  {delivery.status === "CONFIRMED" && (
+                  {(delivery.status === "CONFIRMED" || delivery.status === "PICKED_UP") && (
                     <p className="mb-0 mt-3 text-xs text-slate-500">
-                      Delivery actions become available after dispatch.
+                      {delivery.status === "CONFIRMED"
+                        ? "Confirm the parcel pickup after collecting it from the warehouse."
+                        : "After pickup, start delivery when you leave for the customer."}
                     </p>
                   )}
                 </li>
