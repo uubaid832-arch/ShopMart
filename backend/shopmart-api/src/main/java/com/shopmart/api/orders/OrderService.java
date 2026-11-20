@@ -219,8 +219,19 @@ public class OrderService {
         BigDecimal automaticDiscount=lines.stream().map(line->new BigDecimal(line.discountAmount()))
                 .reduce(BigDecimal.ZERO,BigDecimal::add).setScale(2);
         BigDecimal totalDiscount=automaticDiscount.add(pricing.discount()).setScale(2);
-        if(request.expectedTotal()!=null && request.expectedTotal().compareTo(subtotal.subtract(totalDiscount))!=0)
-            throw new VoucherService.Rejected("Prices changed. Remove and apply the voucher again to confirm the new total.");
+        BigDecimal discountedSubtotal = subtotal.subtract(totalDiscount).setScale(2);
+        var deliverySettings = jdbc.queryForMap("""
+                SELECT delivery_fee, free_delivery_threshold
+                FROM public.store_settings WHERE id=1
+                """);
+        BigDecimal configuredDeliveryFee = (BigDecimal) deliverySettings.get("delivery_fee");
+        BigDecimal freeDeliveryThreshold = (BigDecimal) deliverySettings.get("free_delivery_threshold");
+        BigDecimal shippingFee = freeDeliveryThreshold.signum() > 0
+                && discountedSubtotal.compareTo(freeDeliveryThreshold) >= 0
+                ? BigDecimal.ZERO.setScale(2) : configuredDeliveryFee;
+        BigDecimal orderTotal = discountedSubtotal.add(shippingFee).setScale(2);
+        if(request.expectedTotal()!=null && request.expectedTotal().compareTo(orderTotal)!=0)
+            throw new VoucherService.Rejected("Product prices or delivery charges changed. Review the updated order total and try again.");
         UUID orderId = UUID.randomUUID();
         Long orderSequence = jdbc.queryForObject(
                 "SELECT nextval('public.shopmart_order_number_seq')",
@@ -252,8 +263,8 @@ public class OrderService {
                 address,
                 city,
                 subtotal,
-                BigDecimal.ZERO,
-                subtotal.subtract(totalDiscount),
+                shippingFee,
+                orderTotal,
                 pricing.voucherId(), pricing.code(), totalDiscount,
                 paymentMethod,
                 paymentStatus);

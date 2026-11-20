@@ -849,7 +849,7 @@ function WarehouseAddressSettings({ session }) {
     accentSoft: theme.accent === "violet" ? theme.isDark ? "#1d2d49" : "#edf4ff" : theme.colors.accentSoft,
     warningSoft: theme.isDark ? "#3c3423" : "#fff6e2",
   };
-  const defaults = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000" };
+  const defaults = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000", deliveryFee: "0.00", freeDeliveryThreshold: "0.00", announcementMessages: [] };
   const [profile, setProfile] = useState(defaults);
   const [operatingCities, setOperatingCities] = useState(["Lahore"]);
   const [cityDraft, setCityDraft] = useState("");
@@ -902,6 +902,8 @@ function WarehouseAddressSettings({ session }) {
     ["Warehouse street address", "warehouseAddressLine", "Street, building, and area", 1000],
     ["Warehouse city", "warehouseCity", "City", 100],
     ["Warehouse contact number", "warehousePhone", "Optional contact number", 32],
+    ["Delivery fee (PKR)", "deliveryFee", "0.00", 12],
+    ["Free delivery threshold (PKR, 0 disables)", "freeDeliveryThreshold", "0.00", 12],
     ["Customer WhatsApp number with country code", "whatsappNumber", "923263101049", 32],
     ["Bank name", "bankName", "Bank name", 120],
     ["Account title", "bankAccountTitle", "Account title", 120],
@@ -945,12 +947,28 @@ function WarehouseAddressSettings({ session }) {
             value={profile[key] || ""}
             onChangeText={(value) => { setProfile({ ...profile, [key]: value }); setError(""); setNotice(""); }}
             editable={!loading && !saving} maxLength={maxLength}
-            keyboardType={key.toLowerCase().includes("phone") || key.toLowerCase().includes("number") ? "phone-pad" : "default"}
+            keyboardType={key === "deliveryFee" || key === "freeDeliveryThreshold" ? "decimal-pad" : key.toLowerCase().includes("phone") || key.toLowerCase().includes("number") ? "phone-pad" : "default"}
             placeholder={placeholder} placeholderTextColor={palette.muted}
             style={[s.input, { color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
           />
         </View>
       ))}
+      <View style={{ marginTop: 12 }}>
+        <Text style={[s.body, { marginBottom: 6 }]}>Rotating storefront announcements (one per line)</Text>
+        <TextInput
+          accessibilityLabel="Storefront announcement messages"
+          value={(profile.announcementMessages || []).join("\n")}
+          onChangeText={(value) => setProfile({ ...profile, announcementMessages: value.split("\n").slice(0, 20) })}
+          editable={!loading && !saving}
+          multiline
+          maxLength={5000}
+          placeholder="Free delivery on orders above PKR 5,000"
+          placeholderTextColor={palette.muted}
+          textAlignVertical="top"
+          style={[s.input, { minHeight: 110, color: palette.text, backgroundColor: palette.elevated, borderColor: palette.border }]}
+        />
+        <Text style={[s.muted, { marginTop: 4 }]}>Up to 20 messages. The storefront cycles through them automatically.</Text>
+      </View>
       <Button title={loading ? "Loading settings…" : saving ? "Saving settings…" : "Save store settings"} icon="check" disabled={loading || saving} onPress={saveSettings} />
       {(error || notice) && (
         <Modal transparent visible animationType="fade" statusBarTranslucent>

@@ -59,8 +59,13 @@ public class SafepayService {
       var offer=productDiscounts.activeOffers(List.of(item.productId())).get(item.productId());
       if(offer!=null)automaticDiscount=automaticDiscount.add(new BigDecimal(offer.discountAmount()).multiply(BigDecimal.valueOf(item.quantity())));
     }
-    BigDecimal total=normalized.voucherCode()==null?subtotal.subtract(automaticDiscount):new BigDecimal(vouchers.quote(user,new VoucherService.QuoteRequest(normalized.voucherCode(),normalized.items())).total());
-    if(input.expectedTotal()!=null && input.expectedTotal().compareTo(total)!=0)throw failure(409,"The total changed. Review your cart and voucher first.");
+    BigDecimal discountedSubtotal=normalized.voucherCode()==null?subtotal.subtract(automaticDiscount):new BigDecimal(vouchers.quote(user,new VoucherService.QuoteRequest(normalized.voucherCode(),normalized.items())).total());
+    var deliverySettings=jdbc.queryForMap("SELECT delivery_fee,free_delivery_threshold FROM public.store_settings WHERE id=1");
+    BigDecimal deliveryFee=(BigDecimal)deliverySettings.get("delivery_fee");
+    BigDecimal freeDeliveryThreshold=(BigDecimal)deliverySettings.get("free_delivery_threshold");
+    BigDecimal shippingFee=freeDeliveryThreshold.signum()>0&&discountedSubtotal.compareTo(freeDeliveryThreshold)>=0?BigDecimal.ZERO:deliveryFee;
+    BigDecimal total=discountedSubtotal.add(shippingFee).setScale(2);
+    if(input.expectedTotal()!=null && input.expectedTotal().compareTo(total)!=0)throw failure(409,"Product prices or delivery charges changed. Review the updated order total and try again.");
     long minor;try{minor=total.movePointRight(2).longValueExact();}catch(ArithmeticException error){throw failure(400,"The checkout total is too large.");}
     if(minor<=0)throw failure(400,"The checkout total must be positive.");
     var provider=client.create(input.idempotencyKey(),minor,source);

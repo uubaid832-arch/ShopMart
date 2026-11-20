@@ -19,6 +19,7 @@ import ProfileModal from "./features/account/ProfileModal";
 import Recommendations from "./features/recommendations/Recommendations";
 import { useSession } from "./features/auth/useSession";
 import { useLanguage } from "./features/language/useLanguage";
+import { getPublicStoreSettings } from "./api/adminStoreSettings";
 import AboutModal from "./components/AboutModal";
 import Modal from "./components/Modal";
 
@@ -423,10 +424,34 @@ function Storefront({ products, onRatingSummaryChange }) {
   const [filters, setFilters] = useState(defaultFilters);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(12);
+  const [publicSettings, setPublicSettings] = useState(null);
+  const [announcementIndex, setAnnouncementIndex] = useState(0);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [notice, setNotice] = useState(null);
   const [isCategoryPickerOpen, setIsCategoryPickerOpen] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getPublicStoreSettings(controller.signal)
+      .then((settings) => { if (!controller.signal.aborted) setPublicSettings(settings); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  const announcements = (publicSettings?.announcementMessages || []).filter((message) => String(message || "").trim());
+  useEffect(() => {
+    if (announcements.length < 2) return undefined;
+    const timer = window.setInterval(() => setAnnouncementIndex((index) => (index + 1) % announcements.length), 5000);
+    return () => window.clearInterval(timer);
+  }, [announcements.length]);
+
+  function selectProductPage(nextPage) {
+    setPage(nextPage);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+  }
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -728,6 +753,16 @@ function Storefront({ products, onRatingSummaryChange }) {
         onAbout={() => setIsAboutOpen(true)}
       />
 
+      {announcements.length > 0 && (
+        <div className="mx-auto mt-3 flex min-h-11 max-w-7xl items-center justify-between gap-3 rounded-xl border border-solid border-sky-200 bg-slate-950 px-3 text-white shadow-sm dark:border-slate-700 sm:px-5" aria-label="ShopMart announcements">
+          <button type="button" aria-label="Previous announcement" onClick={() => setAnnouncementIndex((index) => (index - 1 + announcements.length) % announcements.length)} className="grid size-8 shrink-0 place-items-center rounded-full border-0 bg-white/10 text-lg font-bold text-white hover:bg-white/20">‹</button>
+          <button type="button" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="min-w-0 flex-1 truncate border-0 bg-transparent py-2 text-center text-xs font-semibold tracking-wide text-white sm:text-sm">
+            {announcements[announcementIndex % announcements.length]}
+          </button>
+          <button type="button" aria-label="Next announcement" onClick={() => setAnnouncementIndex((index) => (index + 1) % announcements.length)} className="grid size-8 shrink-0 place-items-center rounded-full border-0 bg-white/10 text-lg font-bold text-white hover:bg-white/20">›</button>
+        </div>
+      )}
+
       <main
         id="top"
         dir={direction}
@@ -834,7 +869,7 @@ function Storefront({ products, onRatingSummaryChange }) {
         <section
           id="products"
           aria-labelledby="products-title"
-          className="scroll-mt-48 pb-8"
+          className="scroll-mt-32 pb-8"
         >
           <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -1066,7 +1101,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                     value={pageSize}
                     onChange={(event) => {
                       setPageSize(Number(event.target.value));
-                      setPage(0);
+                      selectProductPage(0);
                     }}
                     className="rounded-lg border border-solid border-slate-200 bg-white p-2 text-slate-800"
                   >
@@ -1091,7 +1126,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                   <button
                     type="button"
                     disabled={currentPage === 0}
-                    onClick={() => setPage(currentPage - 1)}
+                    onClick={() => selectProductPage(currentPage - 1)}
                     className={secondaryButton}
                   >
                     {text("← Previous", "پچھلا →")}
@@ -1109,7 +1144,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                         aria-current={
                           currentPage === number ? "page" : undefined
                         }
-                        onClick={() => setPage(number)}
+                        onClick={() => selectProductPage(number)}
                         className={`grid size-9 place-items-center rounded-lg border-0 text-sm font-semibold ${
                           currentPage === number
                             ? "bg-violet-600 text-white"
@@ -1124,7 +1159,7 @@ function Storefront({ products, onRatingSummaryChange }) {
                   <button
                     type="button"
                     disabled={currentPage + 1 >= totalPages}
-                    onClick={() => setPage(currentPage + 1)}
+                    onClick={() => selectProductPage(currentPage + 1)}
                     className={secondaryButton}
                   >
                     {text("Next →", "اگلا ←")}

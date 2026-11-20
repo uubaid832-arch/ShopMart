@@ -5,6 +5,7 @@ import ChatModal from "./src/chatbot/ChatModal";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { getProducts } from "./src/api/products";
+import { getMobileStoreSettings } from "./src/api/storeSettings";
 import { useMobileSession } from "./src/auth/useMobileSession";
 import AuthModal from "./src/auth/AuthModal";
 import { useMobileCart } from "./src/cart/useMobileCart";
@@ -167,6 +168,22 @@ function ShopMart() {
   const biometric = useBiometricLock(auth.session?.user.id, !auth.restoring);
   const [chatOpen, setChatOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
+  const [announcementMessages, setAnnouncementMessages] = useState([]);
+  const [announcementIndex, setAnnouncementIndex] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getMobileStoreSettings(controller.signal)
+      .then((settings) => { if (!controller.signal.aborted) setAnnouncementMessages((settings.announcementMessages || []).filter((value) => String(value || "").trim())); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (announcementMessages.length < 2) return undefined;
+    const timer = setInterval(() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length), 5000);
+    return () => clearInterval(timer);
+  }, [announcementMessages.length]);
 
   const updateRatingSummary = useCallback((productId, summary) => {
     setResult((current) => {
@@ -279,12 +296,12 @@ function ShopMart() {
 
   function changeProductPage(nextPage) {
     setProductPage(nextPage);
-    productsListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    requestAnimationFrame(() => productsListRef.current?.scrollToOffset({ offset: 0, animated: true }));
   }
 
   function resetProductPage() {
     setProductPage(0);
-    productsListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    requestAnimationFrame(() => productsListRef.current?.scrollToOffset({ offset: 0, animated: false }));
   }
 
   function openCatalog() {
@@ -498,6 +515,13 @@ function ShopMart() {
 
   const homeHeader = (
     <View style={styles.homeHeader}>
+      {announcementMessages.length > 0 ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 42, marginBottom: 14, paddingHorizontal: 8, borderRadius: 12, backgroundColor: theme.isDark ? "#111827" : "#172033", borderWidth: 1, borderColor: palette.border }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous announcement" onPress={() => setAnnouncementIndex((index) => (index - 1 + announcementMessages.length) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>‹</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={openCatalog} style={{ flex: 1, paddingVertical: 8 }}><Text numberOfLines={1} style={{ color: "#fff", textAlign: "center", fontSize: 12, fontWeight: "700" }}>{announcementMessages[announcementIndex % announcementMessages.length]}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next announcement" onPress={() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>›</Text></Pressable>
+        </View>
+      ) : null}
       {!search.trim() && !wishlistOnly ? (
         <View
           style={[
@@ -609,6 +633,13 @@ function ShopMart() {
 
   const catalogHeader = (
     <View style={styles.catalogHeader}>
+      {announcementMessages.length > 0 ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, minHeight: 42, marginBottom: 14, paddingHorizontal: 8, borderRadius: 12, backgroundColor: theme.isDark ? "#111827" : "#172033", borderWidth: 1, borderColor: palette.border }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous announcement" onPress={() => setAnnouncementIndex((index) => (index - 1 + announcementMessages.length) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>‹</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => productsListRef.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flex: 1, paddingVertical: 8 }}><Text numberOfLines={1} style={{ color: "#fff", textAlign: "center", fontSize: 12, fontWeight: "700" }}>{announcementMessages[announcementIndex % announcementMessages.length]}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next announcement" onPress={() => setAnnouncementIndex((index) => (index + 1) % announcementMessages.length)} style={{ width: 30, height: 34, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>›</Text></Pressable>
+        </View>
+      ) : null}
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Back to home"

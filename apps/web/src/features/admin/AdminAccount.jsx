@@ -7,7 +7,7 @@ import { useLanguage } from "../language/useLanguage";
 import AppearanceMenu from "../../components/AppearanceMenu";
 
 const inputClass = "box-border w-full rounded-xl border border-solid border-slate-200 bg-slate-50 p-3 text-sm text-slate-800";
-const emptyStoreProfile = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000" };
+const emptyStoreProfile = { operatingCities: ["Lahore"], warehouseAddressLine: "", warehouseCity: "Lahore", warehousePhone: "", whatsappNumber: "923263101049", bankName: "ShopMart Demo Bank (fictional)", bankAccountTitle: "ShopMart Test Store", bankAccountNumber: "0000 0000 0000", bankIban: "PK00-DEMO-0000-0000-0000", deliveryFee: "0.00", freeDeliveryThreshold: "0.00", announcementMessages: [] };
 
 export default function AdminAccount() {
   const { session, saveProfile } = useSession();
@@ -147,6 +147,16 @@ export default function AdminAccount() {
             <label className="grid gap-2 text-sm font-semibold">Warehouse street address<input className={inputClass} value={storeProfile.warehouseAddressLine} onChange={(event) => setStoreProfile({ ...storeProfile, warehouseAddressLine: event.target.value })} maxLength={1000} placeholder="Building, street, area" disabled={settingsLoading || settingsBusy} /></label>
             <label className="grid gap-2 text-sm font-semibold">Warehouse city<input className={inputClass} value={storeProfile.warehouseCity} onChange={(event) => setStoreProfile({ ...storeProfile, warehouseCity: event.target.value })} maxLength={100} placeholder="City" disabled={settingsLoading || settingsBusy} /></label>
             <label className="grid gap-2 text-sm font-semibold sm:col-span-2">Warehouse contact number<input className={inputClass} type="tel" value={storeProfile.warehousePhone} onChange={(event) => setStoreProfile({ ...storeProfile, warehousePhone: event.target.value })} maxLength={32} placeholder="Optional contact number" disabled={settingsLoading || settingsBusy} /></label>
+          </div>
+          <div className="grid gap-3 rounded-xl border border-solid border-slate-200 p-4 sm:grid-cols-2">
+            <h3 className="m-0 text-base font-bold sm:col-span-2">Delivery charges</h3>
+            <label className="grid gap-2 text-sm font-semibold">Delivery fee (PKR)<input className={inputClass} type="number" min="0" step="0.01" value={storeProfile.deliveryFee ?? "0.00"} onChange={(event) => setStoreProfile({ ...storeProfile, deliveryFee: event.target.value })} disabled={settingsLoading || settingsBusy} /></label>
+            <label className="grid gap-2 text-sm font-semibold">Free delivery for orders at or above (PKR)<input className={inputClass} type="number" min="0" step="0.01" value={storeProfile.freeDeliveryThreshold ?? "0.00"} onChange={(event) => setStoreProfile({ ...storeProfile, freeDeliveryThreshold: event.target.value })} disabled={settingsLoading || settingsBusy} /></label>
+            <p className="m-0 text-xs font-normal text-slate-500 sm:col-span-2">Set the free delivery amount to 0 to keep free delivery disabled. Delivery is free when the discounted product total reaches the threshold.</p>
+          </div>
+          <div className="grid gap-3 rounded-xl border border-solid border-slate-200 p-4">
+            <label className="grid gap-2 text-sm font-semibold">Rotating storefront announcements<textarea className={`${inputClass} min-h-28 resize-y`} value={(storeProfile.announcementMessages || []).join("\n")} onChange={(event) => setStoreProfile({ ...storeProfile, announcementMessages: event.target.value.split("\n").slice(0, 20) })} maxLength={5000} placeholder={"One message per line, for example:\nFree delivery on orders above PKR 5,000\nNew arrivals are here"} disabled={settingsLoading || settingsBusy} /></label>
+            <p className="m-0 text-xs font-normal text-slate-500">Messages rotate in the storefront ticker. Add up to 20 messages, one per line.</p>
           </div>
           <div className="grid gap-3 rounded-xl border border-solid border-slate-200 p-4 sm:grid-cols-2">
             <h3 className="m-0 text-base font-bold sm:col-span-2">Bank transfer checkout details</h3>

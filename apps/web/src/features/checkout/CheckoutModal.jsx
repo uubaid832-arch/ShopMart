@@ -68,6 +68,7 @@ function OrderSummary({
   automaticDiscount,
   voucherDiscount,
   voucherCode,
+  shippingFee = 0,
 }) {
   const { language } = useLanguage();
   const text = (en, ur) => (language === "ur" ? ur : en);
@@ -111,16 +112,14 @@ function OrderSummary({
       <div className="flex flex-wrap justify-between gap-2 border-0 border-t border-solid border-violet-200 pt-4 font-bold">
         <span>{text("Order total", "آرڈر کی کل رقم")}</span>
         <span>
-          <bdi>{formatPrice(subtotal)}</bdi>
+          <bdi>{formatPrice(Number(subtotal) + Number(shippingFee || 0))}</bdi>
         </span>
       </div>
 
-      <p className="mb-0 text-xs text-slate-500">
-        {text(
-          "Shipping: PKR 0 for this development checkout.",
-          "اس موجودہ ترقیاتی COD نظام میں ڈیلیوری چارجز صفر روپے ہیں۔",
-        )}
-      </p>
+      <div className="mt-3 flex justify-between gap-3 text-xs text-slate-500">
+        <span>{text("Delivery fee", "ڈیلیوری فیس")}</span>
+        <span>{Number(shippingFee || 0) === 0 ? text("Free", "مفت") : formatPrice(shippingFee)}</span>
+      </div>
     </section>
   );
 }
@@ -219,6 +218,13 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
       ? addressResult.error
       : "";
 
+  const deliveryFee = Number(storeSettings?.deliveryFee ?? 0);
+  const freeDeliveryThreshold = Number(storeSettings?.freeDeliveryThreshold ?? 0);
+  const shippingFor = (productTotal) => freeDeliveryThreshold > 0 && Number(productTotal) >= freeDeliveryThreshold ? 0 : deliveryFee;
+  const currentProductTotal = Number(voucher.quote?.total ?? cart.total ?? 0);
+  const currentShippingFee = shippingFor(currentProductTotal);
+  const currentOrderTotal = currentProductTotal + currentShippingFee;
+
   function close() {
     if (inFlight.current) return;
 
@@ -304,12 +310,12 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
         paymentMethod,
         paymentDetails,
         voucherCode: voucher.quote?.code || null,
-        expectedTotal: voucher.quote?.total || null,
+        expectedTotal: currentOrderTotal.toFixed(2),
       };
     }
 
     setSubmittedTotal(
-      (current) => current ?? voucher.quote?.total ?? cart.total,
+      (current) => current ?? currentOrderTotal,
     );
     inFlight.current = true;
     setSubmitting(true);
@@ -444,7 +450,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
               })),
               voucherCode: voucher.quote?.code || null,
               expectedTotal:
-                voucher.quote?.total || Number(cart.total).toFixed(2),
+                currentOrderTotal.toFixed(2),
             },
         );
       }
@@ -499,7 +505,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
   if (bankTransferOpen) {
     return (
       <BankTransferDetails
-        total={voucher.quote?.total ?? cart.total}
+        total={currentOrderTotal}
         name={details.name}
         phone={details.phone}
         settings={storeSettings}
@@ -586,7 +592,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                 id: item.productId,
                 price: Number(item.price),
               }))}
-              subtotal={Number(confirmation.total)}
+              subtotal={Number(confirmation.subtotal || 0) - Number(confirmation.discountAmount || 0)}
+              shippingFee={Number(confirmation.total) - (Number(confirmation.subtotal || 0) - Number(confirmation.discountAmount || 0))}
               discount={confirmation.discountAmount}
               automaticDiscount={confirmation.voucherCode ? undefined : confirmation.discountAmount}
               voucherDiscount={confirmation.voucherCode ? undefined : 0}
@@ -631,7 +638,7 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
               <MockPaymentGateway
                 method={paymentMethod}
                 amount={Number(
-                  submittedTotal ?? voucher.quote?.total ?? cart.total,
+                  submittedTotal ?? currentOrderTotal,
                 )}
                 formatPrice={formatPrice}
                 busy={submitting}
@@ -811,7 +818,8 @@ export default function CheckoutModal({ cart, formatPrice, onClose, session }) {
                   />
                   <OrderSummary
                     items={cart.items}
-                    subtotal={Number(voucher.quote?.total ?? cart.total)}
+                    subtotal={currentProductTotal}
+                    shippingFee={currentShippingFee}
                     discount={voucher.quote?.discountAmount}
                     automaticDiscount={voucher.quote?.automaticDiscountAmount}
                     voucherDiscount={voucher.quote?.voucherDiscountAmount}

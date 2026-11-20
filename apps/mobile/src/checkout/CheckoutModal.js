@@ -51,6 +51,11 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
   const [storeSettingsError, setStoreSettingsError] = useState("");
   const [cityPickerOpen, setCityPickerOpen] = useState(false);
   const voucher = useVoucher(session, cart.items);
+  const deliveryFee = Number(storeSettings?.deliveryFee ?? 0);
+  const freeDeliveryThreshold = Number(storeSettings?.freeDeliveryThreshold ?? 0);
+  const productTotalNow = Number(voucher.quote?.total ?? cart.total ?? 0);
+  const shippingFeeNow = freeDeliveryThreshold > 0 && productTotalNow >= freeDeliveryThreshold ? 0 : deliveryFee;
+  const orderTotalNow = productTotalNow + shippingFeeNow;
   const pending = useRef(false);
   const snapshot = useRef(null);
 
@@ -154,14 +159,15 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
           idempotencyKey: Crypto.randomUUID(),
           paymentMethod,
           voucherCode: voucher.quote?.code || null,
-          expectedTotal: voucher.quote?.total || Number(cart.total).toFixed(2),
+          expectedTotal: orderTotalNow.toFixed(2),
           items: cart.items.map((item) => ({
             productId: item.id,
             quantity: item.quantity,
           })),
         },
         items: cart.items.map((item) => ({ ...item })),
-        total: voucher.quote?.total ?? cart.total,
+        total: orderTotalNow,
+        shippingFee: shippingFeeNow,
         discount: voucher.quote?.discountAmount || "0.00",
         subtotal: voucher.quote?.subtotal ?? cart.total,
         automaticDiscount: Number(voucher.quote?.automaticDiscountAmount ?? cart.items.reduce((sum, item) => sum + Math.max(0, item.price - (item.effectivePrice ?? item.price)) * item.quantity, 0)),
@@ -244,7 +250,8 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
 
   const summaryItems = snapshot.current?.items ?? cart.items;
   const summaryTotal =
-    snapshot.current?.total ?? voucher.quote?.total ?? cart.total;
+    snapshot.current?.total ?? orderTotalNow;
+  const summaryShippingFee = snapshot.current?.shippingFee ?? shippingFeeNow;
   const summaryDiscount =
     snapshot.current?.discount ?? voucher.quote?.discountAmount ?? "0.00";
   const originalSubtotal = summaryItems.reduce((sum, item) => sum + Number(item.price || 0) * item.quantity, 0);
@@ -493,7 +500,7 @@ export default function CheckoutModal({ cart, session, onClose, onPlaced }) {
                   {(campaignSavings > 0 || voucherSavings > 0) && <Text style={[styles.description, { color: palette.muted }]}>Product subtotal: {formatPrice(originalSubtotal)}</Text>}
                   {campaignSavings > 0 && <Text style={[styles.description, { color: palette.success }]}>Automatic campaign savings: -{formatPrice(campaignSavings)}</Text>}
                   {voucherSavings > 0 && <Text style={[styles.description, { color: palette.success }]}>Voucher savings on full-price products: -{formatPrice(voucherSavings)}</Text>}
-                  <Text style={[styles.description, { color: palette.muted }]}>Shipping: PKR 0</Text>
+                  <Text style={[styles.description, { color: palette.muted }]}>Delivery fee: {summaryShippingFee === 0 ? "Free" : formatPrice(summaryShippingFee)}</Text>
                   <Text style={[styles.total, { color: palette.accent }]}>{formatPrice(summaryTotal)}</Text>
                 </View>
 
