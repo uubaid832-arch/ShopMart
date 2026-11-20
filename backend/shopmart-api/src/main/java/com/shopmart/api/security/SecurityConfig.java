@@ -158,6 +158,8 @@ public class SecurityConfig {
                                                 .requestMatchers(
                                                                 HttpMethod.PATCH,
                                                                 "/api/rider/deliveries/*/complete",
+                                                                "/api/rider/deliveries/*/pickup",
+                                                                "/api/rider/deliveries/*/start",
                                                                 "/api/rider/deliveries/*/failed")
                                                 .hasRole("RIDER")
                                                 .requestMatchers(

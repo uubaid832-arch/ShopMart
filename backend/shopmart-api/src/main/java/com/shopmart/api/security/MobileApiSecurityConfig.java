@@ -94,6 +94,8 @@ public class MobileApiSecurityConfig {
                         .requestMatchers(
                                 HttpMethod.PATCH,
                                 "/api/mobile/rider/deliveries/*/complete",
+                                "/api/mobile/rider/deliveries/*/pickup",
+                                "/api/mobile/rider/deliveries/*/start",
                                 "/api/mobile/rider/deliveries/*/failed")
                         .hasRole("RIDER")
                         .requestMatchers(
