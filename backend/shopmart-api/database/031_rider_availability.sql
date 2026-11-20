@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE public.users
+    ADD COLUMN IF NOT EXISTS rider_available BOOLEAN NOT NULL DEFAULT TRUE;
+
+COMMIT;

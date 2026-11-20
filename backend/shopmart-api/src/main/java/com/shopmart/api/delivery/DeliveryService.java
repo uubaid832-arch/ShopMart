@@ -123,7 +123,7 @@ public class DeliveryService {
         return jdbc.query("""
                 SELECT id, name
                 FROM public.users
-                WHERE role = 'RIDER' AND enabled = TRUE
+                WHERE role = 'RIDER' AND enabled = TRUE AND rider_available = TRUE
                 ORDER BY name, id
                 """,
                 (rs, row) -> new RiderResponse(
@@ -171,6 +171,7 @@ public class DeliveryService {
                 SELECT id
                 FROM public.users
                 WHERE id = ? AND role = 'RIDER' AND enabled = TRUE
+                  AND rider_available = TRUE
                 FOR SHARE
                 """, riderId);
 

@@ -61,6 +61,15 @@ async function riderRequest(
 export const getRiderDeliveries = (token, page, signal, section = "ALL", query = "") =>
   riderRequest(token, `?page=${page}&size=20&section=${encodeURIComponent(section)}&q=${encodeURIComponent(query)}`, { signal });
 
+export const getRiderAvailability = (token, signal) =>
+  riderRequest(token, "/availability", { signal });
+
+export const setRiderAvailability = (token, available) =>
+  riderRequest(token, "/availability", {
+    method: "PUT",
+    body: { available },
+  });
+
 export const completeRiderDelivery = (token, id) =>
   riderRequest(token, `/${id}/complete`, { method: "PATCH" });
 

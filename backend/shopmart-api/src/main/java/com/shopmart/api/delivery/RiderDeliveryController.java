@@ -38,6 +38,23 @@ public class RiderDeliveryController {
         .body(deliveries.list(userId(jwt), page, size, section, q));
   }
 
+  @GetMapping("/availability")
+  public ResponseEntity<RiderDeliveryService.AvailabilityResponse> availability(
+      @AuthenticationPrincipal Jwt jwt) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(deliveries.availability(userId(jwt)));
+  }
+
+  @PutMapping("/availability")
+  public ResponseEntity<RiderDeliveryService.AvailabilityResponse> setAvailability(
+      @AuthenticationPrincipal Jwt jwt,
+      @Valid @RequestBody RiderDeliveryService.AvailabilityRequest request) {
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.noStore())
+        .body(deliveries.setAvailability(userId(jwt), request.available()));
+  }
+
   @PatchMapping("/{id}/complete")
   public ResponseEntity<Void> complete(
       @AuthenticationPrincipal Jwt jwt,

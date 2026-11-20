@@ -229,6 +229,7 @@ public class WarehouseService {
           SELECT id
           FROM public.users
           WHERE id = ? AND role = 'RIDER' AND enabled = TRUE
+            AND rider_available = TRUE
           FOR SHARE
           """, request.riderId());
 

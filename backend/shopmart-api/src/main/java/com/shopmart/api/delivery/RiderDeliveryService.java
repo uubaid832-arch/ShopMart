@@ -37,6 +37,32 @@ public class RiderDeliveryService {
     }
 
     @Transactional(readOnly = true)
+    public AvailabilityResponse availability(UUID riderId) {
+        List<Boolean> rows = jdbc.query("""
+                SELECT rider_available
+                FROM public.users
+                WHERE id = ? AND enabled = TRUE AND role = 'RIDER'
+                """, (rs, row) -> rs.getBoolean("rider_available"), riderId);
+        if (rows.isEmpty()) {
+            throw failure(HttpStatus.FORBIDDEN, "Delivery rider access is required.");
+        }
+        return new AvailabilityResponse(rows.get(0));
+    }
+
+    @Transactional
+    public AvailabilityResponse setAvailability(UUID riderId, boolean available) {
+        int updated = jdbc.update("""
+                UPDATE public.users
+                SET rider_available = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND enabled = TRUE AND role = 'RIDER'
+                """, available, riderId);
+        if (updated == 0) {
+            throw failure(HttpStatus.FORBIDDEN, "Delivery rider access is required.");
+        }
+        return new AvailabilityResponse(available);
+    }
+
+    @Transactional(readOnly = true)
     public DeliveryPage list(UUID riderId, int page, int size) {
         return list(riderId, page, size, "ALL");
     }
@@ -417,6 +443,10 @@ public class RiderDeliveryService {
                     + "INCORRECT_ADDRESS|DAMAGED_PACKAGE|OTHER") String reason,
             @Size(max = 500) String note) {
     }
+
+    public record AvailabilityRequest(@NotNull Boolean available) {}
+
+    public record AvailabilityResponse(boolean available) {}
 
     public record DeliveryAttempt(
             String reason,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router";
 import { Bike, Truck, Wallet, LogOut, ArrowUpRight } from "lucide-react";
 import { useSession } from "../auth/useSession";
@@ -7,13 +7,41 @@ import ChangePasswordButton from "../auth/ChangePasswordButton";
 import Modal from "../../components/Modal";
 import AppearanceMenu from "../../components/AppearanceMenu";
 import { useLanguage } from "../language/useLanguage";
+import { getRiderAvailability, setRiderAvailability } from "../../api/riderDeliveries";
 
 export default function RiderLayout() {
   const { session, restoring, error, signOut } = useSession();
   const [signingOut, setSigningOut] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [availability, setAvailability] = useState(null);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
   const { language, setLanguage } = useLanguage();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = session?.accessToken;
+    if (!token || session?.user?.role !== "RIDER") return;
+    const controller = new AbortController();
+    getRiderAvailability(token, controller.signal)
+      .then((result) => { if (!controller.signal.aborted) setAvailability(result.available); })
+      .catch((failure) => { if (!controller.signal.aborted) setAvailabilityError(failure.message); });
+    return () => controller.abort();
+  }, [session?.accessToken, session?.user?.role]);
+
+  async function toggleAvailability() {
+    if (availabilityBusy || availability === null) return;
+    setAvailabilityBusy(true);
+    setAvailabilityError("");
+    try {
+      const result = await setRiderAvailability(session.accessToken, !availability);
+      setAvailability(result.available);
+    } catch (failure) {
+      setAvailabilityError(failure.message);
+    } finally {
+      setAvailabilityBusy(false);
+    }
+  }
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -162,8 +190,14 @@ export default function RiderLayout() {
               My deliveries
             </NavLink>
 
-            <NavLink to="/rider/cash" className={({isActive}) => `flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${isActive ? "bg-violet-600 text-white" : "text-slate-500 hover:bg-violet-50"}`}><Wallet size={18}/>COD cash handovers</NavLink>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <NavLink to="/rider/cash" className={({isActive}) => `flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${isActive ? "bg-violet-600 text-white" : "text-slate-500 hover:bg-violet-50"}`}><Wallet size={18}/>COD cash handovers</NavLink>
+              <button type="button" onClick={toggleAvailability} disabled={availability === null || availabilityBusy} aria-label="Toggle rider availability" className={`rounded-xl border border-solid px-3 py-2 text-sm font-bold disabled:opacity-50 ${availability ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "border-slate-300 bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+                {availabilityBusy ? "Saving…" : availability === null ? "Checking status…" : availability ? "● Available" : "○ Unavailable"}
+              </button>
+            </div>
           </nav>
+          {availabilityError && <p role="alert" className="mx-auto mb-2 mt-0 max-w-6xl px-4 text-xs text-rose-600 sm:px-6">{availabilityError}</p>}
         </div>
       </header>
 

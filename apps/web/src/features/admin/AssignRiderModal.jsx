@@ -94,7 +94,7 @@ export default function AssignRiderModal({
 
             {riders.length === 0 && (
               <p className="m-0 text-sm text-amber-700">
-                No enabled rider accounts are available.
+                No available rider accounts. Riders who are unavailable cannot receive new assignments.
               </p>
             )}
 

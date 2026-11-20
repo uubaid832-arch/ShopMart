@@ -48,15 +48,19 @@ function Icon({ name, color, size = 21 }) {
   );
 }
 
-async function request(token, path = "", method = "GET", signal) {
+async function request(token, path = "", method = "GET", signal, body) {
   if (!baseUrl) throw new Error("The mobile API address is missing.");
   const response = await fetch(
     `${baseUrl}/api/mobile/rider/deliveries${path}`,
     {
       method,
       credentials: "omit",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
       signal,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     },
   );
   if (!response.ok) {
@@ -101,10 +105,20 @@ export default function RiderScreen({
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [availability, setAvailability] = useState(null);
+  const [availabilityBusy, setAvailabilityBusy] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [appearanceOpen, setAppearanceOpen] = useState(false);
   const [failureDelivery, setFailureDelivery] = useState(null);
   const pending = useRef(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    request(token, "/availability", "GET", controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setAvailability(data.available); })
+      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
+    return () => controller.abort();
+  }, [token]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -140,6 +154,26 @@ export default function RiderScreen({
       });
     return () => controller.abort();
   }, [token, section, page, reload, search]);
+
+  async function toggleAvailability() {
+    if (availabilityBusy || availability === null) return;
+    setAvailabilityBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await request(token, "/availability", "PUT", undefined, {
+        available: !availability,
+      });
+      setAvailability(result.available);
+      setNotice(result.available
+        ? "You are available for new delivery assignments."
+        : "You are unavailable for new delivery assignments. Current assigned orders remain with you.");
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setAvailabilityBusy(false);
+    }
+  }
 
   const current =
     result?.token === token &&
@@ -316,9 +350,18 @@ export default function RiderScreen({
             : "Your work, all in one place."}
         </Text>
       </View>
-      <View style={styles.truck}>
-        <Icon name="truck" size={35} />
-      </View>
+      <Pressable
+        accessibilityRole="switch"
+        accessibilityState={{ checked: Boolean(availability), disabled: availability === null || availabilityBusy }}
+        disabled={availability === null || availabilityBusy}
+        onPress={toggleAvailability}
+        style={[styles.availabilityButton, availability ? styles.availabilityOn : styles.availabilityOff]}
+      >
+        <Text style={[styles.availabilityText, { color: availability ? palette.success : palette.muted }]}>
+          {availabilityBusy ? "Saving…" : availability === null ? "Checking…" : availability ? "● Available" : "○ Unavailable"}
+        </Text>
+        <Text style={[styles.availabilityHint, { color: palette.muted }]}>New assignments</Text>
+      </Pressable>
     </View>
   );
 
@@ -859,6 +902,20 @@ const baseStyles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  availabilityButton: {
+    minWidth: 106,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: "#dfe4ed",
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  availabilityOn: { backgroundColor: "#e5f4e9" },
+  availabilityOff: { backgroundColor: "#edf0f5" },
+  availabilityText: { fontSize: 13, fontWeight: "900" },
+  availabilityHint: { fontSize: 10, marginTop: 3 },
   profileSetting: {
     minHeight: 58,
     marginHorizontal: 16,
@@ -1077,6 +1134,7 @@ const styleColors = {
   screen: c => ({ backgroundColor: c.background }), header: c => ({ backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border }),
   eyebrow: c => ({ color: c.accent }), title: c => ({ color: c.text }), iconButton: c => ({ backgroundColor: c.soft }),
   welcome: c => ({ backgroundColor: c.accentSoft }), welcomeName: c => ({ color: c.text }), welcomeText: c => ({ color: c.muted }), truck: c => ({ backgroundColor: c.soft }),
+  availabilityButton: c => ({ borderColor: c.border }), availabilityOn: c => ({ backgroundColor: c.successSoft }), availabilityOff: c => ({ backgroundColor: c.soft }), availabilityHint: c => ({ color: c.muted }),
   viewTabs: c => ({ backgroundColor: c.soft }), viewTabActive: c => ({ backgroundColor: c.accent }), viewTabText: c => ({ color: c.text }),
   sectionTitle: c => ({ color: c.text }), muted: c => ({ color: c.muted }), refreshButton: c => ({ backgroundColor: c.accent }),
   tab: c => ({ backgroundColor: c.soft }), activeTab: c => ({ backgroundColor: c.accent }), tabText: c => ({ color: c.text }),
